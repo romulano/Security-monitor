@@ -29,8 +29,6 @@ class NoExternalNewsApiTest extends TestCase
         'app/Services/Alerts/Discord/DiscordGateway.php' => 'conexão única do bot ao gateway do Discord',
         'app/Services/Alerts/Telegram/TelegramClient.php' => 'entrega no Telegram e mensagens do bot (long polling)',
         'app/Services/Alerts/Webhook/WebhookClient.php' => 'entrega de alerta ao endereço que a própria conta cadastrou e comprovou (webhook: só https:443, IP público já conferido)',
-        'app/Support/Turnstile.php' => 'captcha da Cloudflare',
-        'app/Services/Auth/GithubOAuth.php' => 'Entrar com o GitHub: OAuth de quem faz login ou cadastro (id, nome e e-mail verificado) e de quem confirma que é você (só o id)',
         'app/Services/Exploits/ExploitDbClient.php' => 'índice e arquivos do Exploit-DB: referência de exploit público, não notícia',
         'app/Services/IndexNow/IndexNowClient.php' => 'aviso de URL nova aos buscadores (IndexNow), não é fonte de notícia',
         'app/Services/Lookalike/CertificateSearch.php' => 'Radar de domínios: certificados públicos com a marca (crt.sh)',

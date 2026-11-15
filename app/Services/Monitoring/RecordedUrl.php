@@ -26,12 +26,11 @@ final class RecordedUrl
     ];
 
     /**
-     * O caminho em que o próprio endereço é o segredo (o {hash} é o sha1 do e-mail), pelo modelo da rota;
-     * a migration e o Referer não têm a rota na mão. O teste confere que é o mesmo do routes/web.php.
+     * O caminho em que o próprio endereço é o segredo (um {id} que é a prova, não só um identificador), pelo
+     * modelo da rota; a migration e o Referer não têm a rota na mão. Vazio hoje: a confirmação de e-mail, o
+     * único caso, saiu com o login. Fica como ponto de extensão para o próximo link assim.
      */
-    public const SECRET_PATHS = [
-        '/conta/confirmar-email/' => '/conta/confirmar-email/{user}/{hash}',
-    ];
+    public const SECRET_PATHS = [];
 
     /** O endereço da página aberta: o modelo da rota assinada, sem a query, ou o caminho com a query limpa. */
     public static function path(Request $request): string

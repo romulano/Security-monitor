@@ -26,6 +26,8 @@ return new class extends Migration
         // A chave com o nome sensível (code[], user[password]) ou com o nome codificado (%73ignature); o
         // PHP decide no fim, e o que não muda não é regravado.
         $query = "[?&][^=&#]*({$names}|%)[^=&#]*=";
+        // Hoje SECRET_PATHS está vazio (a confirmação de e-mail saiu com o login): sem prefixo nenhum para
+        // casar, nunca um LIKE '%' que pegaria a tabela inteira.
         $confirm = array_key_first(RecordedUrl::SECRET_PATHS);
         [$min, $max] = [(int) DB::table('page_views')->min('id'), (int) DB::table('page_views')->max('id')];
 
@@ -36,8 +38,9 @@ return new class extends Migration
                 ->whereBetween('id', [$from, $from + self::RANGE - 1])
                 ->where(fn ($q) => $q->whereRaw('path ~* ?', [$query])
                     ->orWhereRaw('referer ~* ?', [$query])
-                    ->orWhereRaw('lower(path) like ?', [$confirm.'%'])
-                    ->orWhereRaw('lower(referer) like ?', ['%'.$confirm.'%']))
+                    ->when($confirm !== null, fn ($q) => $q
+                        ->orWhereRaw('lower(path) like ?', [$confirm.'%'])
+                        ->orWhereRaw('lower(referer) like ?', ['%'.$confirm.'%'])))
                 ->get(['id', 'path', 'referer']);
 
             foreach ($rows as $row) {
