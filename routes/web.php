@@ -248,7 +248,7 @@ Route::middleware('auth')->group(function () {
     // consulta periódica não renova a sessão (item 6 do Blue Team). Revogar e excluir o domínio também ficam aqui
     // (item 4 do Blue Team): revogar é retirar o consentimento, e vale a qualquer momento; o domínio vai pelo nome,
     // só entre os da conta, sem limite e sem reautenticação.
-    Route::prefix('alertas')->name('alerts.')->middleware()->group(function () {
+    Route::prefix('alertas')->name('alerts.')->group(function () {
         Route::get('/testes/execucoes/{execucao}', ShowPentestRunController::class)->whereUuid('execucao')->name('tests.runs.show');
         Route::get('/testes/execucoes/{execucao}/estado', ShowPentestRunStatusController::class)->whereUuid('execucao')->middleware(['session.idle', 'throttle:60,1,pentest-estado'])->name('tests.runs.status');
         Route::post('/testes/execucoes/{execucao}/parar', StopPentestRunController::class)->whereUuid('execucao')->name('tests.runs.stop');
