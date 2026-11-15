@@ -162,17 +162,13 @@ class WebhookConnector
         $this->notifier->test($channel);
     }
 
-    /** Exclui o webhook e a cópia da prova de posse dele (a prova dos outros serviços fica). Na empresa, `$by` vai à Atividade. */
-    public function disconnect(NotificationChannel $channel, ?User $by = null): void
+    /** Exclui o webhook e a cópia da prova de posse dele (a prova dos outros serviços fica). */
+    public function disconnect(NotificationChannel $channel): void
     {
-        DB::transaction(function () use ($channel, $by) {
+        DB::transaction(function () use ($channel) {
             $copy = $channel->domain;
             $channel->delete();
             $copy?->delete();
-
-            if ($by !== null) {
-                $this->channels->record($by, $channel, 'channel.removed');
-            }
         });
     }
 

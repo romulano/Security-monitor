@@ -15,7 +15,7 @@ class DestroyWebhookController extends Controller
     {
         $channel = $request->channel();
         $name = $channel->appName();
-        $this->webhooks->disconnect($channel, $request->user());
+        $this->webhooks->disconnect($channel);
 
         return redirect()->route('alerts.notifiers')->with('status', "{$name} excluído. Os alertas continuam guardados em Alertas.");
     }
