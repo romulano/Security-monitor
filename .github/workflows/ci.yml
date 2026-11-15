@@ -17,17 +17,19 @@ permissions:
 
 jobs:
   estatico:
-    name: Análise estática (PHP 8.3)
+    name: Análise estática (PHP 8.4)
     runs-on: ubuntu-latest
 
     steps:
       - name: Baixar o código
         uses: actions/checkout@v4
 
-      - name: Preparar o PHP 8.3
+      # O composer.json aceita PHP ^8.2, mas o composer.lock trava o Symfony na
+      # série 8.1, que exige PHP >= 8.4.1 — então o CI precisa do 8.4.
+      - name: Preparar o PHP 8.4
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.4'
           # Extensões exigidas pelo composer.json e pelo composer.lock.
           extensions: ctype, dom, fileinfo, filter, iconv, mbstring, openssl, phar, simplexml, tokenizer, xml, xmlwriter
           tools: composer:v2
