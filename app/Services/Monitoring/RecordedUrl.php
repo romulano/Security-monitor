@@ -31,8 +31,6 @@ final class RecordedUrl
      */
     public const SECRET_PATHS = [
         '/conta/confirmar-email/' => '/conta/confirmar-email/{user}/{hash}',
-        // O convite da empresa: o token no caminho abre a conta nova por 7 dias.
-        '/empresa/convite/' => '/empresa/convite/{token}',
     ];
 
     /** O endereço da página aberta: o modelo da rota assinada, sem a query, ou o caminho com a query limpa. */

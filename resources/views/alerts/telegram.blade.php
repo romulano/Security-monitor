@@ -24,7 +24,6 @@
                 <x-brand-icon name="telegram" class="size-11" />
                 <h1 class="text-xl font-semibold text-white">Notificações no Telegram</h1>
             </div>
-            @include('alerts.partials.channel-where', ['private' => 'telegram'])
             @if (! $channel && ! $where)
                 <p class="mt-2 text-sm text-ink-400">Escolha como receber: numa conversa privada com o bot, só para você, ou num grupo, para a equipe toda. O histórico continua em Alertas.</p>
             @endif
@@ -50,7 +49,7 @@
                     <div class="min-w-0">
                         <p class="font-semibold text-white">{{ ucfirst($channel->label()) }}</p>
                         <p class="text-sm text-ink-400">
-                            Conectado {{ $channel->isCompany() ? 'por '.$channel->user?->name : $channel->methodLabel() }} em {{ $channel->created_at->timezone($channel->timezone)->format('d/m/Y') }}
+                            Conectado {{ $channel->methodLabel() }} em {{ $channel->created_at->timezone($channel->timezone)->format('d/m/Y') }}
                             @if ($channel->last_success_at) · último envio {{ $channel->last_success_at->timezone($channel->timezone)->format('d/m H:i') }} @endif
                         </p>
                     </div>
@@ -62,7 +61,7 @@
                         <button class="min-h-11 rounded-lg border border-accent px-4 text-sm text-amber-200 hover:bg-accent/10">Enviar teste</button>
                     </form>
                     <a href="{{ route('alerts.telegram', ['trocar' => 1] + $target) }}" class="inline-flex min-h-11 items-center rounded-lg border border-ink-800 px-4 text-sm text-ink-200 hover:border-ink-700">Mudar a conversa</a>
-                    <form method="POST" action="{{ route('alerts.telegram.destroy', $target) }}" data-confirm="{{ $channel->isCompany() ? 'Desconectar o Telegram '.$channel->label().($channel->sector ? ' do setor '.$channel->sector->name.'? Ninguém mais recebe por ele os avisos do setor '.$channel->sector->name.'.' : ' dos canais gerais da empresa? Ninguém mais recebe por ele os avisos da empresa toda.').' Os alertas continuam guardados em Alertas.' : 'Desconectar o Telegram? Os alertas continuam guardados em Alertas.' }}" @if ($channel->isCompany()) data-confirm-tone="danger" data-confirm-ok="Desconectar" @endif>
+                    <form method="POST" action="{{ route('alerts.telegram.destroy', $target) }}" data-confirm="Desconectar o Telegram? Os alertas continuam guardados em Alertas.">
                         @csrf
                         @method('DELETE')
                         <button class="min-h-11 rounded-lg border border-ink-800 px-4 text-sm text-red-300 hover:border-red-900">Desconectar</button>
@@ -125,7 +124,6 @@
 
         @if ($showConnect)
             <div class="grid gap-4 md:grid-cols-2">
-                {{-- Canal da empresa não é conversa privada (P1): só o grupo. --}}
                 @unless ($where)
                 <section class="flex flex-col gap-3 rounded-xl border {{ $available ? 'border-accent/60' : 'border-ink-800' }} bg-ink-900 p-5">
                     <div class="flex flex-wrap items-baseline justify-between gap-2">

@@ -15,7 +15,7 @@ class UpdateRadarInterviewStepController extends Controller
     public function __invoke(UpdateRadarInterviewStepRequest $request): RedirectResponse
     {
         if ($request->step() === 1) {
-            $watch = $this->interview->saveDomain($request->user(), $request->watch(), $request->provenId(), $request->typed(), $request->sectorId());
+            $watch = $this->interview->saveDomain($request->user(), $request->watch(), $request->provenId(), $request->typed());
         } else {
             $watch = $request->watch();
             $this->interview->saveBrand($watch, $request->company(), $request->brands());

@@ -84,7 +84,7 @@
             <li>429: o Security Monitor espera o <span class="font-mono">Retry-After</span> (até 30 minutos).</li>
             <li>Os outros 4xx e os redirecionamentos (3xx): sem nova tentativa. O Security Monitor não segue redirecionamentos.</li>
             <li>{{ (int) config('secmon.alerts.webhook.max_failures', 5) }} entregas seguidas com falha: o envio para e avisamos por e-mail. Um teste que der certo põe o webhook de volta.</li>
-            <li>Só https, na porta 443, num domínio comprovado {{ auth()->user()?->isCompanyAccount() ? 'pela empresa' : 'pela sua conta' }}. O Security Monitor nunca chama endereço de rede interna.</li>
+            <li>Só https, na porta 443, num domínio comprovado pela sua conta. O Security Monitor nunca chama endereço de rede interna.</li>
         </ul>
     </div>
 </section>

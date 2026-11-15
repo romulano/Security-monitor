@@ -10,7 +10,7 @@ use App\Services\Alerts\AlertRouter;
 use App\Services\Alerts\MatchEngine;
 use App\Services\Alerts\ProfileCompiler;
 use App\Services\Alerts\ProfileIndex;
-use App\Services\Company\Destinations;
+use App\Services\Access\Destinations;
 use App\Support\Settings;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\UniqueConstraintViolationException;

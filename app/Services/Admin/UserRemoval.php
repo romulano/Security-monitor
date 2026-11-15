@@ -37,12 +37,6 @@ class UserRemoval
             throw new ActionRefused('Administradores não são removidos por aqui.');
         }
 
-        // A conta de empresa sai pela empresa (§4.6: fica desativada, não some), e a admin dela não pode
-        // sumir deixando a empresa sem ninguém.
-        if ($target->isCompanyAccount()) {
-            throw new ActionRefused("{$target->name} é uma conta da empresa {$target->company?->name}: ela não é removida por aqui.");
-        }
-
         $this->erase($target);
     }
 

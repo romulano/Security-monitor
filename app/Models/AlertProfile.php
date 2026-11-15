@@ -15,7 +15,7 @@ class AlertProfile extends Model implements VisibilityRoot
     use VisibleToAccount;
 
     /** Empresa e setor só pelo serviço (Visibility::stampFor + forceFill), nunca de um array da tela. */
-    protected $guarded = ['company_id', 'sector_id'];
+    protected $guarded = [];
 
     /** Do mais grave para o menos grave. */
     public const LEVELS = ['critical', 'high', 'medium', 'low'];
@@ -46,12 +46,6 @@ class AlertProfile extends Model implements VisibilityRoot
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    /** O setor do alerta de empresa (nulo = a empresa toda, ou conta pessoal). */
-    public function sector(): BelongsTo
-    {
-        return $this->belongsTo(Sector::class);
     }
 
     public function answers(): HasMany
@@ -92,13 +86,12 @@ class AlertProfile extends Model implements VisibilityRoot
      */
     public function hasSiblings(): bool
     {
-        // O alerta novo de empresa, antes de gravar o passo 1, ainda não existe: sem irmãos nem ?alerta=.
+        // O alerta novo, antes de gravar o passo 1, ainda não existe: sem irmãos nem ?alerta=.
         if (! $this->exists) {
             return false;
         }
 
-        return $this->hasSiblings ??= $this->company_id !== null
-            || static::query()->visibleTo($this->user)->whereKeyNot($this->id)->exists();
+        return $this->hasSiblings ??= static::query()->visibleTo($this->user)->whereKeyNot($this->id)->exists();
     }
 
     /**

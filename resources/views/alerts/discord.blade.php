@@ -25,7 +25,6 @@
                 <x-brand-icon name="discord" class="size-11" />
                 <h1 class="text-xl font-semibold text-white">Notificações no Discord</h1>
             </div>
-            @include('alerts.partials.channel-where', ['private' => 'discord'])
             @if (! $channel && ! $where)
                 <p class="mt-2 text-sm text-ink-400">Escolha como receber: num canal do servidor, para a equipe toda, ou numa mensagem direta, só para você. O histórico continua em Alertas.</p>
             @endif
@@ -67,7 +66,7 @@
                     <div class="min-w-0">
                         <p class="font-semibold text-white">{{ ucfirst($channel->label()) }}</p>
                         <p class="text-sm text-ink-400">
-                            Conectado {{ $channel->isCompany() ? 'por '.$channel->user?->name : $channel->methodLabel() }} em {{ $channel->created_at->timezone($channel->timezone)->format('d/m/Y') }}
+                            Conectado {{ $channel->methodLabel() }} em {{ $channel->created_at->timezone($channel->timezone)->format('d/m/Y') }}
                             @if ($channel->last_success_at) · último envio {{ $channel->last_success_at->timezone($channel->timezone)->format('d/m H:i') }} @endif
                         </p>
                     </div>
@@ -84,7 +83,7 @@
                         <a href="{{ route('alerts.discord', ['escolher' => 1] + $target) }}" class="inline-flex min-h-11 items-center rounded-lg border border-ink-800 px-4 text-sm text-ink-200 hover:border-ink-700">Trocar canal</a>
                     @endif
                     <a href="{{ route('alerts.discord', ['trocar' => 1] + $target) }}" class="inline-flex min-h-11 items-center rounded-lg border border-ink-800 px-4 text-sm text-ink-200 hover:border-ink-700">Mudar o jeito de receber</a>
-                    <form method="POST" action="{{ route('alerts.discord.destroy', $target) }}" data-confirm="{{ $channel->isCompany() ? 'Desconectar o Discord '.$channel->label().($channel->sector ? ' do setor '.$channel->sector->name.'? Ninguém mais recebe por ele os avisos do setor '.$channel->sector->name.'.' : ' dos canais gerais da empresa? Ninguém mais recebe por ele os avisos da empresa toda.').' Os alertas continuam guardados em Alertas.' : 'Desconectar o Discord? Os alertas continuam guardados em Alertas.' }}" @if ($channel->isCompany()) data-confirm-tone="danger" data-confirm-ok="Desconectar" @endif>
+                    <form method="POST" action="{{ route('alerts.discord.destroy', $target) }}" data-confirm="Desconectar o Discord? Os alertas continuam guardados em Alertas.">
                         @csrf
                         @method('DELETE')
                         <button class="min-h-11 rounded-lg border border-ink-800 px-4 text-sm text-red-300 hover:border-red-900">Desconectar</button>
@@ -153,7 +152,6 @@
                     @endif
                 </section>
 
-                {{-- Canal da empresa não é conversa privada (P1): sem a mensagem direta. --}}
                 @unless ($where)
                 <section class="flex flex-col gap-3 rounded-xl border border-ink-800 bg-ink-900 p-5">
                     <div class="flex flex-wrap items-baseline justify-between gap-2">

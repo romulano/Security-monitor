@@ -17,19 +17,12 @@ class UpdateGithubInterviewStepRequest extends GithubInterviewRequest
 
     public function rules(): array
     {
-        // O setor do monitoramento novo de empresa; quem pode usar qual, o Visibility confere ao criar.
-        return ['setor' => ['nullable', 'integer', 'min:1']];
+        return [];
     }
 
     public function messages(): array
     {
-        return ['setor.*' => 'Escolha um setor da lista.'];
-    }
-
-    /** O setor escolhido para o monitoramento novo (nulo: sem setor, só quem administra a empresa). */
-    public function sectorId(): ?int
-    {
-        return $this->filled('setor') ? (int) $this->validated('setor') : null;
+        return [];
     }
 
     /** As respostas do passo, sem o que tem cara de valor de chave (o service valida o resto). */

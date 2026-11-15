@@ -4,14 +4,8 @@ namespace App\Services\Github;
 
 use App\Exceptions\ActionRefused;
 use App\Jobs\ScanGithub;
-use App\Models\Company;
 use App\Models\GithubMonitor;
 use App\Models\User;
-use App\Services\Company\Companies;
-use App\Services\Company\CompanyLimits;
-use App\Services\Company\ItemSectors;
-use App\Services\Company\Viewer;
-use App\Services\Company\Visibility;
 use App\Support\DomainName;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -98,73 +92,36 @@ class GithubInterview
 
     private const HOST = '/^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{1,62}$/';
 
-    public function __construct(private ExtraFlow $extra, private Visibility $visibility, private Companies $companies, private CompanyLimits $limits) {}
+    public function __construct(private ExtraFlow $extra) {}
 
     /**
      * O monitoramento da conta pessoal (um só); na primeira vez nasce vazio. Nada vem da entrevista de alertas: o
      * GitHub pode vigiar outra marca (ou outra empresa), então o cliente escreve tudo à mão. A conta de empresa não
-     * ganha rascunho sozinha (DESENHO-5.2 §2.1): cria pelo passo 1, com o setor (startWith).
      */
     public function monitorFor(User $user): GithubMonitor
     {
         // Consulta nova (não a relação já carregada): o monitoramento pode ter nascido nesta mesma requisição.
         return GithubMonitor::query()->visibleTo($user)->oldest('id')->first()
-            ?? GithubMonitor::query()->forceCreate($this->visibility->stampFor($user, null) + $this->blankAttributes());
+            ?? GithubMonitor::query()->forceCreate(['user_id' => $user->id] + $this->blankAttributes());
     }
 
-    /** Um monitoramento ainda não gravado, para a tela do passo 1 de um novo de empresa. */
+    /** Um monitoramento ainda não gravado, para a tela do passo 1. */
     public function blank(): GithubMonitor
     {
         return new GithubMonitor($this->blankAttributes());
     }
 
-    /**
-     * A conta cria monitoramentos? A pessoal, enquanto não tem o seu; na empresa, quem administra e quem responde por
-     * um setor, até o limite da empresa (P6, `limit_github_monitors`).
-     */
+    /** A conta cria monitoramentos enquanto não tem o seu. */
     public function mayCreate(User $user): bool
     {
-        $viewer = $this->visibility->viewer($user);
-
-        return match ($viewer->kind) {
-            Viewer::PERSONAL => ! GithubMonitor::query()->visibleTo($user)->exists(),
-            Viewer::ADMIN, Viewer::SECTORS => ($viewer->kind === Viewer::ADMIN || $this->visibility->sectorChoices($user)->isNotEmpty())
-                && GithubMonitor::query()->where('company_id', $viewer->companyId)->count() < $this->companies->limit(Company::query()->findOrFail($viewer->companyId), 'github_monitors'),
-            default => false,
-        };
+        return ! GithubMonitor::query()->visibleTo($user)->exists();
     }
 
-    /**
-     * Pode começar um monitoramento novo (o passo 1 sem `?monitor=`): quem administra a empresa e quem responde por um
-     * setor. O limite da empresa fica com o startWith, que avisa com a mensagem (e deixa o duplo clique cair no rascunho).
-     */
-    public function mayStart(User $user): bool
+    /** Passo 1 de um monitoramento novo: cria e grava as respostas numa transação. Resposta inválida desfaz tudo. */
+    public function startWith(User $user, array $answers): GithubMonitor
     {
-        $viewer = $this->visibility->viewer($user);
-
-        return $viewer->kind === Viewer::ADMIN || ($viewer->kind === Viewer::SECTORS && $this->visibility->sectorChoices($user)->isNotEmpty());
-    }
-
-    /**
-     * Passo 1 de um monitoramento novo de empresa: cria com o setor (conferido pelo Visibility) e grava as respostas,
-     * numa transação com a empresa travada (o limite sem corrida). Resposta inválida desfaz tudo.
-     */
-    public function startWith(User $user, ?int $sectorId, array $answers): GithubMonitor
-    {
-        return DB::transaction(function () use ($user, $sectorId, $answers) {
-            // A empresa travada antes de conferir o setor: apagar o setor (Sectors::delete) trava a empresa também, então
-            // um setor apagado no mesmo instante vira a mensagem, e não um erro de FK (Red Team da E2f).
-            $company = Company::query()->lockForUpdate()->findOrFail($this->visibility->viewer($user)->companyId);
-            ItemSectors::ensureSectorExists($sectorId);
-            $stamp = $this->visibility->stampFor($user, $sectorId);
-            $limit = $this->companies->limit($company, 'github_monitors');
-
-            if (! $this->recentDraft($user, $stamp['sector_id'], $answers) && GithubMonitor::query()->where('company_id', $company->id)->count() >= $limit) {
-                throw new ActionRefused("A empresa já tem {$limit} monitoramentos do GitHub, o máximo. Para criar outro, exclua um monitoramento. ".CompanyLimits::MORE);
-            }
-
-            $monitor = $this->recentDraft($user, $stamp['sector_id'], $answers) ?? GithubMonitor::query()->forceCreate($stamp + $this->blankAttributes());
-            $this->limits->notify($company, 'github_monitors');
+        return DB::transaction(function () use ($user, $answers) {
+            $monitor = $this->recentDraft($user, $answers) ?? GithubMonitor::query()->forceCreate(['user_id' => $user->id] + $this->blankAttributes());
             $this->save($monitor, 1, $answers);
 
             return $monitor;
@@ -176,7 +133,7 @@ class GithubInterview
      * primeiro acabou de criar, igual (o mesmo autor, o mesmo setor e as mesmas respostas, há poucos segundos), em vez
      * de nascer outro (Red Team da E2d2). Um monitoramento diferente criado logo depois nasce normalmente.
      */
-    private function recentDraft(User $user, ?int $sectorId, array $answers): ?GithubMonitor
+    private function recentDraft(User $user, array $answers): ?GithubMonitor
     {
         $same = [];
 
@@ -189,7 +146,7 @@ class GithubInterview
         }
 
         return GithubMonitor::query()->visibleTo($user)->where('user_id', $user->id)->whereNull('completed_at')
-            ->where('sector_id', $sectorId)->where('created_at', '>=', now()->subSeconds(self::DOUBLE_SUBMIT_SECONDS))
+            ->where('created_at', '>=', now()->subSeconds(self::DOUBLE_SUBMIT_SECONDS))
             ->latest('id')->get()
             ->first(fn (GithubMonitor $draft) => collect($same)->every(fn ($value, $key) => $draft->{$key} == $value));
     }
@@ -219,9 +176,6 @@ class GithubInterview
             'fields' => $fields,
             'plan' => $step === self::LAST_STEP ? $this->plan($monitor) : null,
             'codeSearch' => app(GithubClient::class)->hasToken(),
-            // O setor de um monitoramento novo de empresa: o passo 1 escolhe; depois, "Trocar o setor" na página.
-            'sectors' => $step === 1 && ! $monitor->exists ? $this->visibility->sectorChoices($user) : collect(),
-            'sectorless' => $step === 1 && ! $monitor->exists && $this->visibility->canUseNoSector($user),
         ];
     }
 

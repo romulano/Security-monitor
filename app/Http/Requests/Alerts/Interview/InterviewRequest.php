@@ -20,7 +20,7 @@ abstract class InterviewRequest extends Request
      */
     public function startsNew(): bool
     {
-        return ! $this->filled('alerta') && $this->user()->isCompanyAccount();
+        return false;
     }
 
     /** Só no passo 1 e só para quem pode criar (a admin e o responsável; o membro, não). */

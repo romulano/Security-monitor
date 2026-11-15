@@ -6,7 +6,7 @@ use App\Exceptions\ActionRefused;
 use App\Models\NotificationChannel;
 use App\Models\User;
 use App\Services\Alerts\Notifier;
-use App\Services\Company\CompanyChannels;
+use App\Services\Access\Channels;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -24,7 +24,7 @@ class UpdateHandler
         private ConnectionLinks $links,
         private Notifier $notifier,
         private MessageBuilder $messages,
-        private CompanyChannels $channels,
+        private Channels $channels,
     ) {}
 
     public function handle(array $update): void
@@ -90,14 +90,6 @@ class UpdateHandler
         if (! $user) {
             $this->reply($chatId, 'Esse link de conexão expirou ou já foi usado. Gere outro em '
                 .'<a href="'.$this->messages->esc(route('alerts.telegram')).'">Alertas → Notificadores → Telegram</a>.');
-
-            return;
-        }
-
-        // O canal da empresa (E5a) só num grupo (P1): a conversa privada é de uma pessoa. Quem pode é conferido de novo
-        // agora (a pessoa pode ter perdido o papel nos 30 minutos do link), e a recusa vai como resposta no chat.
-        if ($type === 'private' && CompanyChannels::packedIsCompany($link['target'])) {
-            $this->reply($chatId, 'O canal da empresa só funciona num grupo do Telegram. Gere o link de novo em Notificadores e escolha "Num grupo".');
 
             return;
         }

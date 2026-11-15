@@ -74,19 +74,13 @@
                                 <span class="text-[11px] text-ink-700">(você)</span>
                             @endif
                             <span class="block text-xs text-ink-700">{{ $account->email }}</span>
-                            @if ($account->companyMembership && $account->companyMembership->joined_at === null)
-                                <span class="mt-0.5 block text-[11px] text-amber-300">ainda não entrou</span>
-                            @elseif (! $account->hasVerifiedEmail())
+                            @if (! $account->hasVerifiedEmail())
                                 <span class="mt-0.5 block text-[11px] text-amber-300">e-mail não confirmado</span>
                             @endif
                         </td>
                         <td class="px-3 py-2 text-xs">
-                            @php $membership = $account->companyMembership; @endphp
                             @if ($account->is_admin)
                                 <span class="rounded-full border border-accent/40 px-2 py-0.5 text-[11px] text-accent">admin</span>
-                            @elseif ($membership)
-                                @php $badge = ($membership->role === \App\Enums\CompanyRole::Admin ? 'admin da empresa ' : 'empresa ').$membership->company->name; @endphp
-                                <span title="{{ $badge }}" class="inline-block max-w-[12rem] truncate rounded-full border border-ink-700 px-2 py-0.5 align-bottom text-[11px] text-ink-400">{{ $badge }}</span>
                             @else
                                 <span class="rounded-full border border-ink-700 px-2 py-0.5 text-[11px] text-ink-400">usuário</span>
                             @endif
@@ -147,14 +141,12 @@
                                         <button class="rounded-md border border-ink-800 px-2.5 py-1 text-xs text-ink-200 hover:border-accent">Nova senha</button>
                                     </form>
 
-                                    @unless ($account->companyMembership)
                                     <form method="POST" action="{{ route('admin.users.destroy', $account) }}"
                                           data-confirm="Remover {{ $account->name }} ({{ $account->email }})? A conta e tudo o que está ligado a ela são apagados e a pessoa perde o acesso na hora. Não dá para desfazer.">
                                         @csrf
                                         @method('DELETE')
                                         <button class="rounded-md border border-ink-800 px-2.5 py-1 text-xs text-ink-700 hover:text-red-400">Remover</button>
                                     </form>
-                                    @endunless
                                 @endif
                             </div>
                         </td>

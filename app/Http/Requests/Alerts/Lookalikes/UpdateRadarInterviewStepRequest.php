@@ -21,7 +21,6 @@ class UpdateRadarInterviewStepRequest extends RadarInterviewRequest
                 'origem' => ['required', 'string', 'max:20'],
                 'outro' => ['nullable', 'string', 'max:255', 'required_if:origem,outro'],
                 // O setor do Radar novo (conta de empresa); quem pode usar qual, o Visibility confere ao criar.
-                'setor' => ['nullable', 'integer', 'min:1'],
             ]
             : [
                 'empresa' => ['required', 'string', 'max:120'],
@@ -47,12 +46,6 @@ class UpdateRadarInterviewStepRequest extends RadarInterviewRequest
     public function provenId(): ?int
     {
         return ctype_digit((string) $this->input('origem')) ? (int) $this->input('origem') : null;
-    }
-
-    /** O setor escolhido para o Radar novo (nulo: sem setor, só a admin pode). */
-    public function sectorId(): ?int
-    {
-        return $this->filled('setor') ? (int) $this->validated('setor') : null;
     }
 
     public function typed(): ?string

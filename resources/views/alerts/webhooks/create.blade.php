@@ -48,15 +48,8 @@
             <section class="space-y-3 rounded-xl border border-ink-800 bg-ink-900 p-5">
                 <h2 class="font-semibold text-white">O domínio precisa ser seu</h2>
                 <p class="text-sm text-ink-200">
-                    @if ($scope)
-                        O Security Monitor só chama endereços de um domínio que a empresa comprovou em
-                        <a href="{{ route('company.domains') }}" class="text-accent hover:underline">Domínios da empresa</a>.
-                        Aqui valem os domínios sem setor{{ $scope['sector'] === null ? '' : ' e os do setor '.$scope['sector'] }}.
-                        É o que impede alguém de usar o Security Monitor contra o site de outra pessoa.
-                    @else
                         O Security Monitor só chama endereços de um domínio que a sua conta comprovou, pelo registro TXT
                         <span class="font-mono">secmon-verify=…</span> no DNS: é o que impede alguém de usar o Security Monitor contra o site de outra pessoa.
-                    @endif
                     A prova vale para o domínio e para os subdomínios dele.
                 </p>
                 @if ($proven->isNotEmpty())

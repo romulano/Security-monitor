@@ -4,7 +4,7 @@ namespace App\Http\Requests\Alerts\Github;
 
 use App\Http\Requests\Request;
 use App\Models\GithubMonitor;
-use App\Services\Company\Visibility;
+use App\Services\Access\Visibility;
 use Illuminate\Support\Collection;
 
 /**
@@ -45,7 +45,6 @@ abstract class GithubRequest extends Request
         $monitor = $this->monitor();
 
         return $monitor !== null
-            && ($monitor->company_id === null || $this->filled('monitor'))
             && app(Visibility::class)->manages($this->user(), $monitor);
     }
 }

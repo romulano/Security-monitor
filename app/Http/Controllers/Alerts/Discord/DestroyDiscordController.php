@@ -15,6 +15,6 @@ class DestroyDiscordController extends Controller
     {
         $this->discord->disconnect($request->channel(), $request->user());
 
-        return redirect()->route($request->user()->isCompanyAccount() ? 'alerts.notifiers' : 'alerts.discord')->with('status', 'Discord desconectado. Os alertas continuam guardados em Alertas.');
+        return redirect()->route('alerts.discord')->with('status', 'Discord desconectado. Os alertas continuam guardados em Alertas.');
     }
 }

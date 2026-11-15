@@ -44,7 +44,6 @@
             @if ($many)
                 <span class="rounded border border-ink-700 px-1.5 py-px text-xs text-ink-200">{{ $match->profile->displayName() }}</span>
             @endif
-            @include('alerts.partials.sector-badge', ['item' => $match->profile])
             {{ $match->kind === 'case_update' ? 'Atualização · ' : '' }}Por quê: <span class="text-amber-200">{{ $match->reasonTerms() }}</span>
             · {{ $outcome }}
         </span>

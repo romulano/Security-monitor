@@ -8,8 +8,8 @@ use App\Models\NotificationChannel;
 use App\Models\NotificationDelivery;
 use App\Services\Alerts\AlertRouter;
 use App\Services\Alerts\Notifier;
-use App\Services\Company\DeliveryGate;
-use App\Services\Company\Destinations;
+use App\Services\Access\DeliveryGate;
+use App\Services\Access\Destinations;
 use App\Support\Settings;
 use Illuminate\Support\Str;
 
@@ -53,7 +53,7 @@ class LookalikeAlertRouter
 
     /**
      * Os canais do Radar (os de quem o criou, na conta pessoal; os do escopo dele, na empresa, E5b1) que recebem um
-     * aviso deste risco agora, ou o motivo de nenhum receber. Também serve ao aviso de subdomínio (SubdomainAlertRouter).
+     * aviso deste risco agora, ou o motivo de nenhum receber.
      *
      * @return array{0: list<NotificationChannel>, 1: ?string}
      */

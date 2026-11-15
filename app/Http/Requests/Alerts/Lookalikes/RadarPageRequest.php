@@ -4,7 +4,7 @@ namespace App\Http\Requests\Alerts\Lookalikes;
 
 use App\Http\Requests\Request;
 use App\Models\LookalikeWatch;
-use App\Services\Company\Visibility;
+use App\Services\Access\Visibility;
 use Illuminate\Support\Collection;
 
 /**
@@ -44,7 +44,6 @@ abstract class RadarPageRequest extends Request
         $watch = $this->watch();
 
         return $watch !== null
-            && ($watch->company_id === null || $this->filled('radar'))
             && app(Visibility::class)->manages($this->user(), $watch);
     }
 }

@@ -5,16 +5,11 @@ namespace App\Services\Lookalike;
 use App\Exceptions\ActionRefused;
 use App\Jobs\ScanLookalikes;
 use App\Models\AlertProfile;
-use App\Models\Company;
 use App\Models\LookalikeWatch;
 use App\Models\MonitoredDomain;
 use App\Models\OwnedDomain;
 use App\Models\User;
-use App\Services\Company\Companies;
-use App\Services\Company\CompanyLimits;
-use App\Services\Company\ItemSectors;
-use App\Services\Company\Viewer;
-use App\Services\Company\Visibility;
+use App\Services\Access\Visibility;
 use App\Services\Domains\DomainOwner;
 use App\Services\Domains\DomainOwnership;
 use App\Support\DomainName;
@@ -61,46 +56,24 @@ class RadarInterview
             ->values();
     }
 
-    /** Um Radar por domínio (na empresa, em qualquer setor). Na empresa, o Radar pode ser de um setor que a conta não vê: a mensagem não diz qual (Red Team da E2d1). */
+    /** Um Radar por domínio. */
     private function ensureNoOtherRadar(User $user, ?LookalikeWatch $watch, string $name, bool $fromList): void
     {
         if ($this->watches($user)->whereKeyNot($watch?->id ?? 0)->whereHas('domain', fn ($q) => $q->where('domain', $name))->exists()) {
-            $where = $this->visibility->viewer($user)->kind === Viewer::PERSONAL ? '' : ' na empresa';
-            throw ValidationException::withMessages([$fromList ? 'origem' : 'outro' => "Já existe um Radar para {$name}{$where}."]);
+            throw ValidationException::withMessages([$fromList ? 'origem' : 'outro' => "Já existe um Radar para {$name}."]);
         }
     }
 
-    /**
-     * Na empresa não há "5 por criador" (E5d, P7): o teto é o limite de domínios. Sem ele, os nomes de baixo de um
-     * domínio comprovado (que não gastam domínio, E3b) dariam Radares sem fim (Red Team B da E5d).
-     */
-    private function ensureCompanyRoom(Company $locked): void
-    {
-        $max = app(Companies::class)->limit($locked, 'domains');
-
-        if (LookalikeWatch::query()->where('company_id', $locked->id)->count() >= $max) {
-            throw new ActionRefused("A empresa já tem {$max} Radares, o máximo (um por domínio, até o limite de domínios). Para adicionar outro, exclua um Radar que não use mais. ".CompanyLimits::MORE);
-        }
-    }
-
-    /** Os Radares que contam para "já existe": na conta pessoal, os dela; na empresa, os da empresa toda (o sistema conferindo). */
+    /** Os Radares que contam para "já existe": os da conta. */
     private function watches(User $user): Builder
     {
-        $viewer = $this->visibility->viewer($user);
-
-        return $viewer->kind === Viewer::PERSONAL || $viewer->companyId === null
-            ? LookalikeWatch::query()->visibleTo($user)
-            : LookalikeWatch::query()->where('company_id', $viewer->companyId);
+        return LookalikeWatch::query()->visibleTo($user);
     }
 
-    /** A conta cria Radares: a pessoal sempre; na empresa, a admin e quem responde por algum setor (o membro, não). */
+    /** A conta cria Radares. */
     public function mayCreate(User $user): bool
     {
-        return match ($this->visibility->viewer($user)->kind) {
-            Viewer::PERSONAL, Viewer::ADMIN => true,
-            Viewer::SECTORS => $this->visibility->sectorChoices($user)->isNotEmpty(),
-            default => false,
-        };
+        return true;
     }
 
     /** O que a tela de um passo mostra. */
@@ -115,9 +88,6 @@ class RadarInterview
             'proven' => $step === 1 && ! $watch?->isCompleted() ? $this->provenDomains($user, $watch) : collect(),
             'ownership' => $step === 3 && $watch?->domain ? $this->ownership->screenFor($watch->domain) : null,
             'samples' => $step === 2 && $watch ? $this->samples($watch) : ['hosts' => [], 'total' => 0],
-            // O setor do Radar novo de empresa (o passo 1 só escolhe na criação; depois, "Trocar o setor" na tela do Radar).
-            'sectors' => $step === 1 && ! $watch ? $this->visibility->sectorChoices($user) : collect(),
-            'sectorless' => $step === 1 && ! $watch && $this->visibility->canUseNoSector($user),
         ];
     }
 
@@ -133,7 +103,7 @@ class RadarInterview
      * empresa e marcas vazias: quem vigia pode ser outra empresa, então o
      * cliente escreve os nomes no passo 2, sem copiar do alerta de notícias.
      */
-    public function saveDomain(User $user, ?LookalikeWatch $watch, ?int $provenId, ?string $typed, ?int $sectorId = null): LookalikeWatch
+    public function saveDomain(User $user, ?LookalikeWatch $watch, ?int $provenId, ?string $typed): LookalikeWatch
     {
         if ($watch?->isCompleted()) {
             throw new ActionRefused('O domínio de um Radar ativado não muda. Para vigiar outro domínio, adicione outro Radar em Integração.');
@@ -143,8 +113,7 @@ class RadarInterview
             throw new ActionRefused('Você chegou ao limite de '.LookalikeWatch::MAX_PER_USER.' Radares. Exclua um para adicionar outro.');
         }
 
-        // Quem cria e onde (empresa e setor): conferido antes de tudo, nunca pelo formulário (Visibility::stampFor).
-        $stamp = $watch ? null : $this->visibility->stampFor($user, $sectorId);
+        $stamp = $watch ? null : $this->visibility->stampFor($user);
 
         $source = $provenId ? $this->provenDomains($user, $watch)->firstWhere('id', $provenId) : null;
 
@@ -158,26 +127,10 @@ class RadarInterview
         $this->ensureNoOtherRadar($user, $watch, $name, $source !== null);
 
         return DB::transaction(function () use ($user, $watch, $source, $name, $stamp) {
-            // Radar novo de empresa: a empresa travada antes de conferir o setor de novo, porque apagar o setor também a
-            // trava; um setor apagado no mesmo instante vira a mensagem, e não um erro de FK (Red Team da E2f).
-            if ($stamp !== null && $stamp['company_id'] !== null) {
-                $company = Company::query()->lockForUpdate()->findOrFail($stamp['company_id']);
-                ItemSectors::ensureSectorExists($stamp['sector_id']);
-                // Com a empresa travada, de novo: dois pedidos juntos (duas abas, a admin e um responsável) não dão dois
-                // Radares para o mesmo domínio, e o total não passa do limite de domínios (Red Team B da E5d).
-                $this->ensureNoOtherRadar($user, null, $name, $source !== null);
-                $this->ensureCompanyRoom($company);
-            } elseif ($watch?->company_id !== null) {
-                Company::query()->lockForUpdate()->findOrFail($watch->company_id);
-                $this->ensureNoOtherRadar($user, $watch, $name, $source !== null);
-            }
-
             $current = $watch?->domain;
-            // O dono da posse: a empresa do Radar (o token da empresa) ou a conta (DESENHO-5.3 §2.1). O Radar novo
-            // ainda não existe quando a cópia do domínio nasce: o dono vem do carimbo.
             // A cópia e a linha nova da posse ficam com quem criou o Radar, não com quem editou o rascunho (Red Team da E2d1).
             $creator = $watch?->user_id ?? $user->id;
-            $owner = $watch ? DomainOwner::of($watch->company_id, $creator, $watch->sector_id) : DomainOwnership::ownerOfStamp($stamp);
+            $owner = DomainOwner::of($creator);
 
             // Mesmo domínio: fica como está (a posse do dono chega sozinha).
             if ($current && $current->domain === $name) {

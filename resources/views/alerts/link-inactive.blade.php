@@ -1,4 +1,4 @@
-{{-- Link de uma mensagem (/a/, /r/, /g/) que já não vale: empresa suspensa, conta desativada ou sem visão do item (E2e). Não diz qual, para não contar a terceiros o que houve com a empresa. --}}
+{{-- Link de uma mensagem (/a/, /r/, /g/) que já não vale: a conta deixou de ver o item. --}}
 @extends('layouts.app')
 
 @section('title', 'Link inativo · Security Monitor')

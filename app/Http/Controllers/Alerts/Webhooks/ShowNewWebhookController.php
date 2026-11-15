@@ -14,6 +14,6 @@ class ShowNewWebhookController extends Controller
 
     public function __invoke(ShowNewWebhookRequest $request): View
     {
-        return view('alerts.webhooks.create', $this->webhooks->newPage($request->user(), $request->channelScope()));
+        return view('alerts.webhooks.create', $this->webhooks->newPage($request->user()));
     }
 }

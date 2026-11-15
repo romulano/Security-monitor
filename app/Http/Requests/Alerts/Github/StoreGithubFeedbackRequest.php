@@ -3,7 +3,7 @@
 namespace App\Http\Requests\Alerts\Github;
 
 use App\Http\Requests\Alerts\FeedbackRequest;
-use App\Services\Company\Visibility;
+use App\Services\Access\Visibility;
 
 class StoreGithubFeedbackRequest extends FeedbackRequest
 {

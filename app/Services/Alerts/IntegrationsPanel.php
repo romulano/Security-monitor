@@ -43,7 +43,6 @@ class IntegrationsPanel
             'completed' => $profiles->whereNotNull('completed_at'),
             // O limite é por quem cria (até a E5d): a lista mostra também o que outras contas da empresa criaram.
             'canAddProfile' => $this->alerts->canCreate($user),
-            'companyAccount' => $user->isCompanyAccount(),
             // O rascunho que a tela oferece continuar: só se a conta o configura (o membro vê, mas não entra na entrevista).
             'draftManaged' => ($draft = $profiles->whereNull('completed_at')->first()) !== null
                 && AlertProfile::query()->manageableBy($user)->whereKey($draft->id)->exists(),

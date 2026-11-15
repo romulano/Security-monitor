@@ -3,7 +3,7 @@
 namespace App\Http\Requests\Alerts\Domain;
 
 use App\Http\Requests\Request;
-use App\Services\Company\Visibility;
+use App\Services\Access\Visibility;
 
 class DecideFindingRequest extends Request
 {

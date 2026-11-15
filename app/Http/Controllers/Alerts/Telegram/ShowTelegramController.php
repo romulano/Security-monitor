@@ -27,11 +27,6 @@ class ShowTelegramController extends Controller
         // O link desta sessão saiu da espera: ou o bot conectou a conversa, ou o tempo acabou.
         $connected = $this->telegram->finishedLink($channel, $session);
 
-        // O canal da empresa recém-conectado ganha a tela dele (`?canal=`).
-        if ($connected && $channel->isCompany() && $request->channel() === null) {
-            return redirect()->to($channel->settingsUrl())->with('status', 'Telegram conectado. Mandamos uma mensagem de teste para o grupo.');
-        }
-
         if ($connected !== null) {
             $request->session()->now(...$connected
                 ? ['status', 'Telegram conectado. Mandamos uma mensagem de teste para a conversa.']

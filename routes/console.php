@@ -35,12 +35,6 @@ Schedule::command('secmon:alerts-verify-domains')
     ->everyTenMinutes()
     ->withoutOverlapping(10);
 
-// Subdomínios das empresas (E3c): a descoberta passiva (certificados públicos e DNS) de cada domínio comprovado, uma vez
-// por dia, uns poucos domínios por rodada; o comando só enfileira (fila `subdomains`, a última do worker de baixa prioridade).
-Schedule::command('secmon:subdomains-discover --due')
-    ->hourly()
-    ->withoutOverlapping(30);
-
 Schedule::command('secmon:alerts-discover --due')
     ->dailyAt('03:00')
     ->withoutOverlapping(60);
@@ -114,12 +108,6 @@ Schedule::command('secmon:prune')
     ->dailyAt('03:40')
     ->withoutOverlapping(60)
     ->appendOutputTo(storage_path('logs/prune.log'));
-
-// Plano empresarial: a conta de empresa desativada há mais de 30 dias é apagada (§4.6, D9).
-Schedule::command('secmon:company-purge')
-    ->dailyAt('03:50')
-    ->withoutOverlapping(60)
-    ->appendOutputTo(storage_path('logs/company-purge.log'));
 
 // Testes de segurança: o vigia das execuções, a cada minuto. Redespacha o passo que um deploy
 // matou, finaliza a execução parada, confere o portão da que roda, retoma a pausa vencida, começa

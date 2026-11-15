@@ -49,14 +49,6 @@ use App\Http\Controllers\Admin\Articles\UpdateArticleTextController;
 use App\Http\Controllers\Admin\Cases\DestroyCaseController;
 use App\Http\Controllers\Admin\Cases\ReindexCasesController;
 use App\Http\Controllers\Admin\Cases\ToggleCaseVisibilityController;
-use App\Http\Controllers\Admin\Companies\DisableCompanyController;
-use App\Http\Controllers\Admin\Companies\EnableCompanyController;
-use App\Http\Controllers\Admin\Companies\ListCompaniesController;
-use App\Http\Controllers\Admin\Companies\ResendCompanyEntryController;
-use App\Http\Controllers\Admin\Companies\ResumeCompanyController;
-use App\Http\Controllers\Admin\Companies\StoreCompanyController;
-use App\Http\Controllers\Admin\Companies\SuspendCompanyController;
-use App\Http\Controllers\Admin\Companies\UpdateCompanyLimitsController;
 use App\Http\Controllers\Admin\Emails\SendTestEmailController;
 use App\Http\Controllers\Admin\Emails\ShowEmailsController;
 use App\Http\Controllers\Admin\Logbook\DestroyLogEntryController;
@@ -127,7 +119,6 @@ use App\Http\Controllers\Admin\Users\ResetUserPasswordController;
 use App\Http\Controllers\Admin\Users\RevokePentestAccessController;
 use App\Http\Controllers\Alerts\Center\ToggleChannelPauseController;
 use App\Http\Controllers\Alerts\Center\UpdateAlertCenterController;
-use App\Http\Controllers\Alerts\ChangeAlertSectorController;
 use App\Http\Controllers\Alerts\DestroyAlertController;
 use App\Http\Controllers\Alerts\Discord\ConnectDiscordController;
 use App\Http\Controllers\Alerts\Discord\DestroyDiscordController;
@@ -141,7 +132,6 @@ use App\Http\Controllers\Alerts\Domain\DecideDnsSuggestionsController;
 use App\Http\Controllers\Alerts\Domain\DecideFindingController;
 use App\Http\Controllers\Alerts\Domain\RerunDomainWallsController;
 use App\Http\Controllers\Alerts\Domain\VerifyDomainController;
-use App\Http\Controllers\Alerts\Github\ChangeGithubSectorController;
 use App\Http\Controllers\Alerts\Github\DestroyGithubMonitorController;
 use App\Http\Controllers\Alerts\Github\FinishGithubInterviewController;
 use App\Http\Controllers\Alerts\Github\ResendGithubFindingController;
@@ -165,7 +155,6 @@ use App\Http\Controllers\Alerts\Keys\ShowKeyDomainController;
 use App\Http\Controllers\Alerts\Keys\ShowKeysController;
 use App\Http\Controllers\Alerts\Keys\UpdateKeyDomainPathsController;
 use App\Http\Controllers\Alerts\Lookalikes\ActivateRadarController;
-use App\Http\Controllers\Alerts\Lookalikes\ChangeRadarSectorController;
 use App\Http\Controllers\Alerts\Lookalikes\DestroyRadarController;
 use App\Http\Controllers\Alerts\Lookalikes\ScanLookalikesNowController;
 use App\Http\Controllers\Alerts\Lookalikes\ShowAbuseKitController;
@@ -250,36 +239,6 @@ use App\Http\Controllers\Auth\ShowRegisterController;
 use App\Http\Controllers\Auth\ShowTwoFactorChallengeController;
 use App\Http\Controllers\Auth\ShowVerifyEmailController;
 use App\Http\Controllers\Auth\VerifyEmailController;
-use App\Http\Controllers\Company\AcceptCompanyInviteController;
-use App\Http\Controllers\Company\AddCompanySectorMemberController;
-use App\Http\Controllers\Company\CancelCompanyInviteController;
-use App\Http\Controllers\Company\ChangeCompanyDomainSectorController;
-use App\Http\Controllers\Company\CompleteCompanyEntryController;
-use App\Http\Controllers\Company\DeactivateCompanyMemberController;
-use App\Http\Controllers\Company\DeleteCompanySectorController;
-use App\Http\Controllers\Company\ExportCompanyActivityController;
-use App\Http\Controllers\Company\ListCompanyAccountsController;
-use App\Http\Controllers\Company\ListCompanyActivityController;
-use App\Http\Controllers\Company\ListCompanyDomainsController;
-use App\Http\Controllers\Company\ListCompanySectorsController;
-use App\Http\Controllers\Company\ReactivateCompanyMemberController;
-use App\Http\Controllers\Company\RemoveCompanyDomainController;
-use App\Http\Controllers\Company\RemoveCompanySectorMemberController;
-use App\Http\Controllers\Company\RemoveCompanySubdomainController;
-use App\Http\Controllers\Company\RenameCompanySectorController;
-use App\Http\Controllers\Company\ResendCompanyInviteController;
-use App\Http\Controllers\Company\ResetCompanyMemberTwoFactorController;
-use App\Http\Controllers\Company\ShowCompanyEntryController;
-use App\Http\Controllers\Company\ShowCompanyInviteController;
-use App\Http\Controllers\Company\StoreCompanyDomainController;
-use App\Http\Controllers\Company\StoreCompanyInviteController;
-use App\Http\Controllers\Company\StoreCompanySectorController;
-use App\Http\Controllers\Company\StoreCompanySubdomainController;
-use App\Http\Controllers\Company\TransferCompanyAdminController;
-use App\Http\Controllers\Company\UpdateCompanyMemberRoleController;
-use App\Http\Controllers\Company\UpdateCompanySectorManagerController;
-use App\Http\Controllers\Company\UpdateCompanyTwoFactorController;
-use App\Http\Controllers\Company\VerifyCompanyDomainController;
 use App\Http\Controllers\Site\ShowAboutController;
 use App\Http\Controllers\Site\ShowCaseController;
 use App\Http\Controllers\Site\ShowDashboardController;
@@ -339,20 +298,6 @@ Route::middleware('guest')->group(function () {
     });
 });
 
-// Plano empresarial: o link da admin da empresa para escolher a senha (CompanyEntry). A assinatura (7 dias) vem antes
-// da conta; o link usado, vencido ou de empresa inativa é 404. Sem ENTERPRISE_ENABLED, 404.
-Route::middleware(['guest', 'enterprise', 'signed'])->prefix('empresa/entrar')->name('company.')->group(function () {
-    Route::get('/{user}', ShowCompanyEntryController::class)->whereNumber('user')->middleware('throttle:20,1,empresa-entrada')->name('entry');
-    Route::post('/{user}', CompleteCompanyEntryController::class)->whereNumber('user')->middleware('throttle:10,1,empresa-entrada-senha')->name('entry.complete');
-});
-
-// O convite da empresa (CompanyInvites): o token (só o hash fica no banco) substitui o login. Convite usado, cancelado,
-// vencido ou de empresa inativa cai na mesma página amigável. Sem ENTERPRISE_ENABLED, 404.
-Route::middleware(['guest', 'enterprise'])->prefix('empresa/convite')->name('company.')->group(function () {
-    Route::get('/{token}', ShowCompanyInviteController::class)->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:20,1,empresa-convite')->name('invite');
-    Route::post('/{token}', AcceptCompanyInviteController::class)->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:10,1,empresa-convite-aceitar')->name('invite.accept');
-});
-
 // O link do e-mail de confirmação: a assinatura (vale 1 h) substitui o login, então abre em qualquer aparelho.
 // Ela é conferida antes de a conta ser procurada; o hash é do e-mail atual (o link de um e-mail trocado é 404).
 Route::get('/conta/confirmar-email/{user}/{hash}', VerifyEmailController::class)
@@ -364,61 +309,9 @@ Route::get('/conta/confirmar-email/{user}/{hash}', VerifyEmailController::class)
 // é só a conta: todos os limites dela somam no mesmo contador, e gravar a entrevista do Radar (30/min)
 // esgotava o "Verificar agora" (6/min). O RouteTableTest cobra o contador próprio em toda rota com login.
 // `two-factor.required`: o admin com TWO_FACTOR_ADMIN_REQUIRED e sem a 2FA só chega à tela de configurar (I1 do Red Team).
-// Ele roda depois do EnsureCompanyAccountActive (no grupo `web`): a conta de empresa inativa cai antes e nunca chega à tela de configurar.
 Route::middleware(['auth', 'two-factor.required'])->group(function () {
     Route::get('/conta', ShowAccountController::class)->name('account.show');
 
-    // Atividade da empresa (§4.9): a auditoria, com filtros e CSV; só quem administra.
-    Route::middleware(['enterprise', 'company.admin'])->prefix('empresa/atividade')->name('company.')->group(function () {
-        Route::get('/', ListCompanyActivityController::class)->name('activity');
-        Route::get('/csv', ExportCompanyActivityController::class)->middleware('throttle:10,1,empresa-atividade-csv')->name('activity.csv');
-    });
-
-    // Setores da empresa (E2a): só quem administra a empresa; os outros levam 404 antes de procurar o setor da URL.
-    Route::middleware(['enterprise', 'company.admin'])->prefix('empresa/setores')->name('company.')->group(function () {
-        Route::get('/', ListCompanySectorsController::class)->name('sectors');
-        Route::post('/', StoreCompanySectorController::class)->middleware('throttle:20,1,empresa-setor-criar')->name('sectors.store');
-        // Apagar (E2f, §4.13): o que era do setor fica sem setor, as contas saem; com a reautenticação.
-        Route::delete('/', DeleteCompanySectorController::class)->middleware(['throttle:10,1,empresa-setor-apagar', 'reauth'])->name('sectors.delete');
-        Route::put('/{sector}', RenameCompanySectorController::class)->whereNumber('sector')->middleware('throttle:30,1,empresa-setor-renomear')->name('sectors.rename');
-        Route::post('/{sector}/contas', AddCompanySectorMemberController::class)->whereNumber('sector')->middleware('throttle:60,1,empresa-setor-por')->name('sectors.members.add');
-        Route::delete('/{sector}/contas/{member}', RemoveCompanySectorMemberController::class)->whereNumber(['sector', 'member'])->middleware('throttle:60,1,empresa-setor-tirar')->name('sectors.members.remove');
-        Route::put('/{sector}/contas/{member}/responsavel', UpdateCompanySectorManagerController::class)->whereNumber(['sector', 'member'])->middleware('throttle:60,1,empresa-setor-responsavel')->name('sectors.manager');
-    });
-
-    // Domínios da empresa (E3a3, DESENHO-5.3 §2.7): toda conta da empresa vê os domínios do que vê; quem configura
-    // (a admin, o responsável nos setores dele) cadastra, comprova, troca o setor e remove. A conta pessoal leva 404.
-    // Remover leva o domínio no corpo, como apagar setor: a reautenticação vem antes e não diz se o id existe.
-    Route::middleware(['enterprise', 'company.account'])->prefix('empresa/dominios')->name('company.')->group(function () {
-        Route::get('/', ListCompanyDomainsController::class)->name('domains');
-        Route::post('/', StoreCompanyDomainController::class)->middleware('throttle:20,1,empresa-dominio-criar')->name('domains.store');
-        Route::delete('/', RemoveCompanyDomainController::class)->middleware(['throttle:10,1,empresa-dominio-remover', 'reauth'])->name('domains.remove');
-        Route::post('/{domain}/verificar', VerifyCompanyDomainController::class)->whereNumber('domain')->middleware('throttle:6,1,empresa-dominio-verificar')->name('domains.verify');
-        Route::put('/{domain}/setor', ChangeCompanyDomainSectorController::class)->whereNumber('domain')->middleware('throttle:20,1,empresa-dominio-setor')->name('domains.sector');
-        // Subdomínios do domínio (E3b, R6): quem vê o domínio chega à rota (o resto, 404); quem cadastra e tira (a admin,
-        // quem responde pelo setor do domínio) é conferido no CompanySubdomains.
-        Route::post('/{domain}/subdominios', StoreCompanySubdomainController::class)->whereNumber('domain')->middleware('throttle:30,1,empresa-subdominio')->name('subdomains.store');
-    });
-    Route::middleware(['enterprise', 'company.account'])->prefix('empresa/subdominios')->name('company.')->group(function () {
-        Route::delete('/{subdomain}', RemoveCompanySubdomainController::class)->whereNumber('subdomain')->middleware('throttle:30,1,empresa-subdominio-tirar')->name('subdomains.remove');
-    });
-
-    // Contas da empresa (E1c): só quem administra a empresa; os outros levam 404. Sem ENTERPRISE_ENABLED, 404.
-    Route::middleware(['enterprise', 'company.admin'])->prefix('empresa/contas')->name('company.')->group(function () {
-        Route::get('/', ListCompanyAccountsController::class)->name('accounts');
-        Route::post('/convites', StoreCompanyInviteController::class)->middleware('throttle:20,1,empresa-convidar')->name('invites.store');
-        Route::post('/convites/{invite}/reenviar', ResendCompanyInviteController::class)->whereNumber('invite')->middleware('throttle:10,1,empresa-convite-reenviar')->name('invites.resend');
-        Route::delete('/convites/{invite}', CancelCompanyInviteController::class)->whereNumber('invite')->name('invites.cancel');
-        // Papéis (§4.3): o de membro e responsável aqui; a administração passa com a reautenticação.
-        Route::put('/{member}/papel', UpdateCompanyMemberRoleController::class)->whereNumber('member')->middleware('throttle:30,1,empresa-papel')->name('members.role');
-        // Remover (§4.6): a conta fica desativada, com a reautenticação; reativar confere a vaga.
-        Route::post('/{member}/remover', DeactivateCompanyMemberController::class)->whereNumber('member')->middleware(['reauth', 'throttle:10,1,empresa-remover'])->name('members.deactivate');
-        Route::post('/{member}/reativar', ReactivateCompanyMemberController::class)->whereNumber('member')->middleware(['reauth', 'throttle:10,1,empresa-reativar'])->name('members.reactivate');
-        Route::post('/administracao', TransferCompanyAdminController::class)->middleware(['reauth', 'throttle:5,1,empresa-administracao'])->name('admin.transfer');
-        // A 2FA da empresa (E1f): exigir de todas as contas e redefinir a de quem perdeu o celular (D11), com a reautenticação.
-        Route::post('/duas-etapas', UpdateCompanyTwoFactorController::class)->middleware(['throttle:10,1,empresa-2fa', 'reauth'])->name('two-factor.update');
-        Route::post('/duas-etapas/redefinir', ResetCompanyMemberTwoFactorController::class)->middleware(['throttle:10,1,empresa-2fa-redefinir', 'reauth'])->name('two-factor.reset');
-    });
     Route::put('/conta', UpdateAccountController::class)->name('account.update');
     Route::put('/conta/senha', UpdatePasswordController::class)->name('account.password');
     Route::post('/logout', LogoutController::class)->name('logout');
@@ -478,8 +371,6 @@ Route::middleware(['auth', 'two-factor.required'])->group(function () {
         Route::get('/noticias', ShowNewsController::class)->name('news');
         Route::post('/novo', StoreAlertController::class)->middleware('throttle:10,1,alerta-novo')->name('store');
         Route::post('/pausar', ToggleAlertPauseController::class)->name('pause');
-        // O setor do alerta de empresa (E2c2): quem o configura troca, com a Atividade registrando.
-        Route::put('/setor', ChangeAlertSectorController::class)->middleware('throttle:20,1,alerta-setor')->name('sector');
         Route::delete('/', DestroyAlertController::class)->name('destroy');
         Route::post('/{match}/feedback', StoreAlertFeedbackController::class)->whereNumber('match')->middleware('throttle:30,1,alerta-avaliar')->name('feedback');
         Route::post('/{match}/reenviar', ResendAlertController::class)->whereNumber('match')->middleware('throttle:10,1,alerta-reenviar')->name('resend');
@@ -543,8 +434,6 @@ Route::middleware(['auth', 'two-factor.required'])->group(function () {
         Route::post('/radar-de-dominios/entrevista/ativar', ActivateRadarController::class)->middleware('throttle:10,1,radar-ativar')->name('lookalikes.interview.activate');
         Route::post('/radar-de-dominios/verificar', ScanLookalikesNowController::class)->middleware('throttle:6,1,radar-varredura')->name('lookalikes.scan');
         Route::post('/radar-de-dominios/pausar', ToggleLookalikesPauseController::class)->name('lookalikes.pause');
-        // O setor do Radar de empresa (E2d1): quem o configura troca, com a Atividade registrando.
-        Route::put('/radar-de-dominios/setor', ChangeRadarSectorController::class)->middleware('throttle:20,1,radar-setor')->name('lookalikes.sector');
         Route::get('/radar-de-dominios/{lookalike}', ShowLookalikeController::class)->whereNumber('lookalike')->name('lookalikes.show');
         Route::post('/radar-de-dominios/{lookalike}/avaliar', StoreLookalikeVerdictController::class)->whereNumber('lookalike')->middleware('throttle:30,1,radar-parecer')->name('lookalikes.verdict');
         Route::get('/radar-de-dominios/{lookalike}/denuncia', ShowAbuseKitController::class)->whereNumber('lookalike')->name('lookalikes.kit');
@@ -563,8 +452,6 @@ Route::middleware(['auth', 'two-factor.required'])->group(function () {
         Route::post('/github/entrevista/concluir', FinishGithubInterviewController::class)->middleware('throttle:10,1,github-concluir')->name('github.interview.finish');
         Route::post('/github/verificar', ScanGithubNowController::class)->middleware('throttle:6,1,github-varredura')->name('github.scan');
         Route::post('/github/pausar', ToggleGithubPauseController::class)->name('github.pause');
-        // O setor do monitoramento de empresa (E2d2): quem o configura troca, com a Atividade registrando.
-        Route::put('/github/setor', ChangeGithubSectorController::class)->middleware('throttle:20,1,github-setor')->name('github.sector');
         Route::get('/github/{finding}', ShowGithubFindingController::class)->whereNumber('finding')->name('github.show');
         Route::post('/github/{finding}/avaliar', StoreGithubFeedbackController::class)->whereNumber('finding')->middleware('throttle:30,1,github-avaliar')->name('github.feedback');
         Route::post('/github/{finding}/enviar', ResendGithubFindingController::class)->whereNumber('finding')->middleware('throttle:10,1,github-reenviar')->name('github.resend');
@@ -799,19 +686,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::delete('/usuarios/{user}', DestroyUserController::class)->name('users.destroy');
     Route::post('/usuarios/{user}/testes', GrantPentestAccessController::class)->whereNumber('user')->middleware('throttle:30,1,admin-usuario-testes')->name('users.pentest.grant');
     Route::delete('/usuarios/{user}/testes', RevokePentestAccessController::class)->whereNumber('user')->name('users.pentest.revoke');
-
-    // Plano empresarial (§4.11): as empresas, o uso contra os limites, os limites de cada uma, a suspensão (D7) e a
-    // chave da empresa (D12). Só o admin do Security Monitor cria empresa (D6); sem ENTERPRISE_ENABLED, tudo 404.
-    Route::middleware('enterprise')->prefix('empresas')->name('companies.')->group(function () {
-        Route::get('/', ListCompaniesController::class)->name('index');
-        Route::post('/', StoreCompanyController::class)->middleware('throttle:10,1,admin-empresa-nova')->name('store');
-        Route::put('/{company}/limites', UpdateCompanyLimitsController::class)->whereNumber('company')->name('limits');
-        Route::post('/{company}/suspender', SuspendCompanyController::class)->whereNumber('company')->name('suspend');
-        Route::post('/{company}/reativar', ResumeCompanyController::class)->whereNumber('company')->name('resume');
-        Route::post('/{company}/ligar', EnableCompanyController::class)->whereNumber('company')->name('enable');
-        Route::post('/{company}/desligar', DisableCompanyController::class)->whereNumber('company')->name('disable');
-        Route::post('/{company}/link', ResendCompanyEntryController::class)->whereNumber('company')->middleware('throttle:10,1,admin-empresa-link')->name('entry');
-    });
 
     // Testes ativos (P6b): a chave e o "Parar tudo", as aprovações e as execuções de todas as contas. Desligar, "Parar
     // tudo" e o Parar de uma execução não têm limite de requisições: parar nunca é recusado.

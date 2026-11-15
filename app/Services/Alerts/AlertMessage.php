@@ -5,7 +5,7 @@ namespace App\Services\Alerts;
 use App\Models\AlertMatch;
 use App\Models\AlertProfile;
 use App\Models\NewsCase;
-use App\Services\Company\Destinations;
+use App\Services\Access\Destinations;
 use Illuminate\Support\Str;
 
 /**

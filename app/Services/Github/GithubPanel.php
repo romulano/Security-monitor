@@ -8,10 +8,8 @@ use App\Models\GithubFinding;
 use App\Models\GithubMonitor;
 use App\Models\NotificationChannel;
 use App\Models\User;
-use App\Services\Company\CompanyLimits;
-use App\Services\Company\Destinations;
-use App\Services\Company\ItemSectors;
-use App\Services\Company\Visibility;
+use App\Services\Access\Destinations;
+use App\Services\Access\Visibility;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
@@ -37,7 +35,7 @@ class GithubPanel
     /** Saíram ou deviam sair (o que a IA aprovou, mesmo que um app não tenha recebido). */
     private const DELIVERED = ['sent', 'queued', 'skipped', 'failed'];
 
-    public function __construct(private GithubAlertRouter $router, private Visibility $visibility, private GithubInterview $interview, private ItemSectors $sectors, private Destinations $destinations, private CompanyLimits $limits) {}
+    public function __construct(private GithubAlertRouter $router, private Visibility $visibility, private GithubInterview $interview, private Destinations $destinations) {}
 
     /** @param  Collection<int, GithubMonitor>  $monitors  os que a conta vê; `$monitor`, o escolhido (`?monitor=`) */
     public function page(User $user, Collection $monitors, ?GithubMonitor $monitor, ?string $filter): array
@@ -60,8 +58,6 @@ class GithubPanel
         // Os canais do monitoramento: os de quem o criou, na conta pessoal; os do escopo dele, na empresa (E5b1).
         $channels = $monitor ? $this->destinations->for($monitor) : $user->notificationChannels;
         $manage = $monitor !== null && $this->visibility->manages($user, $monitor);
-        $company = $manage && $monitor->company_id !== null;
-        $choices = $company ? $this->visibility->sectorChoices($user) : collect();
 
         return [
             'monitors' => $monitors,
@@ -76,9 +72,6 @@ class GithubPanel
             // O que esta conta faz aqui (R14): configurar, criar outro e, no de empresa, trocar o setor.
             'canManage' => $manage,
             'canCreate' => $this->interview->mayCreate($user),
-            'sectorChoices' => $choices,
-            'sectorless' => $company && $this->visibility->canUseNoSector($user),
-            'mutedIn' => $company ? $this->sectors->mutedIn($monitor, $choices->modelKeys()) : [],
             'aiCut' => app(GithubJudge::class)->threshold(),
             'codeSearch' => app(GithubClient::class)->hasToken(),
         ];
@@ -151,7 +144,6 @@ class GithubPanel
     public function delete(GithubMonitor $monitor): void
     {
         $monitor->delete();
-        $this->limits->notify($monitor->company_id, 'github_monitors');
     }
 
     /**

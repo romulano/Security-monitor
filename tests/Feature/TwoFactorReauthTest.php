@@ -8,7 +8,6 @@ use App\Models\UserTwoFactor;
 use App\Services\Auth\ReauthCodes;
 use App\Services\Auth\Reauthentication;
 use App\Services\Auth\TwoFactor;
-use App\Services\Company\Companies;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use PragmaRX\Google2FA\Google2FA;
@@ -177,15 +176,6 @@ class TwoFactorReauthTest extends TestCase
         $this->assertAuthenticatedAs($admin);
     }
 
-    public function test_an_inactive_company_account_never_reaches_the_two_factor_setup(): void
-    {
-        config(['secmon.enterprise.enabled' => true, 'secmon.two_factor.admin_required' => true]);
-        app(Companies::class)->create('Acme', 'Ana', 'ana@acme.com');
-        $ana = User::query()->where('email', 'ana@acme.com')->sole();
-
-        $this->actingAs($ana)->get(route('account.two-factor'))->assertRedirect(route('login'));
-        $this->assertGuest();
-    }
 
     public function test_the_admin_requirement_switch_sends_an_admin_without_two_factor_to_the_setup(): void
     {

@@ -81,7 +81,7 @@
             'bullets' => [
                 'Entrevista de 3 passos: domínio, marca e posse',
                 $proven->isNotEmpty() ? 'Reaproveita '.$proven->first()->domain.', já comprovado em Notícias' : 'Reaproveita o domínio já comprovado em Notícias',
-                $companyAccount ? 'Um Radar por domínio comprovado da empresa' : 'Um Radar por domínio, até '.\App\Models\LookalikeWatch::MAX_PER_USER,
+                'Um Radar por domínio, até '.\App\Models\LookalikeWatch::MAX_PER_USER,
             ],
             'numbers' => [
                 [$ready->count(), $ready->count() === 1 ? 'domínio vigiado' : 'domínios vigiados', null, null],
@@ -175,10 +175,7 @@
                             @case('news')
                                 @if ($newsOn)
                                     <a href="{{ route('alerts.news') }}" class="{{ $primary }}">Abrir Notícias</a>
-                                    @if ($canAddProfile && $companyAccount)
-                                        {{-- O alerta de empresa nasce no passo 1, com o setor. --}}
-                                        <a href="{{ route('alerts.interview', ['passo' => 1]) }}" class="{{ $button }} text-accent hover:underline">Novo alerta</a>
-                                    @elseif ($canAddProfile)
+                                    @if ($canAddProfile)
                                         <form method="POST" action="{{ route('alerts.store') }}">
                                             @csrf
                                             <button class="{{ $button }} text-accent hover:underline">Novo alerta</button>
@@ -187,7 +184,6 @@
                                 @elseif ($draft && $draftManaged)
                                     <a href="{{ route('alerts.interview', $draft->urlParams(['passo' => $draft->step_reached])) }}" class="{{ $primary }}">Continuar a entrevista (passo {{ $draft->step_reached }})</a>
                                 @elseif ($canAddProfile)
-                                    {{-- Conta pessoal: a entrevista cria o rascunho; a de empresa, ao gravar o passo 1, com o setor. --}}
                                     <a href="{{ route('alerts.interview', ['passo' => 1]) }}" class="{{ $primary }}">Integrar Notícias</a>
                                 @endif
                                 @break
@@ -203,8 +199,6 @@
                                     <a href="{{ route('alerts.lookalikes.interview', ['passo' => $radarDraft->step_reached, 'radar' => $radarDraft->id]) }}" class="{{ $primary }}">Continuar a entrevista (passo {{ $radarDraft->step_reached }})</a>
                                 @elseif ($canAddWatch)
                                     <a href="{{ route('alerts.lookalikes.interview', ['passo' => 1]) }}" class="{{ $primary }}">Integrar o Radar</a>
-                                @else
-                                    <span class="text-sm text-ink-400">Quem configura o Radar é quem administra a empresa ou quem responde por um setor. Peça a uma dessas pessoas.</span>
                                 @endif
                                 @break
                             @default
@@ -221,8 +215,6 @@
                                     <a href="{{ route('alerts.github.interview', $githubDraft->urlParams(['passo' => $githubDraft->step_reached])) }}" class="{{ $primary }}">Continuar a entrevista (passo {{ $githubDraft->step_reached }})</a>
                                 @elseif ($canAddMonitor)
                                     <a href="{{ route('alerts.github.interview', ['passo' => 1]) }}" class="{{ $primary }}">Integrar o GitHub</a>
-                                @else
-                                    <span class="text-sm text-ink-400">Quem configura o GitHub é quem administra a empresa ou quem responde por um setor. Peça a uma dessas pessoas.</span>
                                 @endif
                         @endswitch
                     </div>

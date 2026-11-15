@@ -5,8 +5,8 @@ namespace App\Console\Commands;
 use App\Models\AlertMatch;
 use App\Services\Alerts\AlertRouter;
 use App\Services\Alerts\Notifier;
-use App\Services\Company\DeliveryGate;
-use App\Services\Company\Destinations;
+use App\Services\Access\DeliveryGate;
+use App\Services\Access\Destinations;
 use Illuminate\Console\Command;
 
 /**

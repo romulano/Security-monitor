@@ -29,28 +29,12 @@ class WebhookOwnership
 {
     public function __construct(private DomainOwnership $domains) {}
 
-    /** Na conta de empresa, o webhook só usa domínio que a empresa já comprovou (P2 do 5.3). */
-    public const COMPANY_PROOF = 'O webhook de uma conta de empresa só chama um domínio que a empresa já comprovou: peça à admin ou a quem responde pelo setor para cadastrar e comprovar o domínio em Domínios da empresa.';
-
     /**
-     * A prova que cobre o host, de qualquer serviço: a do nome mais próximo do host. Nula se não há. No webhook da
-     * empresa (E5a), a da empresa que serve ao escopo dele: o geral só usa domínio sem setor; o do setor, também os do
-     * setor (a regra de compatibilidade, P1 do 5.3). Na conta de empresa sem canal da empresa (antes da E5a), a da empresa
-     * entre os domínios que a conta vê (DESENHO-5.3 §2.6).
+     * A prova que cobre o host, de qualquer serviço: a do nome mais próximo do host. Nula se não há.
      */
     public function proof(User $user, string $host, ?NotificationChannel $channel = null): ?OwnedDomain
     {
-        return match (true) {
-            (bool) $channel?->isCompany() => $this->domains->proof(self::ownerOf($channel), $host),
-            $user->isCompanyAccount() => $this->domains->visibleProof($user, $host),
-            default => $this->domains->proof(DomainOwner::account($user->id), $host),
-        };
-    }
-
-    /** O dono da posse de um webhook da empresa: a empresa, com o setor do canal (nulo nos gerais). */
-    public static function ownerOf(NotificationChannel $channel): DomainOwner
-    {
-        return DomainOwner::company((int) $channel->company_id, (int) $channel->user_id, $channel->sector_id);
+        return $this->domains->proof(DomainOwner::account($user->id), $host);
     }
 
     /** O host é o domínio comprovado ou um subdomínio dele? */
@@ -82,11 +66,6 @@ class WebhookOwnership
 
         $source = $this->proof($user, $host, $channel);
 
-        // A conta de empresa não cadastra domínio da empresa pelo webhook: sem a prova da empresa, recusa (P2 do 5.3).
-        if ($source === null && $user->isCompanyAccount()) {
-            throw new ActionRefused(self::COMPANY_PROOF);
-        }
-
         $name = $source?->domain ?? self::nameFor($host);
 
         $copy = MonitoredDomain::query()->create([
@@ -96,9 +75,7 @@ class WebhookOwnership
             'verified_at' => $source?->verified_at,
             'verify_checked_at' => $source?->checked_at,
         ]);
-        if (! $user->isCompanyAccount()) {
-            $this->domains->claim(DomainOwner::account($user->id), $name, 'webhook', $copy->verify_token);
-        }
+        $this->domains->claim(DomainOwner::account($user->id), $name, 'webhook', $copy->verify_token);
 
         $channel->forceFill(['domain_id' => $copy->id, 'status' => $source ? self::activeStatus($channel) : 'pending'])->save();
         $current?->delete();
@@ -120,11 +97,6 @@ class WebhookOwnership
 
         if (! $copy->isVerified() && ($source = $this->proof($user, (string) $channel->webhook_host, $channel))) {
             $copy->forceFill(['domain' => $source->domain, 'verify_token' => $source->proof_token, 'verified_at' => $source->verified_at, 'verify_checked_at' => $source->checked_at])->save();
-        } elseif ($user->isCompanyAccount()) {
-            // A conta de empresa não procura TXT pelo webhook (o confirmRow cadastraria o nome): a prova vem da empresa.
-            if (! $copy->isVerified()) {
-                throw new ActionRefused(self::COMPANY_PROOF);
-            }
         } else {
             $this->domains->confirmRow($copy, 'webhook');
         }
@@ -147,9 +119,7 @@ class WebhookOwnership
             return false;
         }
 
-        return $channel->isCompany()
-            ? $this->domains->proof(self::ownerOf($channel), (string) $channel->webhook_host) !== null
-            : $copy->user_id === $channel->user_id;
+        return $copy->user_id === $channel->user_id;
     }
 
     /** O quadro "Comprove que o domínio é seu" (<x-domain-ownership>), o de todos os serviços, enquanto a prova falta. */

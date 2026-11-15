@@ -2,15 +2,12 @@
 
 namespace App\Models;
 
-use App\Enums\CompanyRole;
 use App\Services\Auth\EmailVerification;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
@@ -89,43 +86,6 @@ class User extends Authenticatable implements MustVerifyEmail
             ->delete();
     }
 
-    /**
-     * A conta de empresa (R12): a linha dela em `company_user`. A conta pessoal não tem, e nunca
-     * ganha: a conta de empresa nasce dentro da empresa (Companies), e a pessoal não é convertida.
-     */
-    public function companyMembership(): HasOne
-    {
-        return $this->hasOne(CompanyMember::class);
-    }
-
-    public function company(): HasOneThrough
-    {
-        return $this->hasOneThrough(Company::class, CompanyMember::class, 'user_id', 'id', 'id', 'company_id');
-    }
-
-    public function isCompanyAccount(): bool
-    {
-        return $this->companyMembership !== null;
-    }
-
-    /** Os setores em que a conta está (R3). A admin não tem nenhum: responde por todos sem estar em cada um (D3). */
-    public function sectors(): BelongsToMany
-    {
-        return $this->belongsToMany(Sector::class)->withPivot('is_manager')->withTimestamps();
-    }
-
-    /** Os setores pelos quais a conta responde (§4.3); os da admin são todos os da empresa, sem linha aqui. */
-    public function managedSectors(): BelongsToMany
-    {
-        return $this->sectors()->wherePivot('is_manager', true);
-    }
-
-    /** O papel na empresa; nulo na conta pessoal. */
-    public function companyRole(): ?CompanyRole
-    {
-        return $this->companyMembership?->role;
-    }
-
     /** Alertas do cliente: um por produto ou site. */
     public function alertProfiles(): HasMany
     {
@@ -146,17 +106,17 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function slackChannel(): HasOne
     {
-        return $this->hasOne(NotificationChannel::class)->whereNull('company_id')->where('type', 'slack');
+        return $this->hasOne(NotificationChannel::class)->where('type', 'slack');
     }
 
     public function discordChannel(): HasOne
     {
-        return $this->hasOne(NotificationChannel::class)->whereNull('company_id')->where('type', 'discord');
+        return $this->hasOne(NotificationChannel::class)->where('type', 'discord');
     }
 
     public function telegramChannel(): HasOne
     {
-        return $this->hasOne(NotificationChannel::class)->whereNull('company_id')->where('type', 'telegram');
+        return $this->hasOne(NotificationChannel::class)->where('type', 'telegram');
     }
 
     /** Monitoramento do GitHub (um por cliente, com entrevista própria). */
@@ -178,7 +138,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function reachedRadarLimit(): bool
     {
-        return ! $this->isCompanyAccount() && $this->lookalikeWatchesCreated() >= LookalikeWatch::MAX_PER_USER;
+        return $this->lookalikeWatchesCreated() >= LookalikeWatch::MAX_PER_USER;
     }
 
     public function githubMonitor(): HasOne
@@ -214,12 +174,12 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function notificationChannels(): HasMany
     {
-        return $this->hasMany(NotificationChannel::class)->whereNull('company_id')->orderByRaw("type = 'webhook'")->orderBy('type', 'desc')->orderBy('id');
+        return $this->hasMany(NotificationChannel::class)->orderByRaw("type = 'webhook'")->orderBy('type', 'desc')->orderBy('id');
     }
 
     /** Os webhooks pessoais da conta (até 5), do mais antigo. */
     public function webhooks(): HasMany
     {
-        return $this->hasMany(NotificationChannel::class)->whereNull('company_id')->where('type', 'webhook')->orderBy('id');
+        return $this->hasMany(NotificationChannel::class)->where('type', 'webhook')->orderBy('id');
     }
 }

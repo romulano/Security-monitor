@@ -4,7 +4,6 @@ namespace App\Http\Middleware;
 
 use App\Models\User;
 use App\Services\Auth\TwoFactor;
-use App\Services\Company\CompanyTwoFactor;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -16,7 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
  * só no /admin, o admin sem a 2FA seguia na área do cliente, onde a conta de
  * admin roda teste de segurança sem a aprovação e troca e-mail e senha (I1 do
  * Red Team). E a conta da empresa que exige a 2FA (`require_2fa`, E1f): até
- * ligar a dela, nem o /empresa abre.
+ * ligar a dela.
  */
 class EnsureTwoFactorWhenRequired
 {
@@ -27,7 +26,7 @@ class EnsureTwoFactorWhenRequired
         return self::reason($user) !== null;
     }
 
-    /** O aviso de quem precisa ligar a 2FA (o admin do Security Monitor ou a conta da empresa que a exige), ou nulo. */
+    /** O aviso de quem precisa ligar a 2FA (o admin do Security Monitor), ou nulo. */
     public static function reason(?User $user): ?string
     {
         if ($user === null || ! TwoFactor::available()) {
@@ -35,16 +34,12 @@ class EnsureTwoFactorWhenRequired
         }
 
         $admin = $user->is_admin && config('secmon.two_factor.admin_required');
-        // E1f: a empresa com `require_2fa` (a conta de empresa inativa já caiu antes, no EnsureCompanyAccountActive).
-        $company = CompanyTwoFactor::requires($user);
 
-        if ((! $admin && ! $company) || TwoFactor::enabled($user)) {
+        if (! $admin || TwoFactor::enabled($user)) {
             return null;
         }
 
-        return $admin
-            ? 'Para usar o admin, ligue a verificação em duas etapas. Leva um minuto; depois você volta direto para o admin.'
-            : 'A sua empresa exige a verificação em duas etapas. Ligue a sua para continuar: leva um minuto.';
+        return 'Para usar o admin, ligue a verificação em duas etapas. Leva um minuto; depois você volta direto para o admin.';
     }
 
     public function handle(Request $request, Closure $next): Response

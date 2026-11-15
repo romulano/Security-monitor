@@ -12,7 +12,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * Um nome de domínio de uma conta ou de uma empresa: a fonte única da posse (ver DomainOwnership). Uma
- * linha por conta pessoal e nome, ou por empresa e nome (`company_id`; `sector_id` nulo = sem setor),
+ * linha por conta e nome,
  * pedida por qualquer serviço (Notícias, Radar, testes de segurança, monitor de sites, webhook).
  * Comprovada (`verified_at`), vale para o nome e para os subdomínios dele. É raiz da visibilidade: na
  * empresa, quem vê e quem configura é o Visibility (DESENHO-5.3 §2.5); `user_id` é quem cadastrou.
@@ -22,7 +22,7 @@ class OwnedDomain extends Model implements VisibilityRoot
     use VisibleToAccount;
 
     /** Empresa e setor só pelo DomainOwner/forceFill, nunca por atribuição em massa. */
-    protected $guarded = ['company_id', 'sector_id'];
+    protected $guarded = [];
 
     /** O serviço que pediu o nome primeiro (`source`), como as telas dizem de onde veio a prova; `company`, a tela Domínios da empresa. */
     public const SOURCES = ['news', 'radar', 'tests', 'monitor', 'webhook', 'company'];
@@ -46,22 +46,6 @@ class OwnedDomain extends Model implements VisibilityRoot
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
-    }
-
-    public function sector(): BelongsTo
-    {
-        return $this->belongsTo(Sector::class);
-    }
-
-    /** Os subdomínios (R6, só da empresa): ativos, sugestões, tirados e os que deixaram de resolver. */
-    public function subdomains(): HasMany
-    {
-        return $this->hasMany(OwnedSubdomain::class);
     }
 
     /** A varredura de chaves deste domínio, se a conta a ativou. */

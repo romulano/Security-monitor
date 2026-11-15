@@ -18,12 +18,11 @@ class UpdateGithubInterviewStepController extends Controller
         $here = fn () => route('alerts.github.interview', $monitor?->urlParams(['passo' => $passo]) ?? ['passo' => $passo]);
 
         try {
-            // Monitoramento novo de empresa: nasce aqui, no passo 1, com o setor.
             $monitor ? $this->interview->save($monitor, $passo, $request->answers())
-                : $monitor = $this->interview->startWith($request->user(), $request->sectorId(), $request->answers());
+                : $monitor = $this->interview->startWith($request->user(), $request->answers());
         } catch (ValidationException $e) {
             // Volta com o que foi digitado, menos o que tinha cara de segredo.
-            return redirect()->to($here())->withErrors($e->errors())->withInput(['answers' => $request->answers(), 'setor' => $request->input('setor')]);
+            return redirect()->to($here())->withErrors($e->errors())->withInput(['answers' => $request->answers(), ]);
         }
 
         if ($removed = $request->removedSecrets()) {

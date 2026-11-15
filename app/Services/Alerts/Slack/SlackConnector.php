@@ -7,14 +7,13 @@ use App\Models\NotificationChannel;
 use App\Models\User;
 use App\Services\Alerts\ChannelSettings;
 use App\Services\Alerts\Notifier;
-use App\Services\Company\ChannelScope;
-use App\Services\Company\CompanyChannels;
+use App\Services\Access\Channels;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Str;
 
 /**
- * /alertas/slack: conectar o canal (webhook colado ou "Adicionar ao Slack") e desconectar. Na empresa (E5a), o canal é
- * dos gerais ou de um setor (`$scope`), ou um que já existe (`$existing`); o CompanyChannels confere quem e os limites.
+ * /alertas/slack: conectar o canal (webhook colado ou "Adicionar ao Slack") e desconectar. O canal é o da conta, ou um
+ * que já existe (`$existing`).
  */
 class SlackConnector
 {
@@ -26,7 +25,7 @@ class SlackConnector
         private SlackClient $slack,
         private Notifier $notifier,
         private ChannelSettings $settings,
-        private CompanyChannels $channels,
+        private Channels $channels,
     ) {}
 
     public function page(User $user, ?NotificationChannel $channel, bool $changing): array
@@ -36,9 +35,9 @@ class SlackConnector
         ];
     }
 
-    public function saveWebhook(User $user, string $url, ?ChannelScope $scope = null, ?NotificationChannel $existing = null): NotificationChannel
+    public function saveWebhook(User $user, string $url, ?NotificationChannel $existing = null): NotificationChannel
     {
-        $channel = $this->channels->save($user, $this->channels->target($user, 'slack', $scope, $existing), [
+        $channel = $this->channels->save($user, $this->channels->target($user, 'slack', $existing), [
             'method' => 'webhook',
             'webhook_url' => $url,
             'bot_token' => null,
@@ -58,14 +57,14 @@ class SlackConnector
      * "Adicionar ao Slack": guarda o state na sessão (com onde o canal recebe, na empresa) e devolve a tela do Slack onde
      * o cliente escolhe o canal. Quem pode é conferido já aqui e de novo na volta.
      */
-    public function authorizeUrl(Session $session, ?User $user = null, ?ChannelScope $scope = null, ?NotificationChannel $existing = null): string
+    public function authorizeUrl(Session $session, ?User $user = null, ?NotificationChannel $existing = null): string
     {
         if ($user !== null) {
-            $this->channels->target($user, 'slack', $scope, $existing);
+            $this->channels->target($user, 'slack', $existing);
         }
 
         $state = Str::random(40);
-        $target = CompanyChannels::pack($scope, $existing);
+        $target = Channels::pack($existing);
         // O canal pessoal guarda só o state, como sempre; o da empresa, também o alvo.
         $session->put(self::STATE, $target === [] ? $state : ['state' => $state, 'target' => $target]);
 
@@ -99,10 +98,6 @@ class SlackConnector
         }
 
         try {
-            // P1 (R11): o canal da empresa não manda para a conversa direta de uma pessoa (o id do canal do Slack com D).
-            if (CompanyChannels::packedIsCompany($target) && str_starts_with((string) ($response['incoming_webhook']['channel_id'] ?? ''), 'D')) {
-                throw new ActionRefused(self::DM_REFUSED, route('alerts.slack'));
-            }
 
             $channel = $this->saveOAuth($user, $target, $hook, $response);
         } catch (ActionRefused $refused) {
@@ -144,7 +139,6 @@ class SlackConnector
         $channel?->delete();
 
         if ($channel !== null && $by !== null) {
-            $this->channels->record($by, $channel, 'channel.removed');
         }
     }
 }

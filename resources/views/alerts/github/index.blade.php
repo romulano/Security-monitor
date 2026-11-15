@@ -90,9 +90,6 @@
                     @unless ($codeSearch)
                         <p class="text-sm text-amber-200">A busca em código está indisponível no momento: por enquanto rodam só as buscas de repositórios.</p>
                     @endunless
-                    @if ($monitor->company_id)
-                        @include('alerts.partials.sector-change', ['item' => $monitor, 'action' => route('alerts.github.sector', $monitor->urlParams()), 'subject' => 'o monitoramento '.$monitor->displayName(), 'short' => 'este monitoramento', 'things' => 'os achados'])
-                    @endif
                     @if ($monitor->last_error && ! $running)
                         <p class="text-sm text-amber-200">A última varredura parou antes do fim ({{ $monitor->last_error }}). O que faltou fica para a próxima.</p>
                     @endif

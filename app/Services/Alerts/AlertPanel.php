@@ -8,10 +8,8 @@ use App\Models\AlertProfile;
 use App\Models\NotificationChannel;
 use App\Models\NotificationDelivery;
 use App\Models\User;
-use App\Services\Company\CompanyLimits;
-use App\Services\Company\Destinations;
-use App\Services\Company\ItemSectors;
-use App\Services\Company\Visibility;
+use App\Services\Access\Destinations;
+use App\Services\Access\Visibility;
 use App\Support\Settings;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -36,8 +34,6 @@ class AlertPanel
         private ProfileIndex $index,
         private Notifier $notifier,
         private Visibility $visibility,
-        private ItemSectors $sectors,
-        private CompanyLimits $limits,
     ) {}
 
     /**
@@ -46,7 +42,7 @@ class AlertPanel
      */
     public function page(User $user, string $filter, int $alertId): array
     {
-        $profiles = AlertProfile::query()->visibleTo($user)->withCount(['techs', 'terms'])->with(['domains.findings', 'sector:id,name'])->oldest('id')->get();
+        $profiles = AlertProfile::query()->visibleTo($user)->withCount(['techs', 'terms'])->with(['domains.findings'])->oldest('id')->get();
         $completed = $profiles->whereNotNull('completed_at');
         $only = $completed->firstWhere('id', $alertId);
 
@@ -76,7 +72,7 @@ class AlertPanel
                 ->where(fn ($q) => $q->whereNull('delivery_note')->orWhere('delivery_note', '!=', 'ai_review'));
 
             $matches = ($filter === 'segurados-pela-ia' ? clone $held : clone $listed)
-                ->with(['case:id,uuid,title,title_pt,criticity', 'profile:id,name,company_name,language,company_id,sector_id', 'profile.sector:id,name'])
+                ->with(['case:id,uuid,title,title_pt,criticity', 'profile:id,name,company_name,language'])
                 ->when($filter === 'pendentes', $pendingOnly)
                 ->when($filter === 'relevantes', $relevantOnly)
                 ->when($filter === 'na-hora', fn ($q) => $q->where('delivery_status', 'sent'))
@@ -113,49 +109,20 @@ class AlertPanel
             'aiCut' => Settings::int('alerts.ai_review_threshold'),
             'counts' => $counts ?? [],
             'canCreate' => $canCreate = $this->canCreate($user),
-            // A empresa no limite de alertas (E5d): a tela diz o porquê no lugar do "Novo alerta", como a conta lê (rodada 3).
-            'alertsFull' => $user->isCompanyAccount() && $this->createsInCompany($user) && $this->limits->alertsLeft($user) === 0
-                ? $this->limits->alertsFullMessage($user, $this->limits->alertsMax($user)) : null,
-            // Antes do limite, junto do "Novo alerta": "{n} de {max} alertas da empresa" (para quem cria).
-            'alertsUsage' => $user->isCompanyAccount() && $this->createsInCompany($user) ? $this->limits->alertsUsage($user) : null,
-            // O setor do "Novo alerta" de empresa (sector-choice) e a troca no cartão de cada alerta que a conta configura.
-            'sectors' => $choices = ($canCreate || $profiles->contains('company_id', '!=', null)) && $user->isCompanyAccount() ? $this->visibility->sectorChoices($user) : collect(),
-            'sectorless' => $this->visibility->canUseNoSector($user),
-            'companyAccount' => $user->isCompanyAccount(),
-            'managed' => $managed = AlertProfile::query()->manageableBy($user)->pluck('id')->all(),
-            // Em que setores cada alerta ficaria mudo (quem criou não está lá e não administra a empresa) até a E5b.
-            'mutedIn' => $profiles->filter(fn (AlertProfile $p) => $p->company_id !== null && in_array($p->id, $managed, true))
-                ->mapWithKeys(fn (AlertProfile $p) => [$p->id => $this->sectors->mutedIn($p, $choices->modelKeys())])->all(),
+            'managed' => AlertProfile::query()->manageableBy($user)->pluck('id')->all(),
         ];
     }
 
-    /**
-     * O "Novo alerta" aparece para quem pode criar: a conta pessoal abaixo do limite dela; na empresa, a admin ou um
-     * responsável, abaixo do limite da empresa (E5d: não mais o de quem cria).
-     */
+    /** O "Novo alerta" aparece enquanto a conta está abaixo do limite dela. */
     public function canCreate(User $user): bool
     {
-        if (! $user->isCompanyAccount()) {
-            return $user->alertProfilesCreated() < AlertProfile::MAX_PER_USER;
-        }
-
-        return $this->limits->alertsLeft($user) > 0 && $this->createsInCompany($user);
+        return $user->alertProfilesCreated() < AlertProfile::MAX_PER_USER;
     }
 
-    /** Na empresa, cria alerta quem administra ou responde por um setor. */
-    private function createsInCompany(User $user): bool
-    {
-        return $this->visibility->canUseNoSector($user) || $this->visibility->sectorChoices($user)->isNotEmpty();
-    }
-
-    /** Alerta novo só enquanto o cliente (ou a empresa dele) não chegou ao limite; a trava confere de novo no cadastro. */
+    /** Alerta novo só enquanto a conta não chegou ao limite; a trava confere de novo no cadastro. */
     public function ensureRoomFor(User $user): void
     {
-        if ($user->isCompanyAccount() && $this->limits->alertsLeft($user) === 0) {
-            throw new ActionRefused($this->limits->alertsFullMessage($user, $this->limits->alertsMax($user)));
-        }
-
-        if (! $user->isCompanyAccount() && $user->alertProfilesCreated() >= AlertProfile::MAX_PER_USER) {
+        if ($user->alertProfilesCreated() >= AlertProfile::MAX_PER_USER) {
             throw new ActionRefused('Você chegou ao limite de '.AlertProfile::MAX_PER_USER.' alertas. Exclua um para criar outro.');
         }
     }
@@ -188,7 +155,6 @@ class AlertPanel
                 ->delete();
 
             $profile->delete();
-            $this->limits->notify($profile->company_id, 'alert_profiles');
         });
     }
 

@@ -4,7 +4,7 @@ namespace App\Http\Requests\Alerts\Lookalikes;
 
 use App\Http\Requests\Request;
 use App\Models\LookalikeDomain;
-use App\Services\Company\Visibility;
+use App\Services\Access\Visibility;
 
 /**
  * Telas de um domínio do Radar (`{lookalike}`), o voto e a denúncia: quem vê o Radar (o dono; na empresa, a admin e

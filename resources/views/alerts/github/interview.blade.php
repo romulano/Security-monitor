@@ -76,7 +76,6 @@
                     @endforeach
 
                     @if ($step === 1)
-                        @include('alerts.partials.sector-choice', ['what' => 'o monitoramento e os achados', 'label' => 'Setor da empresa que vê este monitoramento'])
                     @endif
 
                     @if ($step === 4 && $monitor->extra_text)

@@ -3,7 +3,6 @@
 namespace App\Services\Auth;
 
 use App\Models\User;
-use App\Services\Company\Companies;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,7 +19,7 @@ use Illuminate\Validation\ValidationException;
  */
 class Authenticator
 {
-    public function __construct(private ReauthCodes $codes, private RejectedAttempts $attempts, private Companies $companies, private TwoFactorChallenge $challenge) {}
+    public function __construct(private ReauthCodes $codes, private RejectedAttempts $attempts, private TwoFactorChallenge $challenge) {}
 
     /**
      * Devolve se entrou; falso: a senha conferiu, e falta o código da 2FA.
@@ -45,10 +44,6 @@ class Authenticator
         // desafio da 2FA; senão, quem tem a 2FA não entra aqui e fica guardado para o código; senão, entra.
         $needsCode = false;
         $allowed = function (User $user) use (&$needsCode) {
-            if ($this->companies->accessRefusal($user) !== null) {
-                return false;
-            }
-
             return ! ($needsCode = TwoFactorChallenge::required($user));
         };
 

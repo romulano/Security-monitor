@@ -7,12 +7,11 @@ use App\Models\GithubFinding;
 use App\Models\LookalikeAlert;
 use App\Models\NotificationChannel;
 use App\Models\NotificationDelivery;
-use App\Models\SubdomainAlert;
 use App\Services\Alerts\Discord\DiscordResult;
 use App\Services\Alerts\Slack\SlackResult;
 use App\Services\Alerts\Telegram\TelegramResult;
 use App\Services\Alerts\Webhook\WebhookResult;
-use App\Services\Company\DeliveryGate;
+use App\Services\Access\DeliveryGate;
 use App\Services\Pentest\PentestReadyNotice;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -168,15 +167,6 @@ abstract class SendChannelMessage implements ShouldQueue
         // Aviso do Radar de domínios: um envio por canal, como os alertas de notícia.
         if ($alertId = $delivery->meta['lookalike_alert_id'] ?? null) {
             LookalikeAlert::query()->whereKey($alertId)
-                ->when($status !== 'sent', fn ($q) => $q->where('status', '!=', 'sent'))
-                ->update(array_filter(['status' => $status, 'note' => $status === 'skipped' ? $note : null, 'notified_at' => $notifiedAt, 'updated_at' => now()]));
-
-            return;
-        }
-
-        // Aviso de subdomínio do Radar (E4a): idem.
-        if ($alertId = $delivery->meta['subdomain_alert_id'] ?? null) {
-            SubdomainAlert::query()->whereKey($alertId)
                 ->when($status !== 'sent', fn ($q) => $q->where('status', '!=', 'sent'))
                 ->update(array_filter(['status' => $status, 'note' => $status === 'skipped' ? $note : null, 'notified_at' => $notifiedAt, 'updated_at' => now()]));
 

@@ -23,7 +23,7 @@ class LookalikeWatch extends Model implements VisibilityRoot
     use VisibleToAccount;
 
     /** Empresa e setor só pelo serviço (Visibility::stampFor + forceFill), nunca de um array da tela. */
-    protected $guarded = ['company_id', 'sector_id'];
+    protected $guarded = [];
 
     /** Um Radar por domínio; até este número por cliente. */
     public const MAX_PER_USER = 5;
@@ -52,12 +52,6 @@ class LookalikeWatch extends Model implements VisibilityRoot
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    /** O setor da empresa (nulo: sem setor, a empresa toda vê; sempre nulo na conta pessoal). */
-    public function sector(): BelongsTo
-    {
-        return $this->belongsTo(Sector::class);
     }
 
     public function domain(): BelongsTo
@@ -143,8 +137,7 @@ class LookalikeWatch extends Model implements VisibilityRoot
      */
     public function hasSiblings(): bool
     {
-        return $this->hasSiblings ??= $this->company_id !== null
-            || static::query()->visibleTo($this->user)->whereKeyNot($this->id)->exists();
+        return $this->hasSiblings ??= static::query()->visibleTo($this->user)->whereKeyNot($this->id)->exists();
     }
 
     /** Parâmetro que diz qual Radar uma URL mira. Quem tem um só continua com as URLs de sempre. */

@@ -10,12 +10,9 @@ use App\Observers\RadarEnrollment;
 use App\Services\Admin\PentestOverview;
 use App\Services\Alerts\Discovery\DnsResolver;
 use App\Services\Alerts\Discovery\NativeDnsResolver;
-use App\Services\Company\Visibility;
 use App\Services\Pentest\PentestBanner;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Events\RouteMatched;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -30,9 +27,6 @@ class AppServiceProvider extends ServiceProvider
     {
         // A descoberta pelo domínio fala com o DNS por aqui (os testes trocam por um falso).
         $this->app->bind(DnsResolver::class, NativeDnsResolver::class);
-
-        // A visibilidade de empresa lê quem a conta é uma vez por requisição (e a fila renova a cada job).
-        $this->app->scoped(Visibility::class);
     }
 
     /**
@@ -42,9 +36,6 @@ class AppServiceProvider extends ServiceProvider
     {
         // O Radar ativado que espera o registro TXT começa quando a posse é comprovada.
         MonitoredDomain::observe(RadarEnrollment::class);
-
-        // Cada requisição começa com a visibilidade relida (o mesmo processo pode atender várias, como nos testes).
-        Event::listen(RouteMatched::class, fn () => $this->app->forgetInstance(Visibility::class));
 
         // O sitemap e o aviso aos buscadores (IndexNow) acompanham a matéria que entra, muda ou sai do ar,
         // e a antiga que a fusão de matérias troca pela nova (CaseMerge).
