@@ -52,7 +52,6 @@
                 <tr>
                     <th class="px-3 py-2 font-medium">Conta</th>
                     <th class="px-3 py-2 font-medium">Acesso</th>
-                    <th class="px-3 py-2 font-medium">Testes de segurança</th>
                     <th class="px-3 py-2 font-medium">Criada</th>
                     <th class="px-3 py-2"></th>
                 </tr>
@@ -80,46 +79,6 @@
                             @if ($account->hasGithub())
                                 <a href="https://github.com/{{ $account->github_login }}" target="_blank" rel="noopener noreferrer"
                                    class="ml-1 text-ink-400 hover:text-accent">GitHub {{ '@'.$account->github_login }}</a>
-                            @endif
-                        </td>
-                        <td class="px-3 py-2 text-xs" data-pentest-access="{{ $account->id }}">
-                            @php
-                                $day = fn ($date) => $date?->timezone('America/Sao_Paulo')->format('d/m');
-                                $access = \App\Services\Pentest\PentestAccess::state($account);
-                            @endphp
-                            @if ($account->is_admin)
-                                <span class="text-ink-400">sempre (conta de administrador)</span>
-                            @else
-                                <div class="flex flex-wrap items-center gap-2">
-                                    @switch($access)
-                                        @case('granted')
-                                            <span class="rounded-full border border-emerald-800 px-2 py-0.5 text-[11px] text-emerald-300">liberado em {{ $day($account->pentest_access_granted_at) }}</span>
-                                            @break
-                                        @case('requested')
-                                            <span class="rounded-full border border-amber-800 px-2 py-0.5 text-[11px] text-amber-200">pediu em {{ $day($account->pentest_access_requested_at) }}</span>
-                                            @break
-                                        @case('revoked')
-                                            <span class="text-ink-400">retirada em {{ $day($account->pentest_access_revoked_at) }}</span>
-                                            @break
-                                        @default
-                                            <span class="text-ink-700">não liberado</span>
-                                    @endswitch
-
-                                    @if ($access === 'granted')
-                                        <form method="POST" action="{{ route('admin.users.pentest.revoke', $account) }}" data-confirm-ok="Retirar liberação"
-                                              data-confirm="Retirar a liberação dos testes de segurança de {{ $account->name }}? O que estiver rodando para, o que estiver agendado ou esperando a aprovação não começa, e a conta não autoriza nem inicia testes até ser liberada de novo. Ver, revogar, parar e excluir continuam valendo.">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button class="rounded-md border border-ink-800 px-2.5 py-1 text-xs text-ink-200 hover:text-red-400">Retirar liberação</button>
-                                        </form>
-                                    @else
-                                        <form method="POST" action="{{ route('admin.users.pentest.grant', $account) }}" data-confirm-ok="Liberar"
-                                              data-confirm="Liberar os testes de segurança para {{ $account->name }} ({{ $account->email }})? A conta passa a poder autorizar testes nos domínios dela, com a posse pelo registro TXT, o termo e a aprovação da 1ª execução de cada autorização.">
-                                            @csrf
-                                            <button class="rounded-md border border-ink-800 px-2.5 py-1 text-xs text-ink-200 hover:border-accent">Liberar</button>
-                                        </form>
-                                    @endif
-                                </div>
                             @endif
                         </td>
                         <td class="px-3 py-2 text-xs text-ink-400">

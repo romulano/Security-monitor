@@ -54,16 +54,10 @@ use App\Http\Controllers\Admin\Monitoring\ShowAccessSettingsController;
 use App\Http\Controllers\Admin\Monitoring\ToggleAccessMonitoringController;
 use App\Http\Controllers\Admin\Monitoring\UpdateOwnAddressesController;
 use App\Http\Controllers\Admin\Pentest\AllowPentestRetestController;
-use App\Http\Controllers\Admin\Pentest\ApprovePentestRunController;
-use App\Http\Controllers\Admin\Pentest\DisablePentestController;
-use App\Http\Controllers\Admin\Pentest\EnablePentestController;
 use App\Http\Controllers\Admin\Pentest\ListAdminPentestRunsController;
-use App\Http\Controllers\Admin\Pentest\ListPentestApprovalsController;
 use App\Http\Controllers\Admin\Pentest\PauseAdminPentestRunController;
-use App\Http\Controllers\Admin\Pentest\RejectPentestRunController;
 use App\Http\Controllers\Admin\Pentest\ResumeAdminPentestRunController;
 use App\Http\Controllers\Admin\Pentest\ShowAdminPentestRunController;
-use App\Http\Controllers\Admin\Pentest\ShowPentestApprovalController;
 use App\Http\Controllers\Admin\Pentest\ShowPentestOverviewController;
 use App\Http\Controllers\Admin\Pentest\StopAdminPentestRunController;
 use App\Http\Controllers\Admin\Pentest\StopAllPentestController;
@@ -99,9 +93,7 @@ use App\Http\Controllers\Admin\Sources\StoreSourceController;
 use App\Http\Controllers\Admin\Sources\ToggleSourceController;
 use App\Http\Controllers\Admin\Sources\UpdateSourceController;
 use App\Http\Controllers\Admin\Users\DestroyUserController;
-use App\Http\Controllers\Admin\Users\GrantPentestAccessController;
 use App\Http\Controllers\Admin\Users\ListUsersController;
-use App\Http\Controllers\Admin\Users\RevokePentestAccessController;
 use App\Http\Controllers\Alerts\Center\ToggleChannelPauseController;
 use App\Http\Controllers\Alerts\Center\UpdateAlertCenterController;
 use App\Http\Controllers\Alerts\DestroyAlertController;
@@ -184,7 +176,6 @@ use App\Http\Controllers\Alerts\Telegram\UpdateTelegramController;
 use App\Http\Controllers\Alerts\Tests\AcceptPentestConsentController;
 use App\Http\Controllers\Alerts\Tests\DestroyPentestDomainController;
 use App\Http\Controllers\Alerts\Tests\PausePentestRunController;
-use App\Http\Controllers\Alerts\Tests\RequestPentestAccessController;
 use App\Http\Controllers\Alerts\Tests\ResumePentestRunController;
 use App\Http\Controllers\Alerts\Tests\RevokePentestConsentController;
 use App\Http\Controllers\Alerts\Tests\ShowPentestBannerController;
@@ -257,7 +248,7 @@ Route::middleware('auth')->group(function () {
     // consulta periódica não renova a sessão (item 6 do Blue Team). Revogar e excluir o domínio também ficam aqui
     // (item 4 do Blue Team): revogar é retirar o consentimento, e vale a qualquer momento; o domínio vai pelo nome,
     // só entre os da conta, sem limite e sem reautenticação.
-    Route::prefix('alertas')->name('alerts.')->middleware('pentest.available')->group(function () {
+    Route::prefix('alertas')->name('alerts.')->middleware()->group(function () {
         Route::get('/testes/execucoes/{execucao}', ShowPentestRunController::class)->whereUuid('execucao')->name('tests.runs.show');
         Route::get('/testes/execucoes/{execucao}/estado', ShowPentestRunStatusController::class)->whereUuid('execucao')->middleware(['session.idle', 'throttle:60,1,pentest-estado'])->name('tests.runs.status');
         Route::post('/testes/execucoes/{execucao}/parar', StopPentestRunController::class)->whereUuid('execucao')->name('tests.runs.stop');
@@ -372,31 +363,22 @@ Route::middleware('auth')->group(function () {
         Route::put('/chaves/{dominio}/{chave}', ClassifyExposedKeyController::class)->whereNumber('chave')->middleware('throttle:60,1,chaves-decidir')->name('keys.classify');
 
         // Testes de segurança (teste ativo, só com autorização): a lista, os passos da autorização, a posse e
-        // a página de cada domínio. Sem PENTEST_ALLOWED, tudo responde 404. O domínio vai pelo nome. Cada
-        // limite tem o seu contador (o 3º parâmetro): sem ele, todo `throttle:N,M` da conta soma no mesmo, e
-        // gravar os passos em sequência esgotava o "Verificar agora". O aceite (passo 7) é a única rota com
-        // `reauth`, e o `pentest.domain` dá o 404 do domínio alheio antes dela; ver o termo nunca pede.
-        Route::middleware('pentest.available')->group(function () {
-            // Sempre, com ou sem a liberação do admin: a entrada (que diz como pedir a liberação), o pedido, o
-            // histórico e o texto aceito. Revogar e excluir ficam fora do `verified`, no grupo do Parar, acima.
+        // a página de cada domínio. O domínio vai pelo nome. Cada limite tem o seu contador (o 3º parâmetro):
+        // sem ele, todo `throttle:N,M` da conta soma no mesmo, e gravar os passos em sequência esgotava o
+        // "Verificar agora".
+        Route::group(function () {
             Route::get('/testes', ShowPentestController::class)->name('tests');
-            Route::post('/testes/liberacao', RequestPentestAccessController::class)->middleware('throttle:5,1,pentest-liberacao')->name('tests.access.request');
             Route::get('/testes/dominios/{dominio}', ShowPentestDomainController::class)->name('tests.domains.show');
             Route::get('/testes/dominios/{dominio}/termo', ShowPentestConsentController::class)->name('tests.domains.consent');
-            // Só a conta liberada pelo admin (e a do admin, para os domínios dela). Sem a liberação, voltam à
-            // entrada sem executar nada, antes do domínio, da senha e do limite.
-            Route::middleware('pentest.access')->group(function () {
-                Route::get('/testes/autorizar/{passo}', ShowPentestStepController::class)->whereNumber('passo')->name('tests.authorize');
-                Route::put('/testes/autorizar/{passo}', UpdatePentestStepController::class)->whereNumber('passo')->middleware('throttle:30,1,pentest-passos')->name('tests.authorize.update');
-                Route::post('/testes/dominios', StorePentestDomainController::class)->middleware('throttle:10,1,pentest-dominios')->name('tests.domains.store');
-                Route::post('/testes/dominios/{dominio}/verificar', VerifyPentestDomainController::class)->middleware('throttle:6,1,pentest-posse')->name('tests.domains.verify');
-                Route::post('/testes/dominios/{dominio}/termo', AcceptPentestConsentController::class)->middleware(['pentest.domain:7', 'throttle:10,1,pentest-aceite'])->name('tests.domains.accept');
-                // "Nova execução", com a reautenticação como o aceite; pausar e retomar, cada um com o seu limite. Retomar
-                // também pede a reautenticação (volta a mandar tráfego), conferida no controller depois do 404 da execução.
-                Route::post('/testes/dominios/{dominio}/execucoes', StartPentestRunController::class)->middleware(['pentest.domain', 'throttle:3,1,pentest-execucoes'])->name('tests.runs.store');
-                Route::post('/testes/execucoes/{execucao}/pausar', PausePentestRunController::class)->whereUuid('execucao')->middleware('throttle:10,1,pentest-pausar')->name('tests.runs.pause');
-                Route::post('/testes/execucoes/{execucao}/retomar', ResumePentestRunController::class)->whereUuid('execucao')->middleware('throttle:10,1,pentest-retomar')->name('tests.runs.resume');
-            });
+            Route::get('/testes/autorizar/{passo}', ShowPentestStepController::class)->whereNumber('passo')->name('tests.authorize');
+            Route::put('/testes/autorizar/{passo}', UpdatePentestStepController::class)->whereNumber('passo')->middleware('throttle:30,1,pentest-passos')->name('tests.authorize.update');
+            Route::post('/testes/dominios', StorePentestDomainController::class)->middleware('throttle:10,1,pentest-dominios')->name('tests.domains.store');
+            Route::post('/testes/dominios/{dominio}/verificar', VerifyPentestDomainController::class)->middleware('throttle:6,1,pentest-posse')->name('tests.domains.verify');
+            Route::post('/testes/dominios/{dominio}/termo', AcceptPentestConsentController::class)->middleware(['pentest.domain:7', 'throttle:10,1,pentest-aceite'])->name('tests.domains.accept');
+            // "Nova execução"; pausar e retomar, cada um com o seu limite.
+            Route::post('/testes/dominios/{dominio}/execucoes', StartPentestRunController::class)->middleware(['pentest.domain', 'throttle:3,1,pentest-execucoes'])->name('tests.runs.store');
+            Route::post('/testes/execucoes/{execucao}/pausar', PausePentestRunController::class)->whereUuid('execucao')->middleware('throttle:10,1,pentest-pausar')->name('tests.runs.pause');
+            Route::post('/testes/execucoes/{execucao}/retomar', ResumePentestRunController::class)->whereUuid('execucao')->middleware('throttle:10,1,pentest-retomar')->name('tests.runs.resume');
         });
 
         Route::get('/entrevista/{passo}', ShowInterviewStepController::class)->whereNumber('passo')->name('interview');
@@ -583,20 +565,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/usuarios', ListUsersController::class)->name('users');
     Route::get('/convites', RedirectController::class)->defaults('destination', '/admin/usuarios')->defaults('status', 301)->name('users.legacy');
     Route::delete('/usuarios/{user}', DestroyUserController::class)->name('users.destroy');
-    Route::post('/usuarios/{user}/testes', GrantPentestAccessController::class)->whereNumber('user')->middleware('throttle:30,1,admin-usuario-testes')->name('users.pentest.grant');
-    Route::delete('/usuarios/{user}/testes', RevokePentestAccessController::class)->whereNumber('user')->name('users.pentest.revoke');
 
     // Testes ativos (P6b): a chave e o "Parar tudo", as aprovações e as execuções de todas as contas. Desligar, "Parar
     // tudo" e o Parar de uma execução não têm limite de requisições: parar nunca é recusado.
     Route::prefix('testes')->name('pentest.')->group(function () {
         Route::get('/', ShowPentestOverviewController::class)->name('overview');
-        Route::post('/ligar', EnablePentestController::class)->middleware('throttle:10,1,admin-testes-ligar')->name('enable');
-        Route::post('/desligar', DisablePentestController::class)->name('disable');
         Route::post('/parar-tudo', StopAllPentestController::class)->name('stop-all');
-        Route::get('/aprovacoes', ListPentestApprovalsController::class)->name('approvals');
-        Route::get('/aprovacoes/{aprovacao}', ShowPentestApprovalController::class)->whereNumber('aprovacao')->name('approvals.show');
-        Route::post('/aprovacoes/{aprovacao}/aprovar', ApprovePentestRunController::class)->whereNumber('aprovacao')->middleware('throttle:30,1,admin-testes-aprovar')->name('approvals.approve');
-        Route::post('/aprovacoes/{aprovacao}/recusar', RejectPentestRunController::class)->whereNumber('aprovacao')->middleware('throttle:30,1,admin-testes-recusar')->name('approvals.reject');
         Route::get('/execucoes', ListAdminPentestRunsController::class)->name('runs');
         Route::get('/execucoes/{execucao}', ShowAdminPentestRunController::class)->whereUuid('execucao')->name('runs.show');
         Route::post('/execucoes/{execucao}/parar', StopAdminPentestRunController::class)->whereUuid('execucao')->name('runs.stop');

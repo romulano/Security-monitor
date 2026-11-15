@@ -5,8 +5,6 @@ namespace App\Models;
 use App\Models\Concerns\VisibleToAccount;
 use App\Models\Contracts\VisibilityRoot;
 use App\Services\Alerts\Slack\SlackClient;
-use App\Services\Pentest\PentestAccess;
-use App\Services\Pentest\PentestAvailability;
 use App\Support\Settings;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -65,7 +63,7 @@ class NotificationChannel extends Model implements VisibilityRoot
      */
     public static function typesFor(User $user): array
     {
-        return self::TYPES + (PentestAvailability::for($user) && PentestAccess::granted($user) ? [self::TESTS => 'Testes de segurança'] : []);
+        return self::TYPES + [self::TESTS => 'Testes de segurança'];
     }
 
     /** Fusos que o cliente pode escolher para o horário silencioso e o resumo diário. */

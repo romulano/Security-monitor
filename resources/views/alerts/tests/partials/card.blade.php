@@ -32,10 +32,8 @@
             <li>Você escolhe quando; parar é um clique, a qualquer momento, e tudo para em segundos</li>
             <li>Nada destrutivo: sem login, sem formulário, sem força bruta, sem sobrecarga</li>
         </ul>
-        @if (! $card['granted'])
-            <div><a href="{{ route('alerts.tests') }}" class="{{ $primary }}">Ver como liberar</a></div>
-        @elseif ($card['domains']->isEmpty())
-            @include('alerts.tests.partials.start', ['switch' => $card['switch']])
+        @if ($card['domains']->isEmpty())
+            @include('alerts.tests.partials.start')
         @else
             <div class="flex flex-wrap items-center gap-2">
                 <a href="{{ route('alerts.tests') }}" class="{{ $primary }}">Abrir os testes</a>
