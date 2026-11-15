@@ -8,7 +8,7 @@ use App\Models\LookalikeWatch;
 use App\Models\NotificationChannel;
 use App\Models\NotificationDelivery;
 use App\Services\Alerts\Notifier;
-use App\Services\Company\Destinations;
+use App\Services\Access\Destinations;
 use App\Support\Settings;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;

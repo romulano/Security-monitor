@@ -26,7 +26,6 @@ use Throwable;
  * 3. dos que existem, lê o registro (RDAP) e a hospedagem;
  * 4. pede ao navegador a visita dos que têm IP público e mudaram ou ficaram
  *    sem print recente;
- * 5. no Radar de empresa, relê o DNS dos subdomínios vigiados (RadarSubdomains).
  *
  * A completa roda todo dia às `scan_at` (01:00 de Brasília). Os passos 1 e 2 vão em lotes de
  * jobs na fila `lookalikes` (`scanInBatches`: cada lote tem o seu retry e um
@@ -47,7 +46,6 @@ class LookalikeScanner
         private RdapClient $rdap,
         private BrowserQueue $browser,
         private RiskScorer $scorer,
-        private RadarSubdomains $subdomains,
     ) {}
 
     /** Liga (ou religa) um Radar já integrado. A próxima varredura fica para já. */
@@ -176,20 +174,11 @@ class LookalikeScanner
                 }
             }
 
-            // As sementes de subdomínio (E4b): ~40 nomes compactos cada, agrupados por terminação, nos mesmos lotes.
-            $compact = $this->subdomainCandidates($watch, $brand, $variants, $known);
-
-            foreach (array_keys($compact) as $host) {
-                $candidates[] = [$host, 'subdominio'];
-            }
-
             $chunks = array_chunk($candidates, max(1, (int) config('secmon.lookalikes.dns_batch_size', 100)));
 
             ScanRun::put($runId, 'meta', [
                 'started_at' => now()->toIso8601String(),
-                'variants' => array_merge(array_keys($variants), array_keys($compact)),
-                // De qual subdomínio veio cada variação compacta: o achado diz qual é imitado.
-                'seeds' => $compact,
+                'variants' => array_keys($variants),
                 'chunks' => count($chunks),
                 'log' => $this->log,
             ]);
@@ -203,40 +192,6 @@ class LookalikeScanner
         }
     }
 
-    /**
-     * As variações compactas das sementes de subdomínio do Radar (E4b), sem as que o gerador de sempre já confere nem as
-     * já conhecidas, agrupadas por terminação. Escreve no log quantas sementes entraram e quantas o teto deixou de fora.
-     *
-     * @param  array<string, ?string>  $variants
-     * @return array<string, string> host => o subdomínio imitado (a semente)
-     */
-    private function subdomainCandidates(LookalikeWatch $watch, BrandContext $brand, array $variants, Collection $known): array
-    {
-        ['seeds' => $seeds, 'used' => $used, 'limit' => $limit, 'left_out' => $out] = $this->subdomains->seeds($watch);
-
-        if ($seeds->isEmpty() && $out === 0) {
-            return [];
-        }
-
-        $hosts = [];
-
-        foreach ($seeds as $sub) {
-            foreach ($this->variants->generateForSubdomain($sub->name, $brand->domain, $brand->ownDomains) as $host => $technique) {
-                if (! isset($variants[$host]) && ! $known->has($host)) {
-                    $hosts[$host] ??= $sub->name;
-                }
-            }
-        }
-
-        $count = $seeds->count();
-        $this->note("Sementes de subdomínio: {$count} (".count($hosts).' variações compactas, agrupadas por terminação).');
-
-        if ($out > 0) {
-            $this->note("{$out} ".($out === 1 ? 'subdomínio ficou' : 'subdomínios ficaram')." de fora pelo teto de {$limit} sementes da empresa ({$used} na empresa): entram os mais antigos.");
-        }
-
-        return array_replace(array_flip(VariantGenerator::bySuffix(array_keys($hosts))), $hosts);
-    }
 
     /**
      * Um lote de nomes no DNS, guardado para o último job. Em job (`final`
@@ -391,11 +346,6 @@ class LookalikeScanner
 
         $queued = $toCapture->isEmpty() ? 0 : $this->browser->enqueue($watch, $toCapture, $brand->ownDomains);
         $this->note($queued ? "{$queued} ".($queued === 1 ? 'página pedida' : 'páginas pedidas').' ao navegador.' : 'Nenhuma página precisava de visita nova.');
-
-        // Os subdomínios vigiados (E4a), só na completa: o DNS deles e os avisos de tomada e de mudança para fora.
-        foreach ($full ? $this->subdomains->scan($watch) : [] as $line) {
-            $this->note($line);
-        }
 
         $watch->stats = array_merge($watch->stats ?? [], [
             'registered' => $watch->lookalikes()->where('state', '!=', 'gone')->count(),

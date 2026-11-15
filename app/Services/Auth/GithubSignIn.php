@@ -4,7 +4,6 @@ namespace App\Services\Auth;
 
 use App\Exceptions\ActionRefused;
 use App\Models\User;
-use App\Services\Company\Companies;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -102,7 +101,7 @@ class GithubSignIn
 
         // Mesma resposta para "não existe" e "é admin": a porta do admin é a senha.
         // A conta de empresa desativada ou com a empresa inativa (chaves, suspensão) também não entra por aqui.
-        $closed = $user !== null && app(Companies::class)->accessRefusal($user) !== null;
+        $closed = false;
 
         if (! $user || $user->is_admin || $closed) {
             throw new ActionRefused('Não há uma conta do Security Monitor ligada a esse GitHub. Crie a sua em Cadastro.', route('login'));

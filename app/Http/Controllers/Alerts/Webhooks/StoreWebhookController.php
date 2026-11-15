@@ -20,7 +20,6 @@ class StoreWebhookController extends Controller
             (string) $request->input('autenticacao'),
             $request->input('segredo'),
             $request->session(),
-            $request->channelScope(),
         );
 
         return redirect()->route('alerts.webhooks.show', $channel)->with('status', $channel->status === 'pending'

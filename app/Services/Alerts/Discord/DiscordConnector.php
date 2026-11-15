@@ -8,8 +8,7 @@ use App\Models\NotificationDelivery;
 use App\Models\User;
 use App\Services\Alerts\ChannelSettings;
 use App\Services\Alerts\Notifier;
-use App\Services\Company\ChannelScope;
-use App\Services\Company\CompanyChannels;
+use App\Services\Access\Channels;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Str;
 
@@ -27,7 +26,7 @@ class DiscordConnector
         private MessageBuilder $messages,
         private Notifier $notifier,
         private ChannelSettings $settings,
-        private CompanyChannels $channels,
+        private Channels $channels,
     ) {}
 
     /** `$pickChannel` (`?canal=1`): trocar o canal do servidor já escolhido. */
@@ -49,19 +48,14 @@ class DiscordConnector
      * não divide nenhum servidor com o bot. Guarda o state na sessão e
      * devolve a tela do Discord.
      */
-    public function authorizeUrl(string $modo, Session $session, ?User $user = null, ?ChannelScope $scope = null, ?NotificationChannel $existing = null): string
+    public function authorizeUrl(string $modo, Session $session, ?User $user = null, ?NotificationChannel $existing = null): string
     {
         $state = Str::random(40);
         $mode = ['dm' => 'dm', 'comunidade' => 'dm_join'][$modo] ?? 'channel';
-        $target = CompanyChannels::pack($scope, $existing);
-
-        // Na empresa (E5a, P1): só o servidor; a mensagem direta seria a conversa de uma pessoa. Quem pode, já aqui.
-        if ($mode !== 'channel' && CompanyChannels::packedIsCompany($target)) {
-            throw new ActionRefused(CompanyChannels::PRIVATE_REFUSED, route('alerts.discord'));
-        }
+        $target = Channels::pack($existing);
 
         if ($user !== null) {
-            $this->channels->target($user, 'discord', $scope, $existing);
+            $this->channels->target($user, 'discord', $existing);
         }
 
         $session->put(self::STATE, ['state' => $state, 'mode' => $mode] + ($target === [] ? [] : ['target' => $target]));
@@ -98,9 +92,6 @@ class DiscordConnector
 
         // O token da conta do cliente só serve para saber quem ele é e qual servidor escolheu.
         try {
-            if ($expected['mode'] !== 'channel' && CompanyChannels::packedIsCompany($target)) {
-                throw new ActionRefused(CompanyChannels::PRIVATE_REFUSED, route('alerts.discord'));
-            }
 
             return match ($expected['mode']) {
                 'dm' => $this->connectDm($user, $token, join: false),
@@ -150,9 +141,9 @@ class DiscordConnector
         return $chosen['name'];
     }
 
-    public function saveWebhook(User $user, string $url, ?ChannelScope $scope = null, ?NotificationChannel $existing = null): NotificationChannel
+    public function saveWebhook(User $user, string $url, ?NotificationChannel $existing = null): NotificationChannel
     {
-        $channel = $this->channels->target($user, 'discord', $scope, $existing);
+        $channel = $this->channels->target($user, 'discord', $existing);
         $previousGuild = $channel->method === 'channel' ? $channel->discord_guild_id : null;
 
         $this->channels->save($user, $channel, [
@@ -187,7 +178,6 @@ class DiscordConnector
         $channel?->delete();
 
         if ($channel !== null && $by !== null) {
-            $this->channels->record($by, $channel, 'channel.removed');
         }
 
         $this->leaveIfUnused($guild);

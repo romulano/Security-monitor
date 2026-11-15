@@ -4,7 +4,7 @@ namespace App\Http\Requests\Alerts\Lookalikes;
 
 use App\Http\Requests\Request;
 use App\Models\LookalikeWatch;
-use App\Services\Company\Visibility;
+use App\Services\Access\Visibility;
 use App\Services\Lookalike\RadarInterview;
 
 /**

@@ -52,7 +52,7 @@
         </button>
         {{-- Reenviar é configurar (R14): o membro vê e vota, mas não dispara os canais de quem criou. --}}
         @if ($receivers->isNotEmpty() && $level !== 'none' && ! in_array($finding->status, ['triage', 'ai_review', 'queued'], true)
-            && ($canManage ?? app(\App\Services\Company\Visibility::class)->manages(auth()->user(), $finding)))
+            && ($canManage ?? app(\App\Services\Access\Visibility::class)->manages(auth()->user(), $finding)))
             <form method="POST" action="{{ route('alerts.github.resend', $finding) }}">
                 @csrf
                 <button class="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-ink-700 px-2.5 text-sm text-ink-200 hover:border-accent hover:text-white"

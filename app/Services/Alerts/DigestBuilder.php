@@ -11,7 +11,7 @@ use App\Models\LookalikeDomain;
 use App\Models\LookalikeWatch;
 use App\Models\NewsCase;
 use App\Models\NotificationChannel;
-use App\Services\Company\Destinations;
+use App\Services\Access\Destinations;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 

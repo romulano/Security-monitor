@@ -11,7 +11,7 @@ use App\Services\Company\Companies;
 use App\Services\Company\CompanyLimits;
 use App\Services\Company\ItemSectors;
 use App\Services\Company\Viewer;
-use App\Services\Company\Visibility;
+use App\Services\Access\Visibility;
 use App\Support\DomainName;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;

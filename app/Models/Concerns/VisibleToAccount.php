@@ -3,20 +3,23 @@
 namespace App\Models\Concerns;
 
 use App\Models\User;
-use App\Services\Company\Visibility;
 use Illuminate\Database\Eloquent\Builder;
 
-/** Os scopes `visibleTo($user)` e `manageableBy($user)` das raízes (VisibilityRoot): a regra é toda do serviço Visibility. */
+/**
+ * Os scopes `visibleTo($user)` e `manageableBy($user)` das raízes (VisibilityRoot): o item é da conta que o criou.
+ *
+ * Na versão aberta não existe empresa nem setor, então ver e configurar são a mesma regra. Os scopes continuam
+ * existindo porque os filhos (VisibleThroughRoot) os consultam por subconsulta da raiz.
+ */
 trait VisibleToAccount
 {
     public function scopeVisibleTo(Builder $query, User $user): void
     {
-        app(Visibility::class)->constrain($query, $user);
+        $query->where($this->qualifyColumn('user_id'), $user->id);
     }
 
-    /** O que a conta configura (R14): a admin, tudo da empresa; o responsável, os setores dele; a pessoal, o dela. */
     public function scopeManageableBy(Builder $query, User $user): void
     {
-        app(Visibility::class)->constrainManaged($query, $user);
+        $query->where($this->qualifyColumn('user_id'), $user->id);
     }
 }

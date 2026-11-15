@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Alerts;
 
-use App\Services\Company\Visibility;
+use App\Services\Access\Visibility;
 
 class StoreAlertFeedbackRequest extends FeedbackRequest
 {

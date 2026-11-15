@@ -4,7 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Contracts\VisibilityRoot;
 use App\Models\Contracts\VisibleThroughRoot;
-use App\Services\Company\DeliveryGate;
+use App\Services\Access\DeliveryGate;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;

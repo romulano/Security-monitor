@@ -917,38 +917,6 @@ return [
         'domain' => env('MAIL_DOMAIN', 'example.com'),
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Plano empresarial (empresas com várias contas e setores)
-    |--------------------------------------------------------------------------
-    | Tudo atrás da chave global, desligada por padrão. Com ela ligada, cada
-    | empresa ainda precisa da própria chave (companies.enterprise_enabled_at,
-    | a empresa piloto primeiro) e de não estar suspensa. Os limites são os
-    | padrões; o admin do Security Monitor ajusta por empresa (as colunas limit_* de
-    | companies; nulo = o padrão daqui).
-    */
-    'enterprise' => [
-        'enabled' => (bool) env('ENTERPRISE_ENABLED', false),
-        'limits' => [
-            // As contas incluem a admin (R1).
-            'accounts' => 10,
-            // Domínios comprovados, somando todos os setores (R5).
-            'domains' => 15,
-            // Subdomínios por domínio comprovado; não contam nos domínios (R6).
-            'subdomains' => 20,
-            'sectors' => 10,
-            // Os dos outros serviços (§4.8, D1).
-            'github_monitors' => 5,
-            'alert_profiles' => 20,
-            'sector_channels' => 5,
-            'general_channels' => 5,
-            'webhooks' => 10,
-            'radar_seeds' => 300,
-            // Convites (convidar e reenviar) por empresa a cada 24 horas: cada um é um e-mail a um terceiro.
-            'daily_invites' => 50,
-        ],
-    ],
-
     // Contato público: pedidos de privacidade (LGPD), dúvidas sobre os termos
     // e relatos de segurança. O example.com recebe e-mail pelo Email Routing da Cloudflare.
     'contact_email' => env('SECMON_CONTACT_EMAIL', 'contato@example.com'),

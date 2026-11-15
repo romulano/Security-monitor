@@ -13,7 +13,7 @@ use App\Models\User;
 use App\Services\Alerts\Discovery\DnsSuggester;
 use App\Services\Company\CompanyLimits;
 use App\Services\Company\ItemSectors;
-use App\Services\Company\Visibility;
+use App\Services\Access\Visibility;
 use App\Services\Domains\DomainOwner;
 use App\Services\Domains\DomainOwnership;
 use App\Support\DomainName;

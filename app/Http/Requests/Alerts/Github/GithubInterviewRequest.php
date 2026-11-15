@@ -5,7 +5,7 @@ namespace App\Http\Requests\Alerts\Github;
 use App\Http\Requests\Request;
 use App\Models\GithubMonitor;
 use App\Services\Company\Viewer;
-use App\Services\Company\Visibility;
+use App\Services\Access\Visibility;
 use App\Services\Github\GithubInterview;
 
 /**

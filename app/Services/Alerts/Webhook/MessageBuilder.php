@@ -39,7 +39,6 @@ class MessageBuilder extends AlertMessage
         'alert.grouped' => 'notícias que chegaram juntas (horário silencioso ou limite por hora)',
         'alert.digest' => 'o resumo diário',
         'radar.alert' => 'domínio parecido com o seu (Radar de domínios)',
-        'radar.subdomain' => 'um subdomínio vigiado pelo Radar apontando para fora ou para um destino que não existe',
         'github.finding' => 'achado do monitoramento do GitHub',
         'tests.ready' => 'os testes de segurança foram ativados e a sua autorização está pronta',
         'test' => 'o teste do botão “Enviar teste”',

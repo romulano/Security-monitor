@@ -1,10 +1,6 @@
 <?php
 
 use App\Http\Middleware\ContentSecurityPolicy;
-use App\Http\Middleware\EnsureCompanyAccount;
-use App\Http\Middleware\EnsureCompanyAccountActive;
-use App\Http\Middleware\EnsureCompanyAdmin;
-use App\Http\Middleware\EnsureEnterpriseEnabled;
 use App\Http\Middleware\EnsurePentestAccess;
 use App\Http\Middleware\EnsurePentestAvailable;
 use App\Http\Middleware\EnsurePentestDomain;
@@ -17,8 +13,6 @@ use App\Http\Middleware\KeepSessionIdle;
 use App\Http\Middleware\RecordPageView;
 use App\Http\Middleware\RefuseRobots;
 use App\Http\Middleware\RejectOutOfRangeIds;
-use App\Services\Company\CompanyEntry;
-use App\Services\Company\CompanyInvites;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -46,12 +40,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'two-factor.required' => EnsureTwoFactorWhenRequired::class,
             // Testes de segurança: só com PENTEST_ALLOWED; senão, 404.
             'pentest.available' => EnsurePentestAvailable::class,
-            // Plano empresarial: só com ENTERPRISE_ENABLED; senão, 404.
-            'enterprise' => EnsureEnterpriseEnabled::class,
-            // Telas de quem administra a empresa; os outros levam 404.
-            'company.admin' => EnsureCompanyAdmin::class,
-            // Telas de toda conta da empresa (Domínios da empresa); a conta pessoal leva 404.
-            'company.account' => EnsureCompanyAccount::class,
             // A conta liberada pelo admin (ou a do admin); sem a liberação, volta à entrada da área sem executar nada.
             'pentest.access' => EnsurePentestAccess::class,
             // O domínio da rota é da conta e chegou ao passo pedido; senão, 404, antes do limite e da senha.
@@ -72,20 +60,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: ValidateSignature::class);
         // O "link inativo" precisa do item da URL: depois da troca do id pelo modelo, e só com a assinatura já conferida.
         $middleware->appendToPriorityList(after: SubstituteBindings::class, append: EnsureSignedLinkActive::class);
-        // Sem a chave do plano empresarial, /admin/empresas/qualquer-id é 404 antes de procurar a empresa.
-        $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: EnsureEnterpriseEnabled::class);
-        $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: EnsureCompanyAdmin::class);
-        $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: EnsureCompanyAccount::class);
         // Id da URL grande demais para o bigint: 404 logo antes do binding, que o mandaria ao Postgres (22003, era 500).
         $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: RejectOutOfRangeIds::class);
-        // A área de testes some antes até do limite de requisições: sem PENTEST_ALLOWED, é
-        // sempre 404, nunca um 429 que contaria que a rota existe. Sem a liberação do admin, a
-        // volta à entrada também vem antes do domínio, da senha e do limite.
-        // O plano empresarial também: sem a chave, ou sem ser a admin da empresa, 404 antes do limite (nunca um 429
-        // que contaria que a rota existe, nem a tentativa gasta do limite de quem administra).
-        $middleware->prependToPriorityList(before: ThrottleRequests::class, prepend: EnsureEnterpriseEnabled::class);
-        $middleware->prependToPriorityList(before: ThrottleRequests::class, prepend: EnsureCompanyAdmin::class);
-        $middleware->prependToPriorityList(before: ThrottleRequests::class, prepend: EnsureCompanyAccount::class);
         $middleware->prependToPriorityList(before: ThrottleRequests::class, prepend: EnsurePentestAvailable::class);
         $middleware->prependToPriorityList(before: ThrottleRequests::class, prepend: EnsurePentestAccess::class);
         $middleware->prependToPriorityList(before: ThrottleRequests::class, prepend: EnsurePentestDomain::class);
@@ -104,7 +80,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append([ContentSecurityPolicy::class, RecordPageView::class]);
 
         // A conta de empresa só entra com a empresa ativa e sem estar desativada (a sessão aberta também cai).
-        $middleware->web(append: [EnsureCompanyAccountActive::class, RejectOutOfRangeIds::class]);
+        $middleware->web(append: [RejectOutOfRangeIds::class]);
         $middleware->api(append: [RejectOutOfRangeIds::class]);
 
         // A aplicação roda atrás do nginx do compose. Dos cabeçalhos X-Forwarded-*, só os que a
@@ -125,18 +101,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // old() fica gravado na sessão.
         $exceptions->dontFlash(['reauth_password', 'reauth_code', 'reauth_two_factor_code', 'two_factor_code', 'proxy_url']);
 
-        // O link da admin da empresa (CompanyEntry) e o convite (CompanyInvites) com assinatura ruim, vencido, já usado
-        // ou de empresa inativa: a mesma página amigável para todos os motivos, com o mesmo 404, sem dizer qual foi.
-        $exceptions->render(function (HttpException $e, Request $request) {
-            if (! in_array($e->getStatusCode(), [403, 404], true) || ! $request->routeIs('company.entry', 'company.entry.complete', 'company.invite', 'company.invite.accept') || ! config('secmon.enterprise.enabled')) {
-                return null;
-            }
-
-            $message = $request->routeIs('company.invite*') ? CompanyInvites::LINK_GONE : CompanyEntry::LINK_GONE;
-
-            return response()->view('company.entry-invalid', ['message' => $message], 404);
-        });
-
+        
         // A área dos testes com a página desatualizada (419): confirmar que é você numa aba, ou sair e entrar de novo,
         // troca o token, e o formulário aberto em outra aba chega com o antigo. No lugar da página de erro, volta à
         // página, que vem com o token novo, dizendo por quê. O Parar volta à execução (B3 do Red Team na P6a); o resto,

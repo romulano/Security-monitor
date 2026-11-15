@@ -58,12 +58,6 @@ class OwnedDomain extends Model implements VisibilityRoot
         return $this->belongsTo(Sector::class);
     }
 
-    /** Os subdomínios (R6, só da empresa): ativos, sugestões, tirados e os que deixaram de resolver. */
-    public function subdomains(): HasMany
-    {
-        return $this->hasMany(OwnedSubdomain::class);
-    }
-
     /** A varredura de chaves deste domínio, se a conta a ativou. */
     public function keySite(): HasOne
     {

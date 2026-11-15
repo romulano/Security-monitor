@@ -6,7 +6,6 @@ use App\Exceptions\ActionRefused;
 use App\Mail\TwoFactorChanged;
 use App\Models\User;
 use App\Models\UserTwoFactor;
-use App\Services\Company\CompanyTwoFactor;
 use App\Services\Mail\Outbox;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
@@ -323,11 +322,6 @@ class TwoFactor
      */
     public function disable(User $user, string $event = 'off'): bool
     {
-        // A própria conta não desliga a 2FA que a empresa exige (trocar de celular é pela redefinição da admin).
-        if ($event === 'off' && CompanyTwoFactor::requires($user) && self::enabled($user)) {
-            throw new ActionRefused('A sua empresa exige a verificação em duas etapas, então ela não pode ser desligada. Para trocar de celular, peça a quem administra a conta da empresa para redefinir a sua.');
-        }
-
         $wasOn = UserTwoFactor::where('user_id', $user->id)->whereNotNull('confirmed_at')->delete() > 0;
         UserTwoFactor::where('user_id', $user->id)->delete();
 

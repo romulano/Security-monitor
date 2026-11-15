@@ -17,10 +17,6 @@ class ShowNotifiersController extends Controller
 
     public function __invoke(ShowNotifiersRequest $request): View
     {
-        $user = $request->user();
-
-        return $user->isCompanyAccount()
-            ? view('alerts.notifiers-company', $this->center->companyPage($user))
-            : view('alerts.notifiers', $this->center->page($user));
+        return view('alerts.notifiers', $this->center->page($request->user()));
     }
 }

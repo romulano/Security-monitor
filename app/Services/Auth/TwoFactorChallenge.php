@@ -4,7 +4,6 @@ namespace App\Services\Auth;
 
 use App\Exceptions\ActionRefused;
 use App\Models\User;
-use App\Services\Company\Companies;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -70,7 +69,7 @@ class TwoFactorChallenge
 
         // A empresa suspensa (ou a conta desativada) entre a senha e o código: volta ao login, onde a senha dá a resposta da errada.
         // O admin do Security Monitor também passa por aqui (E0c).
-        if ($user === null || ! $record?->confirmed() || app(Companies::class)->accessRefusal($user) !== null) {
+        if ($user === null || ! $record?->confirmed()) {
             $session->forget(self::KEY);
 
             throw new ActionRefused('O prazo para digitar o código acabou. Entre de novo.', route('login'));

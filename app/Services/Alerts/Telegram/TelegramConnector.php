@@ -6,8 +6,7 @@ use App\Exceptions\ActionRefused;
 use App\Models\NotificationChannel;
 use App\Models\User;
 use App\Services\Alerts\ChannelSettings;
-use App\Services\Company\ChannelScope;
-use App\Services\Company\CompanyChannels;
+use App\Services\Access\Channels;
 use Illuminate\Contracts\Session\Session;
 
 /**
@@ -24,7 +23,7 @@ class TelegramConnector
         private TelegramClient $telegram,
         private ConnectionLinks $links,
         private ChannelSettings $settings,
-        private CompanyChannels $channels,
+        private Channels $channels,
     ) {}
 
     public function page(User $user, ?NotificationChannel $channel, Session $session, bool $changing): array
@@ -58,15 +57,11 @@ class TelegramConnector
      * "Numa conversa privada" ou "Num grupo" (`$group`): gera o link que o botão da página abre. Na empresa (E5a), só
      * num grupo (P1), e quem pode conectar no escopo é conferido já aqui e de novo quando o grupo responde.
      */
-    public function startLink(User $user, Session $session, bool $group, ?ChannelScope $scope = null, ?NotificationChannel $existing = null): void
+    public function startLink(User $user, Session $session, bool $group, ?NotificationChannel $existing = null): void
     {
-        $target = CompanyChannels::pack($scope, $existing);
+        $target = Channels::pack($existing);
 
-        if (! $group && CompanyChannels::packedIsCompany($target)) {
-            throw new ActionRefused(CompanyChannels::PRIVATE_REFUSED);
-        }
-
-        $this->channels->target($user, 'telegram', $scope, $existing);
+        $this->channels->target($user, 'telegram', $existing);
 
         $session->put(self::LINK, [
             'code' => $this->links->create($user->id, $target),
@@ -97,7 +92,6 @@ class TelegramConnector
         $channel?->delete();
 
         if ($channel !== null && $by !== null) {
-            $this->channels->record($by, $channel, 'channel.removed');
         }
 
         $this->telegram->leaveIfUnused($chatId);
