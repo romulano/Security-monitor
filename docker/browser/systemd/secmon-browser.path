@@ -1,0 +1,12 @@
+# Gatilho do navegador do Radar de domínios: chegou pedido, sobe; terminou, morre.
+# Local: `make browser-watch` (systemd do usuário). Servidor: em /etc/systemd/system.
+# @DIR@ vira a pasta de troca vista do host (no servidor, dentro do volume `storage`).
+[Unit]
+Description=Security Monitor: navegador do Radar de domínios (sobe quando há pedido)
+
+[Path]
+PathExistsGlob=@DIR@/inbox/*.json
+Unit=secmon-browser.service
+
+[Install]
+WantedBy=default.target

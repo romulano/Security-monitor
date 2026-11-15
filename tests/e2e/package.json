@@ -1,0 +1,12 @@
+{
+  "name": "secmon-e2e",
+  "private": true,
+  "description": "Testes de ponta a ponta do Security Monitor (Playwright) contra a stack com as imagens de produção.",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}

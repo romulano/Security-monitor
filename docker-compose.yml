@@ -1,0 +1,147 @@
+name: secmon
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: docker/php/Dockerfile
+    args:
+      UID: ${UID:-1000}
+      GID: ${GID:-1000}
+  image: secmon/app:latest
+  env_file: [.env]
+  user: "${UID:-1000}:${GID:-1000}"
+  # O código vem do host: editar um arquivo já vale na próxima requisição,
+  # sem rebuild. A imagem continua self-contained para deploy.
+  volumes:
+    - ./:/var/www/html
+  depends_on:
+    db:
+      condition: service_healthy
+    es:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+  app:
+    <<: *app
+    container_name: secmon-app
+    environment:
+      SECMON_ROLE: app
+      # sem HOME o tinker tenta escrever em /home/<uid> e quebra
+      HOME: /tmp
+
+  web:
+    image: nginx:1.27-alpine
+    container_name: secmon-web
+    ports:
+      - "1515:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./public:/var/www/html/public:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  worker:
+    <<: *app
+    container_name: secmon-worker
+    environment:
+      SECMON_ROLE: worker
+      # sem HOME o tinker tenta escrever em /home/<uid> e quebra
+      HOME: /tmp
+    # Alertas: o matching (alerts), o Slack (notifications) e o parecer da IA
+    # antes do envio (judge) não podem esperar a fila de análise esvaziar; a
+    # descoberta de domínios (discovery) pode.
+    command: php artisan queue:work --queue=alerts,notifications,notifications-low,judge,pentest-ai,enrich,discovery,lookalikes,github,merge,subdomains,default --sleep=3 --tries=2 --timeout=300 --max-time=3600
+
+  scheduler:
+    <<: *app
+    container_name: secmon-scheduler
+    environment:
+      SECMON_ROLE: scheduler
+      # sem HOME o tinker tenta escrever em /home/<uid> e quebra
+      HOME: /tmp
+    command: php artisan schedule:work
+
+  # Navegador do Radar de domínios (docker/browser). Não sobe com `up`: o
+  # docker/browser/run.sh o chama com `run --rm` quando há pedido em
+  # storage/app/lookalike/inbox, e ele sai ao terminar. Rede própria (sem o
+  # banco, o app, o Elasticsearch ou o hermes), sem .env e só com a pasta de
+  # troca montada. A página que ele abre é de quem imita o cliente: tratada
+  # como hostil.
+  browser:
+    build:
+      context: docker/browser
+    image: secmon/browser:latest
+    profiles: [browser]
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      HOME: /tmp
+      WORK_DIR: /work
+    volumes:
+      - ./storage/app/lookalike:/work
+    networks: [browser]
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1536m
+    cpus: 1.0
+    pids_limit: 256
+    restart: "no"
+
+  db:
+    image: postgres:16-alpine
+    container_name: secmon-db
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-secmon}
+      POSTGRES_USER: ${DB_USERNAME:-secmon}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secmon}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-secmon} -d ${DB_DATABASE:-secmon}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    container_name: secmon-es
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      xpack.security.http.ssl.enabled: "false"
+      bootstrap.memory_lock: "true"
+      ES_JAVA_OPTS: "-Xms768m -Xmx768m"
+    ulimits:
+      memlock: { soft: -1, hard: -1 }
+      nofile: { soft: 65536, hard: 65536 }
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  es_data:
+
+# Sub-rede fixa: o gateway 172.31.88.1 é o endereço do computador visto de
+# dentro dos containers, e é nele que o hermes (~/job/hermes) escuta — fora da
+# rede Wi-Fi. É o HERMES_URL padrão do driver de IA `hermes`.
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.31.88.0/24
+          gateway: 172.31.88.1
+  # Só o navegador: sai para a internet, não enxerga os outros containers.
+  browser: {}

@@ -1,0 +1,201 @@
+# Stack do CI (.github/workflows/ci-cd.yml): as mesmas imagens de produção,
+# sem nenhuma rede externa, segredo ou porta publicada.
+#
+#   docker compose -f docker-compose.ci.yml run --rm phpunit     # Laravel
+#   docker compose -f docker-compose.ci.yml up -d --wait web     # stack de prod
+#   docker compose -f docker-compose.ci.yml run --rm e2e         # Playwright
+#   node --test docker/browser/test/capture.test.mjs              # navegador do Radar
+#   bash docker/pentest/test/isolamento.sh                        # stack de testes autorizados
+#
+# O APP_KEY vem do ambiente (o workflow gera um a cada execução). Banco e
+# Elasticsearch nascem vazios: o boot do app roda as migrations, nunca o seed.
+name: secmon-ci
+
+x-env: &env
+  APP_KEY: ${APP_KEY:?gere um APP_KEY para o CI}
+  DB_CONNECTION: pgsql
+  DB_HOST: db
+  DB_PORT: "5432"
+  DB_USERNAME: secmon
+  DB_PASSWORD: secmon
+  HOME: /tmp
+
+services:
+  # Suíte do Laravel (PHPUnit) dentro da imagem de testes: mesmo PHP do runtime.
+  phpunit:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: test
+      additional_contexts:
+        tests: ./tests
+    # CI_TAG (o workflow põe o número do run): dois runners juntos não usam a imagem um do outro.
+    image: secmon/app:test${CI_TAG:-}
+    profiles: [laravel]
+    user: "1000:1000"
+    # Em paralelo: um processo e um banco (secmon_test_test_N) por vez; ~50 s em vez de ~6 min.
+    command: ["php", "artisan", "test", "--parallel", "--processes=6"]
+    environment:
+      <<: *env
+      # O phpunit.xml força o resto (APP_ENV=testing, DB_DATABASE=secmon_test,
+      # filas síncronas, IA desligada).
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Imagens de produção (target runtime e web), com o .env.example da imagem
+  # e só o necessário sobrescrito aqui.
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: runtime
+    image: secmon/app:ci${CI_TAG:-}
+    # O nginx de produção procura o PHP por este alias
+    # (docker/nginx/prod-upstream.conf), como no docker-compose.prod.yml.
+    networks:
+      default:
+        aliases: [secmon-fpm]
+    user: "1000:1000"
+    # O boot copia o public/ para o volume que o nginx serve, como em produção.
+    volumes:
+      - public:/srv/public
+    environment:
+      <<: *env
+      SECMON_PUBLIC_DIR: /srv/public
+      SECMON_ROLE: app
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: http://web
+      DB_DATABASE: secmon
+      ELASTICSEARCH_HOST: http://es:9200
+      # Sem IA, e-mail, Turnstile ou integrações: nada sai da máquina do CI.
+      ENRICHER_ENABLED: "false"
+      MAIL_MAILER: log
+      LOG_CHANNEL: stderr
+      TURNSTILE_SITE_KEY: ""
+      TURNSTILE_SECRET_KEY: ""
+      INDEXNOW_ENABLED: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 9000) ? 0 : 1);'"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+    depends_on:
+      db:
+        condition: service_healthy
+      es:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: web
+    image: secmon/web:ci${CI_TAG:-}
+    volumes:
+      - type: volume
+        source: public
+        target: /var/www/html/public
+        read_only: true
+        volume:
+          nocopy: true
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/favicon.ico || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    depends_on:
+      app:
+        condition: service_healthy
+
+  # Testes de ponta a ponta (tests/e2e) contra o nginx de produção.
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.63.0-noble
+    profiles: [e2e]
+    working_dir: /e2e
+    environment:
+      BASE_URL: http://web
+      CI: "true"
+      HOME: /tmp
+      npm_config_cache: /tmp/.npm
+    volumes:
+      - ./tests/e2e:/e2e
+    command: ["sh", "-c", "npm ci --no-audit --no-fund && npx playwright test"]
+    depends_on:
+      web:
+        condition: service_healthy
+
+  # Navegador do Radar de domínios: só a imagem; quem a roda é o
+  # docker/browser/test/capture.test.mjs, com as travas de produção.
+  browser:
+    build:
+      context: docker/browser
+    image: secmon/browser:ci
+    profiles: [browser]
+
+  # Servidor de envio (Postfix + DKIM): só a imagem; quem a roda é o
+  # docker/mail/test/run.sh, com as travas de produção e um Mailpit no lugar da internet.
+  mail:
+    build:
+      context: docker/mail
+    image: secmon/mail:ci
+    profiles: [mail]
+
+  # Stack de testes autorizados: as imagens de ferramentas e do portão, mais a sonda que
+  # faz o papel de ferramenta malcomportada. Quem as roda é o docker/pentest/test/isolamento.sh.
+  pentest:
+    build:
+      context: docker/pentest
+      additional_contexts:
+        catalogo: resources/pentest/catalog
+    image: secmon/pentest:ci
+    profiles: [pentest]
+
+  pentest-portao:
+    build:
+      context: docker/pentest/portao
+    image: secmon/pentest-portao:ci
+    profiles: [pentest]
+
+  pentest-sonda:
+    build:
+      context: docker/pentest/test
+      dockerfile: sonda.Dockerfile
+    image: secmon/pentest-sonda:ci
+    profiles: [pentest]
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: secmon
+      POSTGRES_USER: secmon
+      POSTGRES_PASSWORD: secmon
+    volumes:
+      # Banco dos testes do Laravel, ao lado do usado pela stack.
+      - ./docker/ci/initdb:/docker-entrypoint-initdb.d:ro
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U secmon -d secmon"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      xpack.security.http.ssl.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+
+volumes:
+  public:

@@ -1,0 +1,8 @@
+Security Monitor's copy editor checked the record you wrote for this article against the sources and asked for the adjustments
+below. Fix exactly what was asked, using only the article and the existing case above.
+
+When the scope is "parte", rewrite only the fields listed in fields_to_rewrite and copy every other field from
+previous_record exactly as it is. When the scope is "tudo", write the whole record again from the article, fixing every
+problem listed; keep same_case and is_new_info as they are in previous_record.
+
+Keep the Brazilian Portuguese fields saying the same as the English ones.

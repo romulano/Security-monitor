@@ -1,0 +1,43 @@
+{
+    "version": 1,
+    "id": "0f8c6b2e-5d1a-4c3e-9a7b-2f4d6e8a1c3b",
+    "event": "alert.match",
+    "sent_at": "2026-11-01T12:00:05Z",
+    "data": {
+        "title": "Falha no FortiOS permite execução remota de código sem login",
+        "kind": "new_case",
+        "criticity": "critical",
+        "language": "pt",
+        "summary": "A Fortinet corrigiu uma falha no SSL-VPN do FortiOS que permite executar código no equipamento sem autenticação.",
+        "case": {
+            "id": "3f6c1e9a-8b2d-4c71-9e05-7d4a2b6c8f13",
+            "title": "Falha no FortiOS permite execução remota de código sem login",
+            "criticity": "critical",
+            "url": "https://example.com/materia/3f6c1e9a-8b2d-4c71-9e05-7d4a2b6c8f13",
+            "cves": ["CVE-2026-24858"],
+            "threat_actors": [],
+            "sectors": ["Governo"],
+            "products": ["FortiOS 7.4"],
+            "sources": 4,
+            "first_seen_at": "2026-11-01T11:42:10Z",
+            "exploits": ["EDB-52473"]
+        },
+        "match": {
+            "alerts": ["Acme Pagamentos"],
+            "cites_company": false,
+            "terms": ["Fortinet", "FortiOS"],
+            "reasons": ["FortiOS — produto da sua stack afetado"],
+            "score": 90,
+            "min_criticity": "high"
+        },
+        "ai_review": {
+            "relevance": 92,
+            "reason": "O FortiOS está na sua stack e a falha é explorada sem login."
+        },
+        "links": {
+            "case": "https://example.com/materia/3f6c1e9a-8b2d-4c71-9e05-7d4a2b6c8f13",
+            "relevant": "https://example.com/a/1234/relevante?expires=1764590400&signature=abc",
+            "irrelevant": "https://example.com/a/1234/nao-relevante?expires=1764590400&signature=abc"
+        }
+    }
+}

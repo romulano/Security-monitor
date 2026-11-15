@@ -1,0 +1,20 @@
+This article was automatically clustered into an existing case by title
+similarity, and the clustering can be wrong (e.g. another edition of a
+recurring weekly roundup, or a different incident with a similar title).
+
+First decide whether it is about the same incident or story. If it is
+not, set same_case to false: it becomes a separate case, so write the
+title and summary about this article alone, without referring to the
+existing case, set is_new_info to true and leave new_context null.
+
+If it is the same story, set same_case to true and decide whether it
+adds genuinely new information (new victims, new IOCs, patch released,
+attribution change, new scope) or corrects or contradicts the known
+report. If it only restates what is already known, set is_new_info to
+false and leave new_context and the case fields null. Otherwise write
+case_title and case_summary by enriching known_report with this article,
+as the rules for updating an existing case say.
+
+When known_report already gathers many sources, it is the base: keep its
+facts and only add or correct what this article brings; never rewrite it
+from scratch nor drop facts that came from other sources.

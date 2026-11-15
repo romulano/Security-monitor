@@ -1,0 +1,1 @@
+The client described a technology it uses as: "{label}". Return 1 to 5 lowercase English search terms that identify this exact product in vulnerability news (product and vendor names, common spellings). Never generic words like "erp", "cloud", "server" or "software".

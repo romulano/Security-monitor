@@ -1,0 +1,6 @@
+Tasks:
+1. PRINTS (PRINT 1..n, in reading order): transcribe the article's own text verbatim — headline, body paragraphs, lists, quotes, code blocks, tables (as plain text) and captions. Skip site navigation, ads, cookie and newsletter banners, share buttons, comments and lists of other articles. When overlapping prints repeat a passage, write it once.
+2. Merge that transcription with the text already available into one clean article text, in reading order, without duplicates and without adding anything that is not in the sources.
+3. For every image that shows something — each FIGURE n, and each figure, diagram or screenshot visible inside the prints — decide whether it is part of the post (diagram, chart, table, screenshot of malware, code, logs, a phishing page, indicators, or a photo of this specific incident) or not (site logo, author photo, ad, thumbnail of another article, generic stock photo, icon). For the ones that are part of the post, describe precisely what they show and transcribe every readable text, indicator (IPs, domains, hashes, CVEs), command and code.
+
+Keep the article text in its original language, and write reasons and descriptions in that same language.

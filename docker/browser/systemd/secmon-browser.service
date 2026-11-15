@@ -1,0 +1,9 @@
+# Disparado pelo secmon-browser.path. Abre as páginas pedidas e sai.
+[Unit]
+Description=Security Monitor: abre as páginas do Radar de domínios e sai
+
+[Service]
+Type=oneshot
+Environment=SECMON_LOOKALIKE_DIR=@DIR@
+ExecStart=@ROOT@/docker/browser/run.sh
+TimeoutStartSec=3000

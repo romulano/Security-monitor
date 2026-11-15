@@ -1,0 +1,1 @@
+The client described a kind of threat it cares about as: "{label}". Return 2 to 6 lowercase English terms used to label this attack type in threat-intelligence news (e.g. "sim swap", "credential stuffing").

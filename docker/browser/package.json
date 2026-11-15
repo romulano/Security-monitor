@@ -1,0 +1,9 @@
+{
+  "name": "secmon-browser",
+  "private": true,
+  "description": "Navegador do Radar de domínios: abre as páginas pedidas pelo Security Monitor, grava prints e sai.",
+  "type": "module",
+  "dependencies": {
+    "playwright-core": "1.63.0"
+  }
+}

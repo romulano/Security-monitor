@@ -1,0 +1,4 @@
+# O Received que este Postfix acrescenta ao receber do app tem o nome e o IP
+# internos do container (rede do Docker). Ele não sai: quem recebe vê só o
+# servidor (o nome do HELO e o IP público), que é quem de fato entrega.
+/^Received: from [^ ]+ \([^)]*\[(10|127|172\.(1[6-9]|2[0-9]|3[01])|192\.168)\./ IGNORE

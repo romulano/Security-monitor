@@ -1,0 +1,19 @@
+# Robôs leem o feed, as páginas e as matérias. Ficam de fora as buscas (/?q=...): cada
+# combinação de filtros é um endereço novo, e em 24/10/2026 o Googlebot percorria milhares
+# delas (259 de 315 requisições em 2 minutos), cada uma consultando o Elasticsearch e
+# criando uma sessão no banco. Também ficam de fora a troca de idioma (redireciona), a API
+# JSON e os links assinados dos alertas (sem a assinatura, só dão 403).
+User-agent: *
+Disallow: /?q=
+Disallow: /*?q=
+Disallow: /*&q=
+Disallow: /idioma/
+Disallow: /api/
+Disallow: /a/
+Disallow: /r/
+Disallow: /g/
+
+# O mapa do site: as páginas fixas e as matérias publicadas, refeito do banco quando uma
+# matéria entra, muda ou sai do ar. O endereço é absoluto (o protocolo pede) e é o de
+# produção: este arquivo é estático, o nginx o entrega antes do PHP.
+Sitemap: https://example.com/sitemap.xml

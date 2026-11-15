@@ -1,0 +1,3 @@
+# Contexto `tests` do build de testes (docker/php/Dockerfile, target test):
+# o Playwright de ponta a ponta roda em container próprio, fora da imagem PHP.
+e2e

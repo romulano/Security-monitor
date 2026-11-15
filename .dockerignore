@@ -1,0 +1,22 @@
+.git
+.env
+vendor
+node_modules
+storage/logs/*
+storage/app/lookalike
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+public/build
+public/hot
+tests
+docs
+deploy.sh
+.github
+ci
+docker-compose.ci.yml
+# Cache de rotas e de config do host (route:cache, config:cache): entrava na
+# imagem e fazia os testes locais rodarem com as rotas e a config antigas. O
+# boot do app refaz o cache dentro do container.
+bootstrap/cache/*
+!bootstrap/cache/.gitignore

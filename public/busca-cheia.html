@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<!-- O 429 da busca no nginx (docker/nginx/prod-site.conf): sem PHP, e tenta de novo sozinha. -->
+<meta http-equiv="refresh" content="5">
+<title>Muitas buscas agora · Security Monitor</title>
+<style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0a0d12; color: #c9d1db; font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { max-width: 32rem; padding: 2rem 1rem; text-align: center; }
+    h1 { margin: 0 0 .5rem; color: #fff; font-size: 1.2rem; font-weight: 600; }
+    p { margin: .4rem 0; }
+    .en { color: #7d8794; font-size: 13px; }
+    a { color: #38bdf8; }
+</style>
+</head>
+<body>
+<main>
+    <h1>Muitas buscas ao mesmo tempo</h1>
+    <p>A busca do Security Monitor está com fila. Esta página tenta de novo sozinha em 5 segundos.</p>
+    <p class="en">Too many searches right now. This page retries by itself in 5 seconds.</p>
+    <p><a href="/">Abrir o feed sem filtros</a></p>
+</main>
+</body>
+</html>
