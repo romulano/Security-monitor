@@ -56,8 +56,6 @@
                     @endforeach
 
                     @isset($newAlert)
-                        {{-- Alerta novo de empresa: o setor nasce com ele, no fim do passo 1 (como no Radar e no GitHub). --}}
-                        @include('alerts.partials.sector-choice', ['what' => 'o alerta e as notícias dele', 'label' => 'Setor da empresa que vê este alerta'] + $newAlert)
                     @endisset
 
                     @if ($step === 5)

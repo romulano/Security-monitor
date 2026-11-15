@@ -143,9 +143,6 @@
                             O domínio entrou no Radar. A primeira varredura confere centenas de nomes no DNS e leva uns minutos.
                         @endif
                     </p>
-                    @if ($watch->company_id)
-                        @include('alerts.partials.sector-change', ['item' => $watch, 'action' => route('alerts.lookalikes.sector', $watch->urlParams()), 'subject' => 'o Radar de '.$domain->domain, 'short' => 'este Radar', 'things' => 'os domínios achados'])
-                    @endif
                     @if ($counts['queued'])
                         <p class="text-sm text-amber-200">{{ $counts['queued'] }} {{ $counts['queued'] === 1 ? 'página esperando' : 'páginas esperando' }} a visita do navegador.</p>
                     @endif

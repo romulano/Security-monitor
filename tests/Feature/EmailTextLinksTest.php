@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Mail\CompanyEntryLink;
 use App\Mail\VerifyEmail;
 use App\Mail\WebhookPaused;
 use Illuminate\Http\Request;
@@ -34,7 +33,6 @@ class EmailTextLinksTest extends TestCase
     {
         $mails = [
             'confirmação do cadastro' => fn () => new VerifyEmail('Ana', URL::temporarySignedRoute('verification.verify', now()->addMinutes(60), ['user' => 1, 'hash' => sha1('ana@acme.com')]), 60),
-            'entrada da admin da empresa' => fn () => new CompanyEntryLink('Ana', 'Acme', URL::temporarySignedRoute('company.entry', now()->addDays(7), ['user' => 1, 'stamp' => 'abc']), 7),
         ];
 
         foreach ($mails as $what => $mail) {

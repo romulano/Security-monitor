@@ -23,18 +23,10 @@
     <section class="space-y-4 rounded-xl border border-ink-800 bg-ink-900 p-5 has-[[name=realtime]:checked]:border-accent/40">
         <label class="flex cursor-pointer items-start justify-between gap-4">
             <span class="min-w-0">
-                @if ($channel->isCompany())
-                    {{-- O canal é da empresa (E5a2): fala dos alertas da empresa ou do setor, não da entrevista de uma pessoa. --}}
-                    <span class="block font-semibold text-white">Alertas de Notícias, na hora</span>
-                    <span class="mt-1 block text-sm text-ink-200">
-                        Quando uma notícia casar com um alerta de Notícias {{ $channel->sector ? 'do setor '.$channel->sector->name : 'da empresa sem setor' }}, enviamos assim que a análise da IA termina.
-                    </span>
-                @else
                     <span class="block font-semibold text-white">Alertas da minha entrevista, na hora</span>
                     <span class="mt-1 block text-sm text-ink-200">
                         Quando uma notícia casar com {{ $profiles->count() > 1 ? 'um dos seus alertas' : 'o seu perfil ('.($profiles->first()?->levelLabel() ?? 'High e acima').', mais as menções à sua empresa)' }}, enviamos assim que a análise da IA termina.
                     </span>
-                @endif
             </span>
             <input type="hidden" name="realtime" value="0">
             <input type="checkbox" name="realtime" value="1" @checked(old('realtime', $channel->realtime)) class="peer sr-only" data-reveals="#realtime-options">
@@ -67,7 +59,7 @@
             @error('quiet_end') <p class="text-sm text-red-400">{{ $message }}</p> @enderror
             <p class="text-sm text-ink-400">
                 Limite de {{ \App\Support\Settings::int('alerts.max_per_hour') }} mensagens por hora; o que passar disso chega agrupado numa só.
-                Para mudar nível ou tecnologias, <a href="{{ route('alerts.news') }}" class="text-accent hover:underline">{{ $channel->isCompany() ? 'edite os alertas em Alertas' : 'edite a entrevista do alerta' }}</a>.
+                Para mudar nível ou tecnologias, <a href="{{ route('alerts.news') }}" class="text-accent hover:underline">edite a entrevista do alerta</a>.
             </p>
         </div>
     </section>
@@ -102,10 +94,7 @@
                 <legend class="text-sm text-ink-400">Conteúdo</legend>
                 <div class="grid gap-2 sm:grid-cols-2">
                     @php
-                        $whose = $channel->sector ? 'o setor' : 'a empresa';
-                        $scopes = $channel->isCompany()
-                            ? ['all' => ['Tudo', "Panorama completo do dia, com o que afeta {$whose} no topo."], 'profile' => [$channel->sector ? 'Só os alertas do setor' : 'Só os alertas da empresa', 'Apenas os casos que casaram com eles.']]
-                            : ['all' => ['Tudo', 'Panorama completo do dia, com o que afeta você no topo.'], 'profile' => ['Só o meu perfil', 'Apenas os casos que casaram com a sua entrevista.']];
+                        $scopes = ['all' => ['Tudo', 'Panorama completo do dia, com o que afeta você no topo.'], 'profile' => ['Só o meu perfil', 'Apenas os casos que casaram com a sua entrevista.']];
                     @endphp
                     @foreach ($scopes as $value => [$label, $desc])
                         <label class="flex cursor-pointer flex-col gap-1 rounded-lg border border-ink-700 bg-ink-850 p-3.5 has-checked:border-accent has-checked:bg-accent/10">

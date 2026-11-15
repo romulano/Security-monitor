@@ -21,7 +21,7 @@ class StoreAlertController extends Controller
         $this->alerts->ensureRoomFor($request->user());
 
         $from = $request->copyFrom();
-        $profile = $this->interview->create($request->user(), $from, $request->sectorId());
+        $profile = $this->interview->create($request->user(), $from);
 
         return redirect()->route('alerts.interview', $profile->urlParams(['passo' => 1]))->with('status', $from
             ? 'Alerta novo, com as respostas de “'.$from->displayName().'”. Dê um nome a ele e ajuste o que muda neste produto ou site.'

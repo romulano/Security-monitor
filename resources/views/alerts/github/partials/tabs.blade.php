@@ -1,6 +1,6 @@
 {{-- Na empresa, vários monitoramentos (P6): um por aba, depois do título e da descrição (como no Radar), e o "Adicionar
      monitoramento" para quem pode criar. --}}
-@if ($monitors->count() > 1 || ($canCreate && $monitors->isNotEmpty() && $monitor?->company_id))
+@if ($monitors->count() > 1)
     <div class="mt-4 flex flex-wrap items-center gap-2">
         @if ($monitors->count() > 1)
             <nav aria-label="Monitoramentos do GitHub" class="flex flex-wrap gap-1 rounded-lg border border-ink-800 p-1">

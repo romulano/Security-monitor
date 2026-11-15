@@ -83,7 +83,7 @@ return new class extends Migration
                    k.last_seen_at, k.verdict, k.verdict_by, k.verdict_at, k.created_at, k.updated_at
             from pentest_keys k
             join pentest_domains d on d.id = k.pentest_domain_id
-            join owned_domains o on o.user_id = k.user_id and o.company_id is null and o.domain = d.host
+            join owned_domains o on o.user_id = k.user_id and o.domain = d.host
             on conflict (owned_domain_id, fingerprint) do nothing
         SQL);
     }

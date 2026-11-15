@@ -282,7 +282,7 @@ class AlertInbox
 
         $models = [
             'news' => AlertMatch::query()->whereIn('id', $ids['news'] ?? [])
-                ->with(['case:id,uuid,title,title_pt,criticity', 'profile:id,name,company_name,language,company_id,sector_id', 'profile.sector:id,name'])->get()->keyBy('id'),
+                ->with(['case:id,uuid,title,title_pt,criticity', 'profile:id,name,company_name,language'])->get()->keyBy('id'),
             'radar' => LookalikeAlert::query()->whereIn('id', $ids['radar'] ?? [])->with('lookalike')->get()->keyBy('id'),
             'github' => GithubFinding::query()->whereIn('id', $ids['github'] ?? [])->get()->keyBy('id'),
         ];

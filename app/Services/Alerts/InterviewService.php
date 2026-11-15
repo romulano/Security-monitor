@@ -4,15 +4,12 @@ namespace App\Services\Alerts;
 
 use App\Jobs\ExpandCustomAnswer;
 use App\Models\AlertProfile;
-use App\Models\Company;
 use App\Models\CustomAnswerTerm;
 use App\Models\InterviewQuestion;
 use App\Models\MonitoredDomain;
 use App\Models\TechCatalog;
 use App\Models\User;
 use App\Services\Alerts\Discovery\DnsSuggester;
-use App\Services\Company\CompanyLimits;
-use App\Services\Company\ItemSectors;
 use App\Services\Access\Visibility;
 use App\Services\Domains\DomainOwner;
 use App\Services\Domains\DomainOwnership;
@@ -89,7 +86,6 @@ class InterviewService
         private DnsSuggester $dnsSuggester,
         private DomainOwnership $ownership,
         private Visibility $visibility,
-        private CompanyLimits $limits,
     ) {}
 
     /** Quanto tempo um segundo envio igual do passo 1 de um alerta novo conta como o mesmo (duplo clique). */
@@ -112,34 +108,18 @@ class InterviewService
             return $managed->findOrFail($id);
         }
 
-        // Na empresa, a entrevista é sempre de um alerta da URL (U1 do Red Team): "o primeiro" seria outro alerta.
-        if ($user->isCompanyAccount()) {
-            throw (new ModelNotFoundException)->setModel(AlertProfile::class);
-        }
-
         return $managed->oldest('id')->first() ?? AlertProfile::query()->create(['user_id' => $user->id, 'status' => 'draft']);
     }
 
     /**
-     * Passo 1 de um alerta novo de empresa (como o GitHub): nasce com o setor (Visibility::stampFor) e as respostas,
-     * numa transação: resposta inválida ou setor recusado não deixa rascunho.
+     * Passo 1 de um alerta novo (como o GitHub): nasce com as respostas, numa transação — resposta inválida não deixa
+     * rascunho. Dois envios juntos (duplo clique) caem no mesmo rascunho.
      */
-    public function startWith(User $user, ?int $sectorId, array $answers, array $extra = []): AlertProfile
+    public function startWith(User $user, array $answers, array $extra = []): AlertProfile
     {
-        return DB::transaction(function () use ($user, $sectorId, $answers, $extra) {
-            $stamp = $this->visibility->stampFor($user, $sectorId);
-            // A empresa travada enfileira dois envios juntos do mesmo passo 1 (duplo clique): o segundo cai no rascunho
-            // que o primeiro acabou de criar, como no GitHub (Red Team da E2d2).
-            $company = Company::query()->lockForUpdate()->findOrFail($stamp['company_id']);
-            // Com a empresa travada: o setor apagado no mesmo instante dá a mensagem, não um erro de FK (Red Team da E2f).
-            ItemSectors::ensureSectorExists($stamp['sector_id']);
-            $profile = $this->recentDraft($user, $stamp['sector_id'], $answers);
-
-            // O limite da empresa (E5d: não mais o de quem cria), com a empresa travada (duas abas no passo 1; U2 do Red Team).
-            if ($profile === null) {
-                $this->limits->assertAlertRoom($company, $user);
-                $this->limits->notify($company, 'alert_profiles');
-            }
+        return DB::transaction(function () use ($user, $answers, $extra) {
+            $stamp = $this->visibility->stampFor($user);
+            $profile = $this->recentDraft($user, $answers);
 
             $profile ??= AlertProfile::query()->forceCreate($stamp + ['status' => 'draft']);
             $this->save($profile, 1, $answers, $extra);
@@ -149,12 +129,12 @@ class InterviewService
     }
 
     /** O rascunho igual (mesmo autor, setor, nome e empresa) que o mesmo passo 1 criou há poucos segundos. */
-    private function recentDraft(User $user, ?int $sectorId, array $answers): ?AlertProfile
+    private function recentDraft(User $user, array $answers): ?AlertProfile
     {
         $same = fn (string $key) => trim((string) (is_scalar($answers[$key] ?? null) ? $answers[$key] : ''));
 
         return AlertProfile::query()->visibleTo($user)->where('user_id', $user->id)->whereNull('completed_at')
-            ->where('sector_id', $sectorId)->where('created_at', '>=', now()->subSeconds(self::DOUBLE_SUBMIT_SECONDS))
+            ->where('created_at', '>=', now()->subSeconds(self::DOUBLE_SUBMIT_SECONDS))
             ->with('answers')->latest('id')->get()
             ->first(fn (AlertProfile $draft) => collect(['alert_name', 'company_name'])
                 ->every(fn ($key) => trim((string) (is_scalar($draft->answerMap()[$key] ?? null) ? $draft->answerMap()[$key] : '')) === $same($key)));
@@ -166,35 +146,18 @@ class InterviewService
         return (new AlertProfile)->forceFill(['status' => 'draft', 'step_reached' => 1]);
     }
 
-    /** O setor do alerta novo: o que a conta pode escolher (sector-choice). */
-    public function sectorChoice(User $user): array
-    {
-        return ['sectors' => $this->visibility->sectorChoices($user), 'sectorless' => $this->visibility->canUseNoSector($user)];
-    }
-
     /**
      * Alerta novo para outro produto ou site. Com `$from`, começa com as
-     * respostas dele (empresa, setor, stack...), menos nome e domínio.
+     * respostas dele (empresa, stack...), menos nome e domínio.
      */
-    public function create(User $user, ?AlertProfile $from = null, ?int $sectorId = null): AlertProfile
+    public function create(User $user, ?AlertProfile $from = null): AlertProfile
     {
-        return DB::transaction(fn () => $this->createLocked($user, $from, $sectorId));
+        return DB::transaction(fn () => $this->createLocked($user, $from));
     }
 
-    private function createLocked(User $user, ?AlertProfile $from, ?int $sectorId): AlertProfile
+    private function createLocked(User $user, ?AlertProfile $from): AlertProfile
     {
-        // Quem cria e onde (Visibility::stampFor): a conta pessoal, sem empresa; a admin, no setor escolhido ou sem
-        // setor; o responsável, num setor que gerencia. Membro e setor alheio são recusados com o aviso.
-        $stamp = $this->visibility->stampFor($user, $sectorId);
-
-        // Na empresa (a cópia de um alerta), como no passo 1: a empresa travada, o setor ainda existe e o limite da
-        // empresa conferido de novo (Red Team da E2c2 e da E2f; E5d).
-        if ($stamp['company_id'] !== null) {
-            $company = Company::query()->lockForUpdate()->findOrFail($stamp['company_id']);
-            ItemSectors::ensureSectorExists($stamp['sector_id']);
-            $this->limits->assertAlertRoom($company, $user);
-            $this->limits->notify($company, 'alert_profiles');
-        }
+        $stamp = $this->visibility->stampFor($user);
 
         $profile = AlertProfile::query()->forceCreate($stamp + ['status' => 'draft']);
 
@@ -825,7 +788,7 @@ class InterviewService
         }
 
         // O dono da posse: a empresa do alerta (o token da empresa) ou a conta (DESENHO-5.3 §2.1).
-        $owner = DomainOwner::of($profile->company_id, $profile->user_id, $profile->sector_id);
+        $owner = DomainOwner::of($profile->user_id);
 
         if (! $current || $current->domain !== $wanted) {
             $this->forgetDomain($profile);

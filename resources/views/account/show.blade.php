@@ -18,19 +18,6 @@
             </form>
         </div>
 
-        @if (config('secmon.enterprise.enabled') && $user->companyRole() === \App\Enums\CompanyRole::Admin)
-            <a href="{{ route('company.accounts') }}" class="block rounded-lg border border-ink-800 bg-ink-900 p-4 text-sm hover:border-accent">
-                <span class="font-semibold text-white">Contas da empresa</span>
-                <span class="mt-1 block text-ink-400">Convide pessoas e acompanhe quem já entrou na conta de {{ $user->company->name }}.</span>
-            </a>
-        @endif
-        @if (config('secmon.enterprise.enabled') && $user->isCompanyAccount())
-            <a href="{{ route('company.domains') }}" class="block rounded-lg border border-ink-800 bg-ink-900 p-4 text-sm hover:border-accent">
-                <span class="font-semibold text-white">Domínios da empresa</span>
-                <span class="mt-1 block text-ink-400">Os domínios de {{ $user->company->name }} que você vê, com a posse comprovada de cada um.</span>
-            </a>
-        @endif
-
         @unless ($user->hasVerifiedEmail())
             <div class="rounded-lg border border-amber-800/60 bg-amber-950/30 p-4 text-sm">
                 <p class="font-semibold text-amber-300">Confirme o seu e-mail para usar os alertas.</p>

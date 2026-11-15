@@ -53,38 +53,7 @@
                     <h1 class="text-xl font-semibold text-white">Notícias</h1>
                     <p class="text-sm text-ink-400">Um alerta por produto ou site, cada um com a sua entrevista e o seu domínio. Todos chegam nos apps que recebem notícias em <a href="{{ route('alerts.notifiers') }}" class="text-accent hover:underline">Notificadores</a>.</p>
                 </div>
-                @if ($canCreate && $companyAccount)
-                    {{-- Alerta de empresa: nasce no passo 1 com o setor (startWith, como o GitHub); copiar escolhe o setor aqui. --}}
-                    <div class="flex flex-wrap items-start gap-2">
-                        <div class="flex flex-col gap-1">
-                            <a href="{{ route('alerts.interview', ['passo' => 1]) }}" class="{{ $button }} inline-flex items-center bg-accent font-semibold text-ink-950 hover:brightness-110">Novo alerta</a>
-                            @if ($alertsUsage)
-                                @php [$alertsUsed, $alertsMax] = $alertsUsage; @endphp
-                                <p @class(['text-xs', 'text-amber-300' => $alertsMax > 0 && $alertsUsed / $alertsMax >= 0.8, 'text-ink-400' => ! ($alertsMax > 0 && $alertsUsed / $alertsMax >= 0.8)]) data-alerts-usage>
-                                    {{ $alertsUsed }} de {{ $alertsMax }} alertas da empresa
-                                </p>
-                            @endif
-                        </div>
-                        @php $copiable = $completed->filter(fn ($p) => in_array($p->id, $managed, true)); @endphp
-                        @if ($copiable->isNotEmpty())
-                            <details class="w-full sm:w-auto" @if ($errors->has('setor')) open @endif>
-                                <summary class="{{ $button }} inline-flex cursor-pointer items-center text-accent hover:underline">Copiar um alerta</summary>
-                                <form method="POST" action="{{ route('alerts.store') }}" class="mt-3 space-y-3 sm:w-96">
-                                    @csrf
-                                    <label for="copiar" class="sr-only">Começar com as respostas de</label>
-                                    <select id="copiar" name="copiar" required
-                                            class="min-h-11 w-full rounded-lg border border-ink-800 bg-ink-900 px-3 text-sm text-ink-200 [color-scheme:dark]">
-                                        @foreach ($copiable as $p)
-                                            <option value="{{ $p->id }}">Copiar respostas de “{{ $p->displayName() }}”</option>
-                                        @endforeach
-                                    </select>
-                                    @include('alerts.partials.sector-choice', ['what' => 'o alerta e as notícias dele', 'label' => 'Setor da empresa que vê este alerta'])
-                                    <button class="{{ $button }} bg-accent font-semibold text-ink-950 hover:brightness-110">Criar a cópia</button>
-                                </form>
-                            </details>
-                        @endif
-                    </div>
-                @elseif ($canCreate)
+                @if ($canCreate)
                     <form method="POST" action="{{ route('alerts.store') }}" class="flex flex-wrap items-center gap-2">
                         @csrf
                         @if ($completed->isNotEmpty())
@@ -99,8 +68,6 @@
                         @endif
                         <button class="{{ $button }} bg-accent font-semibold text-ink-950 hover:brightness-110">Novo alerta</button>
                     </form>
-                @elseif ($alertsFull)
-                    <p class="max-w-sm text-sm text-amber-300" data-alerts-full>{{ $alertsFull }}</p>
                 @endif
             </div>
 
@@ -208,15 +175,6 @@
                             @endif
                         </p>
 
-                        @if ($profile->company_id)
-                            @php $manages = in_array($profile->id, $managed, true); @endphp
-                            @include('alerts.partials.sector-change', [
-                                'item' => $profile, 'action' => route('alerts.sector', $profile->urlParams()),
-                                'subject' => 'o alerta “'.$profile->displayName().'”', 'short' => 'este alerta', 'things' => 'as notícias dele',
-                                'sectorChoices' => $manages ? $sectors : collect(), 'sectorless' => $manages && $sectorless,
-                                'mutedIn' => $mutedIn[$profile->id] ?? [],
-                            ])
-                        @endif
 
                         {{-- Configurar é de quem configura (R14): o membro só vê e vota. --}}
                         @if (in_array($profile->id, $managed, true))

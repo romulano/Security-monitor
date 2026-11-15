@@ -15,9 +15,8 @@ class UpdateInterviewStepController extends Controller
     {
         $extra = ['consent' => $request->consent(), 'ip' => $request->ip()];
 
-        // Alerta novo de empresa: nasce aqui, no passo 1, com o setor (startWith); senão, o de sempre.
         if ($request->startsNew()) {
-            $profile = $this->interview->startWith($request->user(), $request->sectorId(), $request->answers(), $extra);
+            $profile = $this->interview->startWith($request->user(), $request->answers(), $extra);
         } else {
             $profile = $this->interview->profileFor($request->user(), $request->alertId());
             $this->interview->save($profile, $passo, $request->answers(), $extra);

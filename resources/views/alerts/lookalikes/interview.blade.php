@@ -135,7 +135,6 @@
                         @endif
                         @error('origem')<p class="text-sm text-red-300">{{ $message }}</p>@enderror
                         @error('outro')<p class="text-sm text-red-300">{{ $message }}</p>@enderror
-                        @include('alerts.partials.sector-choice', ['what' => 'o Radar e os domínios achados', 'label' => 'Setor da empresa que vê este Radar'])
                     </form>
                 @endif
             @elseif ($step === 2)

@@ -22,7 +22,6 @@
                 <x-brand-icon name="slack" class="size-11" />
                 <h1 class="text-xl font-semibold text-white">Notificações no Slack</h1>
             </div>
-            @include('alerts.partials.channel-where')
             @if (! $channel)
                 <p class="text-sm text-ink-400">Conecte um canal. Os alertas e o resumo diário chegam lá; o histórico continua em Alertas.</p>
             @endif
@@ -37,7 +36,7 @@
                     <div class="min-w-0">
                         <p class="font-semibold text-white">{{ $channel->slack_team ? $channel->slack_team.' · ' : '' }}{{ $channel->label() }}</p>
                         <p class="text-sm text-ink-400">
-                            Conectado {{ $channel->isCompany() ? 'por '.$channel->user?->name : ($channel->method === 'oauth' ? 'pelo app' : 'por webhook') }} em {{ $channel->created_at->timezone($channel->timezone)->format('d/m/Y') }}
+                            Conectado {{ ($channel->method === 'oauth' ? 'pelo app' : 'por webhook') }} em {{ $channel->created_at->timezone($channel->timezone)->format('d/m/Y') }}
                             @if ($channel->last_success_at) · último envio {{ $channel->last_success_at->timezone($channel->timezone)->format('d/m H:i') }} @endif
                         </p>
                     </div>
@@ -55,7 +54,7 @@
                         <button class="min-h-11 rounded-lg border border-accent px-4 text-sm text-amber-200 hover:bg-accent/10">Enviar teste</button>
                     </form>
                     <a href="{{ route('alerts.slack', ['trocar' => 1] + $target) }}" class="inline-flex min-h-11 items-center rounded-lg border border-ink-800 px-4 text-sm text-ink-200 hover:border-ink-700">Trocar canal</a>
-                    <form method="POST" action="{{ route('alerts.slack.destroy', $target) }}" data-confirm="{{ $channel->isCompany() ? 'Desconectar o Slack '.$channel->label().($channel->sector ? ' do setor '.$channel->sector->name.'? Ninguém mais recebe por ele os avisos do setor '.$channel->sector->name.'.' : ' dos canais gerais da empresa? Ninguém mais recebe por ele os avisos da empresa toda.').' Os alertas continuam guardados em Alertas.' : 'Desconectar o Slack? Os alertas continuam guardados em Alertas.' }}" @if ($channel->isCompany()) data-confirm-tone="danger" data-confirm-ok="Desconectar" @endif>
+                    <form method="POST" action="{{ route('alerts.slack.destroy', $target) }}" data-confirm="Desconectar o Slack? Os alertas continuam guardados em Alertas.">
                         @csrf
                         @method('DELETE')
                         <button class="min-h-11 rounded-lg border border-ink-800 px-4 text-sm text-red-300 hover:border-red-900">Desconectar</button>

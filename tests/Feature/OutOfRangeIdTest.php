@@ -10,7 +10,6 @@ use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
-use Tests\Support\Company\VisibilityFixtures;
 use Tests\TestCase;
 
 /**
@@ -19,7 +18,7 @@ use Tests\TestCase;
  */
 class OutOfRangeIdTest extends TestCase
 {
-    use RefreshDatabase, VisibilityFixtures;
+    use RefreshDatabase;
 
     private const HUGE = '123456789012345678901234567890';
 
@@ -69,12 +68,12 @@ class OutOfRangeIdTest extends TestCase
 
     public function test_no_route_with_a_numeric_id_answers_500_to_an_id_beyond_bigint(): void
     {
-        [, $companyAdmin] = $this->activeCompany('Acme', 'admin@acme.com.br');
+        $client = User::factory()->create();
         $secmonAdmin = User::factory()->create(['is_admin' => true]);
         $routes = $this->numericRoutes();
         $this->assertGreaterThan(40, count($routes));
 
-        foreach (['visitante' => null, 'admin da empresa' => $companyAdmin, 'admin do Security Monitor' => $secmonAdmin] as $who => $user) {
+        foreach (['visitante' => null, 'cliente' => $client, 'admin do Security Monitor' => $secmonAdmin] as $who => $user) {
             $user ? $this->actingAs($user) : auth()->logout();
 
             foreach ($routes as $key => [$method, $url]) {
@@ -85,13 +84,9 @@ class OutOfRangeIdTest extends TestCase
 
     public function test_the_routes_seen_by_the_red_team_answer_404(): void
     {
-        [, $companyAdmin] = $this->activeCompany('Acme', 'admin@acme.com.br');
         $id = self::HUGE;
 
-        $this->actingAs($companyAdmin);
-        $this->put("/empresa/setores/$id", ['nome' => 'TI'])->assertNotFound();
-        $this->delete("/empresa/setores/1/contas/$id")->assertNotFound();
-        $this->put("/empresa/contas/$id/papel", ['papel' => 'member'])->assertNotFound();
+        $this->actingAs(User::factory()->create());
         $this->post("/alertas/$id/feedback")->assertNotFound();
         $this->get("/alertas/radar-de-dominios/$id")->assertNotFound();
         $this->get("/alertas/github/$id")->assertNotFound();

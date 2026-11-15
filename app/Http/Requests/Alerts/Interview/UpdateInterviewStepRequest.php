@@ -14,18 +14,12 @@ class UpdateInterviewStepRequest extends InterviewRequest
 
     public function rules(): array
     {
-        return ['setor' => ['nullable', 'regex:/^[1-9]\d{0,17}$/']];
+        return [];
     }
 
     public function messages(): array
     {
-        return ['setor.*' => 'Escolha um setor da lista.'];
-    }
-
-    /** O setor do alerta novo de empresa (sector-choice); vazio = sem setor, que só a admin escolhe (o serviço confere). */
-    public function sectorId(): ?int
-    {
-        return $this->filled('setor') ? (int) $this->validated('setor') : null;
+        return [];
     }
 
     /** As respostas do passo, como vieram; o service valida pergunta a pergunta. */

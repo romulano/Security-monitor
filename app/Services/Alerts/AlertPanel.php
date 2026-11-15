@@ -119,14 +119,10 @@ class AlertPanel
         return $user->alertProfilesCreated() < AlertProfile::MAX_PER_USER;
     }
 
-    /** Alerta novo só enquanto o cliente (ou a empresa dele) não chegou ao limite; a trava confere de novo no cadastro. */
+    /** Alerta novo só enquanto a conta não chegou ao limite; a trava confere de novo no cadastro. */
     public function ensureRoomFor(User $user): void
     {
-        if ($user->isCompanyAccount() && $this->limits->alertsLeft($user) === 0) {
-            throw new ActionRefused($this->limits->alertsFullMessage($user, $this->limits->alertsMax($user)));
-        }
-
-        if (! $user->isCompanyAccount() && $user->alertProfilesCreated() >= AlertProfile::MAX_PER_USER) {
+        if ($user->alertProfilesCreated() >= AlertProfile::MAX_PER_USER) {
             throw new ActionRefused('Você chegou ao limite de '.AlertProfile::MAX_PER_USER.' alertas. Exclua um para criar outro.');
         }
     }
@@ -159,7 +155,6 @@ class AlertPanel
                 ->delete();
 
             $profile->delete();
-            $this->limits->notify($profile->company_id, 'alert_profiles');
         });
     }
 

@@ -8,7 +8,6 @@ use App\Models\LookalikeCapture;
 use App\Models\LookalikeDomain;
 use App\Models\LookalikeWatch;
 use App\Models\User;
-use App\Services\Company\ItemSectors;
 use App\Services\Access\Visibility;
 use App\Services\Domains\DomainOwnership;
 use Illuminate\Support\Collection;
@@ -34,7 +33,6 @@ class LookalikeRadar
         private DomainOwnership $ownership,
         private Visibility $visibility,
         private RadarInterview $interview,
-        private ItemSectors $sectors,
     ) {}
 
     /**
@@ -92,9 +90,6 @@ class LookalikeRadar
             // O que esta conta faz aqui (R14): configurar o Radar, criar outro e, no de empresa, trocar o setor.
             'canManage' => $manage = $watch !== null && $this->visibility->manages($user, $watch),
             'canCreate' => $this->interview->mayCreate($user) && ! $user->reachedRadarLimit(),
-            'sectorChoices' => $manage && $watch->company_id !== null ? $this->visibility->sectorChoices($user) : collect(),
-            'sectorless' => $manage && $watch->company_id !== null && $this->visibility->canUseNoSector($user),
-            'mutedIn' => $manage && $watch->company_id !== null ? $this->sectors->mutedIn($watch, $this->visibility->sectorChoices($user)->modelKeys()) : [],
             // Os subdomínios que o Radar de empresa vigia (E4a); nulo fora da empresa ou com a chave desligada.
         ];
     }

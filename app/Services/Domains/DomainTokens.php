@@ -41,7 +41,7 @@ class DomainTokens
     {
         return DB::table('users')->where('domain_token', $token)->where('id', '!=', $userId)->exists()
             || DB::table('companies')->where('domain_token', $token)->exists()
-            || $this->inOwnedDomains($token)->where(fn ($q) => $q->where('user_id', '!=', $userId)->orWhereNotNull('company_id'))->exists();
+            || $this->inOwnedDomains($token)->where('user_id', '!=', $userId)->exists();
     }
 
     /**
@@ -57,8 +57,7 @@ class DomainTokens
     /** O token é de uma empresa (o dela ou o de uma linha de posse dela)? */
     public function ofCompany(string $token): bool
     {
-        return DB::table('companies')->where('domain_token', $token)->exists()
-            || $this->inOwnedDomains($token)->whereNotNull('company_id')->exists();
+        return DB::table('companies')->where('domain_token', $token)->exists();
     }
 
     private function inOwnedDomains(string $token)
