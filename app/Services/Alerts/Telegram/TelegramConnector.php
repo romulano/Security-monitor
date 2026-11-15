@@ -2,11 +2,10 @@
 
 namespace App\Services\Alerts\Telegram;
 
-use App\Exceptions\ActionRefused;
 use App\Models\NotificationChannel;
 use App\Models\User;
-use App\Services\Alerts\ChannelSettings;
 use App\Services\Access\Channels;
+use App\Services\Alerts\ChannelSettings;
 use Illuminate\Contracts\Session\Session;
 
 /**

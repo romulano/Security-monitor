@@ -1,0 +1,69 @@
+# Verificação estática do repositório, no runner hospedado do GitHub Actions.
+# Repositório público, sem segredos: tudo aqui roda só com o código baixado.
+#
+# A suíte PHPUnit NÃO roda aqui de propósito: ela precisa de Postgres e de
+# Elasticsearch de pé, e subir esses serviços no CI fica para outra etapa.
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  estatico:
+    name: Análise estática (PHP 8.4)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      # O composer.json aceita PHP ^8.2, mas o composer.lock trava o Symfony na
+      # série 8.1, que exige PHP >= 8.4.1 — então o CI precisa do 8.4.
+      - name: Preparar o PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          # Extensões exigidas pelo composer.json e pelo composer.lock.
+          extensions: ctype, dom, fileinfo, filter, iconv, mbstring, openssl, phar, simplexml, tokenizer, xml, xmlwriter
+          tools: composer:v2
+          coverage: none
+
+      - name: Conferir o composer.json
+        run: composer validate --strict
+
+      - name: Instalar as dependências
+        run: composer install --prefer-dist --no-progress
+
+      - name: Lint de sintaxe em todo .php fora do vendor
+        shell: bash
+        run: |
+          erros=0
+          while IFS= read -r -d '' arquivo; do
+            if ! saida=$(php -l "$arquivo" 2>&1); then
+              echo "$saida"
+              erros=1
+            fi
+          done < <(
+            find . \( -path ./vendor -o -path ./node_modules -o -path ./.git \) -prune \
+              -o -name '*.php' -print0
+          )
+          exit "$erros"
+
+      - name: Conferir o estilo com o Pint
+        run: vendor/bin/pint --test
+
+      # Dois verificadores próprios do projeto, em ci/verificadores/.
+      # Acham o que o php -l não vê: referência a classe que não existe e
+      # `use` removido com o uso mantido. Qualquer achado reprova o CI.
+      - name: Verificador - referência a classe inexistente
+        run: python3 -I ci/verificadores/orfaos.py
+
+      - name: Verificador - use removido com o uso mantido
+        run: python3 -I ci/verificadores/nomes2.py

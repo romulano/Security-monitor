@@ -8,7 +8,6 @@ use App\Models\User;
 use App\Services\Alerts\ProfileIndex;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Tests\Feature\Alerts\FakeProfileIndex;
 use Tests\TestCase;
 

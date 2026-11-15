@@ -257,5 +257,4 @@ class AdminQueueTest extends TestCase
         $this->post(route('admin.queue.advance', $pentest))->assertSessionHas('error');
         $this->post(route('admin.queue.advance-all'))->assertSessionHas('error', 'Não há job agendado para adiantar.');
     }
-
 }

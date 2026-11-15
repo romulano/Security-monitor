@@ -5,7 +5,6 @@ namespace App\Services\Alerts\Webhook;
 use App\Exceptions\ActionRefused;
 use App\Models\MonitoredDomain;
 use App\Models\NotificationChannel;
-use App\Models\OwnedDomain;
 use App\Models\User;
 use App\Services\Alerts\ChannelSettings;
 use App\Services\Alerts\Notifier;
