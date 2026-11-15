@@ -172,7 +172,7 @@ class KeysPagesTest extends TestCase
 
     public function test_the_security_tests_domain_page_points_to_the_keys_area(): void
     {
-        $this->switchOn();
+        $this->ready();
         $this->user = $this->grant($this->user);
         $domain = $this->authorized();
 

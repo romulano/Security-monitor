@@ -30,7 +30,7 @@
     };
     // Revogada, nada mais sai desta autorização: sem "Mudar" e sem "Copiar de novo" (a faixa leva a autorizar de novo).
     // Bloqueada, sem "Mudar".
-    $changeable = $granted && ! in_array($state, ['revoked', 'suspended'], true);
+    $changeable = ! in_array($state, ['revoked', 'suspended'], true);
     $checked = $domain->ownership_checked_at?->timezone($tz)->format('d/m \à\s H:i');
     [$ownership, $ownershipTone] = match (true) {
         ! $copy->isVerified() => ['aguardando o TXT', 'alerta'],
@@ -42,15 +42,6 @@
 
 @section('content')
     <div class="space-y-6">
-        @if ($granted)
-        @else
-            <p role="status" class="rounded-lg border border-amber-800 bg-amber-950/30 px-3.5 py-3 text-sm text-amber-100">
-                <b class="text-white">Os testes de segurança não estão liberados para a sua conta.</b>
-                Dá para ver, revogar e excluir; autorizar e testar voltam quando o administrador liberar.
-                <a href="{{ route('alerts.tests') }}" class="font-semibold underline">Pedir a liberação</a>
-            </p>
-        @endif
-
         <div class="flex flex-wrap items-end justify-between gap-3">
             <div class="space-y-1">
                 @include('alerts.partials.crumbs', ['parent' => ['Testes de segurança', route('alerts.tests')], 'here' => $domain->host])
@@ -81,9 +72,7 @@
                 <section role="alert" class="space-y-1.5 rounded-xl border border-red-900 bg-red-950/40 px-4 py-3.5 text-sm">
                     <p class="font-semibold text-white">O registro TXT de {{ $domain->host }} não está mais no DNS.</p>
                     <p class="text-red-100">Nenhum teste começa sem ele. Publique o registro de novo para testar.</p>
-                    @if ($granted)
-                        <a href="{{ route('alerts.tests.authorize', ['passo' => 2, 'dominio' => $domain->host]) }}" class="inline-flex min-h-11 items-center font-semibold text-red-200 underline">Ver o registro</a>
-                    @endif
+                    <a href="{{ route('alerts.tests.authorize', ['passo' => 2, 'dominio' => $domain->host]) }}" class="inline-flex min-h-11 items-center font-semibold text-red-200 underline">Ver o registro</a>
                 </section>
                 @break
             @case('suspended')
@@ -96,18 +85,14 @@
                 <section class="space-y-1.5 rounded-xl border border-ink-700 bg-ink-850 px-4 py-3.5 text-sm">
                     <p class="font-semibold text-white">A janela venceu em {{ $until }}.</p>
                     <p class="text-ink-200">Para testar de novo, escolha uma janela nova: isso pede um aceite novo.</p>
-                    @if ($granted)
-                        <a href="{{ route('alerts.tests.authorize', ['passo' => 4, 'dominio' => $domain->host]) }}" class="inline-flex min-h-11 items-center font-semibold text-accent hover:underline">Escolher a janela</a>
-                    @endif
+                    <a href="{{ route('alerts.tests.authorize', ['passo' => 4, 'dominio' => $domain->host]) }}" class="inline-flex min-h-11 items-center font-semibold text-accent hover:underline">Escolher a janela</a>
                 </section>
                 @break
             @case('revoked')
                 <section class="space-y-1.5 rounded-xl border border-ink-700 bg-ink-850 px-4 py-3.5 text-sm">
                     <p class="font-semibold text-white">Revogada em {{ $consent->revoked_at->timezone($tz)->format('d/m \à\s H:i') }}{{ $consent->revoked_by === 'admin' ? ' pelo Security Monitor' : '' }}.</p>
                     <p class="text-ink-200">Nenhuma execução começa sem um aceite novo: refaça os passos e aceite o termo. A auditoria fica como prova do que foi autorizado.</p>
-                    @if ($granted)
-                        <a href="{{ route('alerts.tests.authorize', ['passo' => 1, 'dominio' => $domain->host]) }}" class="inline-flex min-h-11 items-center font-semibold text-accent hover:underline">Autorizar de novo</a>
-                    @endif
+                    <a href="{{ route('alerts.tests.authorize', ['passo' => 1, 'dominio' => $domain->host]) }}" class="inline-flex min-h-11 items-center font-semibold text-accent hover:underline">Autorizar de novo</a>
                 </section>
                 @break
         @endswitch
@@ -125,12 +110,10 @@
                         <dt class="text-ink-400">Nome</dt><dd class="font-mono text-white">@</dd>
                         <dt class="text-ink-400">Valor</dt><dd class="font-mono break-all text-white">{{ $copy->txtValue() }}</dd>
                     </dl>
-                    @if ($granted)
-                        <form method="POST" action="{{ route('alerts.tests.domains.verify', ['dominio' => $domain->host]) }}">
-                            @csrf
-                            <button class="inline-flex min-h-11 items-center rounded-lg border border-ink-700 px-4 text-sm text-ink-200 hover:border-ink-400 hover:text-white">Conferir agora</button>
-                        </form>
-                    @endif
+                    <form method="POST" action="{{ route('alerts.tests.domains.verify', ['dominio' => $domain->host]) }}">
+                        @csrf
+                        <button class="inline-flex min-h-11 items-center rounded-lg border border-ink-700 px-4 text-sm text-ink-200 hover:border-ink-400 hover:text-white">Conferir agora</button>
+                    </form>
                 </section>
 
                 <section class="{{ $box }}">
@@ -196,9 +179,6 @@
         <section id="nova-execucao" aria-labelledby="execucoes" class="{{ $box }}">
             <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 id="execucoes" class="{{ $title }}">Execuções desta autorização</h2>
-                @if ($runInfo['approved'])
-                    <span class="text-xs text-ink-400">{{ $runInfo['approved'] }}</span>
-                @endif
             </div>
 
             @if ($runs->isEmpty())
@@ -226,25 +206,14 @@
                         <h3 class="text-sm font-semibold text-white">Nova execução</h3>
                         @if ($opening)
                             <p class="text-sm text-ink-200">
-                                Começa {{ $opening->isPast() || $opening->lte(now()->addMinute()) ? 'na janela de agora' : 'na próxima abertura: '.\App\Services\Pentest\PentestRunView::when($opening, now(), $consent->rule['window']['tz']).' ('.\App\Services\Pentest\PentestWindow::ZONES[$consent->rule['window']['tz']].')' }}{{ $runInfo['approved'] ? '' : ', depois da aprovação de um analista do Security Monitor' }}.
+                                Começa {{ $opening->isPast() || $opening->lte(now()->addMinute()) ? 'na janela de agora' : 'na próxima abertura: '.\App\Services\Pentest\PentestRunView::when($opening, now(), $consent->rule['window']['tz']).' ('.\App\Services\Pentest\PentestWindow::ZONES[$consent->rule['window']['tz']].')' }}.
                                 Um teste típico leva de 30 a 40 minutos.
                             </p>
                             <form method="POST" action="{{ route('alerts.tests.runs.store', ['dominio' => $domain->host]) }}" class="space-y-2"
                                   data-confirm="Agendar uma nova execução em {{ $domain->host }}? Ela segue a regra aceita: {{ \App\Services\Pentest\PentestWindow::describe($consent->rule['window']) }}." data-confirm-ok="Agendar">
                                 @csrf
-                                @if ($reauth['recent'])
-                                    <p class="text-sm text-emerald-300">Confirmado {{ $reauth['method'] }}; vale até as {{ $reauth['until']->timezone('America/Sao_Paulo')->format('H:i') }}.</p>
-                                @elseif ($reauth['two_factor'])
-                                    @include('account.partials.reauth-code')
-                                @else
-                                    <label for="reauth-password" class="block text-sm text-ink-200">Senha da sua conta</label>
-                                    <input id="reauth-password" type="password" name="reauth_password" autocomplete="current-password"
-                                           class="min-h-11 w-full max-w-sm rounded-lg border border-ink-700 bg-ink-850 px-3 text-sm text-white focus:border-accent">
-                                @endif
-                                @error('reauth_password', 'reauth')<p class="text-sm text-red-300">{{ $message }}</p>@enderror
                                 <button class="inline-flex min-h-11 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-ink-950 hover:brightness-110">Agendar nova execução</button>
                             </form>
-                            @include('account.partials.reauth', ['reauth' => $reauth, 'twoFactorBox' => false, 'context' => $domain->host, 'intro' => 'Ou confirme que é você de outro jeito:'])
                         @else
                             <p class="text-sm text-ink-200">A validade desta autorização terminou: escolha uma nova janela para testar de novo.</p>
                         @endif

@@ -1,6 +1,5 @@
 {{--
-    O cartão "Testes de segurança" da Integração (Integracao): com PENTEST_ALLOWED, para toda conta. Sem a
-    liberação do admin, a pílula diz "não liberado" e o botão leva à página que diz como pedir.
+    O cartão "Testes de segurança" da Integração (Integracao).
     Espera $card (PentestPanel::card()), $pills, $primary e $button da página.
 --}}
 <section aria-labelledby="testes-titulo" class="flex flex-wrap gap-6 rounded-xl border border-ink-800 bg-ink-900 p-5" data-source="tests">

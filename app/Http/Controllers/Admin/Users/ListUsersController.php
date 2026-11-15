@@ -12,6 +12,6 @@ class ListUsersController extends Controller
 
     public function __invoke(): View
     {
-        return view('admin.users', ['users' => $this->users->list(), 'pentestRequests' => $this->users->pentestRequests()]);
+        return view('admin.users', ['users' => $this->users->list()]);
     }
 }

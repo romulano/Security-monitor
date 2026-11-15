@@ -38,13 +38,7 @@
         Remover apaga a conta e tudo o que está ligado a ela (alertas, Radar, GitHub e canais);
         a pessoa perde o acesso na hora. Com o cadastro aberto, ela pode criar uma conta nova (e confirmar o e-mail de novo).
         Contas de empresa não têm “Remover”: elas saem pela própria empresa (a admin dela desativa a conta), para a empresa não ficar sem admin.
-        Os testes de segurança só valem para a conta liberada aqui (a de administrador usa sempre, para os domínios dela).
     </p>
-    @if ($pentestRequests > 0)
-        <p class="mb-3 rounded-lg border border-amber-800 bg-amber-950/30 px-3 py-2 text-xs text-amber-100">
-            {{ $pentestRequests === 1 ? '1 conta pediu' : $pentestRequests.' contas pediram' }} a liberação dos testes de segurança.
-        </p>
-    @endif
 
     <div class="overflow-x-auto rounded-lg border border-ink-800">
         <table class="w-full text-left text-sm">

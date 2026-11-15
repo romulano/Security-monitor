@@ -47,7 +47,6 @@
                         'Você escolhe os dias, o horário e a intensidade. Parar é um clique, a qualquer momento, e tudo para em segundos.',
                         'Nada destrutivo: sem login, sem envio de formulários, sem força bruta e sem sobrecarga. O que o teste nunca faz está no termo, antes do aceite.',
                         'Cada achado é testado de novo, de outro jeito, antes de entrar no relatório.',
-                        'A primeira execução de cada autorização passa pela aprovação de um analista do Security Monitor.',
                     ] as $i => $line)
                         <li class="flex gap-2"><span class="text-accent">{{ $i + 1 }}.</span><span>{{ $line }}</span></li>
                     @endforeach
@@ -128,9 +127,6 @@
                             @endif
                             @if ($consent)
                                 @include('alerts.tests.partials.pill', ['pill' => ['termo '.$consent->version.' aceito em '.$when($consent->accepted_at), 'neutro']])
-                            @endif
-                            @if ($info['approved'])
-                                @include('alerts.tests.partials.pill', ['pill' => [$info['approved'], str_starts_with($info['approved'], '1ª execução aprovada') ? 'ok' : 'neutro']])
                             @endif
                         </div>
 

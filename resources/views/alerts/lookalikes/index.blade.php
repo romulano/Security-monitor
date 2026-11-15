@@ -185,10 +185,6 @@
                 @endif
             </section>
 
-            @if ($subdomains !== null)
-                @include('alerts.lookalikes.partials.subdomains', ['subdomains' => $subdomains, 'domain' => $domain])
-            @endif
-
             {{-- Resumo por nível (clicável) --}}
             <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 @foreach ([
