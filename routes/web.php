@@ -366,20 +366,18 @@ Route::middleware('auth')->group(function () {
         // a página de cada domínio. O domínio vai pelo nome. Cada limite tem o seu contador (o 3º parâmetro):
         // sem ele, todo `throttle:N,M` da conta soma no mesmo, e gravar os passos em sequência esgotava o
         // "Verificar agora".
-        Route::group(function () {
-            Route::get('/testes', ShowPentestController::class)->name('tests');
-            Route::get('/testes/dominios/{dominio}', ShowPentestDomainController::class)->name('tests.domains.show');
-            Route::get('/testes/dominios/{dominio}/termo', ShowPentestConsentController::class)->name('tests.domains.consent');
-            Route::get('/testes/autorizar/{passo}', ShowPentestStepController::class)->whereNumber('passo')->name('tests.authorize');
-            Route::put('/testes/autorizar/{passo}', UpdatePentestStepController::class)->whereNumber('passo')->middleware('throttle:30,1,pentest-passos')->name('tests.authorize.update');
-            Route::post('/testes/dominios', StorePentestDomainController::class)->middleware('throttle:10,1,pentest-dominios')->name('tests.domains.store');
-            Route::post('/testes/dominios/{dominio}/verificar', VerifyPentestDomainController::class)->middleware('throttle:6,1,pentest-posse')->name('tests.domains.verify');
-            Route::post('/testes/dominios/{dominio}/termo', AcceptPentestConsentController::class)->middleware(['pentest.domain:7', 'throttle:10,1,pentest-aceite'])->name('tests.domains.accept');
-            // "Nova execução"; pausar e retomar, cada um com o seu limite.
-            Route::post('/testes/dominios/{dominio}/execucoes', StartPentestRunController::class)->middleware(['pentest.domain', 'throttle:3,1,pentest-execucoes'])->name('tests.runs.store');
-            Route::post('/testes/execucoes/{execucao}/pausar', PausePentestRunController::class)->whereUuid('execucao')->middleware('throttle:10,1,pentest-pausar')->name('tests.runs.pause');
-            Route::post('/testes/execucoes/{execucao}/retomar', ResumePentestRunController::class)->whereUuid('execucao')->middleware('throttle:10,1,pentest-retomar')->name('tests.runs.resume');
-        });
+        Route::get('/testes', ShowPentestController::class)->name('tests');
+        Route::get('/testes/dominios/{dominio}', ShowPentestDomainController::class)->name('tests.domains.show');
+        Route::get('/testes/dominios/{dominio}/termo', ShowPentestConsentController::class)->name('tests.domains.consent');
+        Route::get('/testes/autorizar/{passo}', ShowPentestStepController::class)->whereNumber('passo')->name('tests.authorize');
+        Route::put('/testes/autorizar/{passo}', UpdatePentestStepController::class)->whereNumber('passo')->middleware('throttle:30,1,pentest-passos')->name('tests.authorize.update');
+        Route::post('/testes/dominios', StorePentestDomainController::class)->middleware('throttle:10,1,pentest-dominios')->name('tests.domains.store');
+        Route::post('/testes/dominios/{dominio}/verificar', VerifyPentestDomainController::class)->middleware('throttle:6,1,pentest-posse')->name('tests.domains.verify');
+        Route::post('/testes/dominios/{dominio}/termo', AcceptPentestConsentController::class)->middleware(['pentest.domain:7', 'throttle:10,1,pentest-aceite'])->name('tests.domains.accept');
+        // "Nova execução"; pausar e retomar, cada um com o seu limite.
+        Route::post('/testes/dominios/{dominio}/execucoes', StartPentestRunController::class)->middleware(['pentest.domain', 'throttle:3,1,pentest-execucoes'])->name('tests.runs.store');
+        Route::post('/testes/execucoes/{execucao}/pausar', PausePentestRunController::class)->whereUuid('execucao')->middleware('throttle:10,1,pentest-pausar')->name('tests.runs.pause');
+        Route::post('/testes/execucoes/{execucao}/retomar', ResumePentestRunController::class)->whereUuid('execucao')->middleware('throttle:10,1,pentest-retomar')->name('tests.runs.resume');
 
         Route::get('/entrevista/{passo}', ShowInterviewStepController::class)->whereNumber('passo')->name('interview');
         Route::put('/entrevista/{passo}', UpdateInterviewStepController::class)->whereNumber('passo')->name('interview.update');
