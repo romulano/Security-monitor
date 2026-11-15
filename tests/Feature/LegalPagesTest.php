@@ -67,7 +67,7 @@ class LegalPagesTest extends TestCase
             ->assertSee('href="'.route('terms').'"', false)
             ->assertSee('href="'.route('privacy').'"', false);
 
-        $this->get(route('register'))
+        $this->get(route('about'))
             ->assertSee('Ao criar a conta você concorda com os');
     }
 }

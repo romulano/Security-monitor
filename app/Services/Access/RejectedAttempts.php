@@ -1,14 +1,13 @@
 <?php
 
-namespace App\Services\Auth;
+namespace App\Services\Access;
 
 use App\Services\Monitoring\AccessEventRecorder;
 use Illuminate\Http\Request;
 
 /**
- * As tentativas recusadas de login e cadastro (a /privacidade promete o
- * registro): senha errada, excesso de tentativas, captcha recusado e e-mail
- * já cadastrado. A requisição é marcada aqui e o evento é gravado no terminate
+ * As tentativas recusadas (a /privacidade promete o registro): excesso de
+ * tentativas e captcha recusado. A requisição é marcada aqui e o evento é gravado no terminate
  * (AccessEventRecorder), com a resposta que saiu, o IP, o navegador e o mesmo
  * teto por minuto dos outros eventos, mesmo com a monitoria desligada.
  *
@@ -20,16 +19,7 @@ class RejectedAttempts
 {
     /** Os motivos, no `auth` do evento. */
     public const REASONS = [
-        'login_senha' => 'senha errada',
-        'login_trava' => 'excesso de tentativas',
-        'admin_senha' => 'senha errada no admin',
-        'admin_trava' => 'excesso de tentativas no admin',
-        'login_codigo' => 'código da verificação em duas etapas errado',
-        'login_codigo_trava' => 'excesso de tentativas do código',
-        'admin_codigo' => 'código da verificação em duas etapas errado no admin',
-        'admin_codigo_trava' => 'excesso de tentativas do código no admin',
         'captcha' => 'captcha recusado',
-        'cadastro_email_existente' => 'e-mail já cadastrado',
     ];
 
     public function record(Request $request, string $auth, ?string $email = null): void

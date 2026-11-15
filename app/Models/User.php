@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use App\Services\Auth\EmailVerification;
 use Database\Factories\UserFactory;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -12,8 +10,11 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 
-/** Os alertas pedem o e-mail confirmado (middleware `verified`); o link sai pelo EmailVerification. */
-class User extends Authenticatable implements MustVerifyEmail
+/**
+ * A conta do Security Monitor. Na versão local e aberta existe uma só, a do dono da instalação: ela nasce no primeiro
+ * acesso (localOwner) e nunca pede senha nem confirmação de e-mail.
+ */
+class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
@@ -59,15 +60,24 @@ class User extends Authenticatable implements MustVerifyEmail
         ];
     }
 
-    public function hasGithub(): bool
+    /**
+     * A conta única desta instalação, criada no primeiro acesso. O e-mail e o nome vêm do ambiente
+     * (LOCAL_OWNER_EMAIL, LOCAL_OWNER_NAME) para quem quiser os avisos por e-mail no endereço certo.
+     */
+    public static function localOwner(): self
     {
-        return $this->github_id !== null;
-    }
+        $email = (string) config('secmon.local_owner.email');
 
-    /** O link de confirmação sai pela porta de todo e-mail (Outbox), não pela notificação padrão. */
-    public function sendEmailVerificationNotification(): void
-    {
-        app(EmailVerification::class)->send($this);
+        $owner = static::query()->firstOrCreate(
+            ['email' => $email],
+            ['name' => (string) config('secmon.local_owner.name'), 'password' => null, 'email_verified_at' => now()],
+        );
+
+        if (! $owner->is_admin) {
+            $owner->forceFill(['is_admin' => true])->save();
+        }
+
+        return $owner;
     }
 
     /**

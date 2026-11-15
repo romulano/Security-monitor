@@ -16,9 +16,9 @@ Sobe inteiro em Docker, na **porta 1515**.
 
 ```bash
 make setup     # .env, dependências, assets, containers, banco e índice
-# → http://localhost:1515              feed público
-# → http://localhost:1515/admin/login  admin (admin@example.com / secmon)
-# → http://localhost:1515/login        usuário comum (cadastro aberto em /cadastro)
+# → http://localhost:1515        feed público
+# → http://localhost:1515/alertas alertas, Radar, GitHub, chaves e testes de segurança
+# → http://localhost:1515/admin   administração (sem login: a instalação é de quem a roda)
 ```
 
 ---
@@ -44,93 +44,20 @@ troca o driver de IA sem tocar em container.
 
 ---
 
-## Usuários
+## A conta desta instalação
 
-Há dois logins sobre a mesma tabela `users`, separados pela coluna `is_admin`:
+Não há login. Quem abre o site é o dono da instalação, e a aplicação já começa com ele autenticado como
+administrador: o feed, os alertas, o Radar, o GitHub, as chaves expostas, os testes de segurança e o `/admin` abrem
+direto. A conta existe no banco porque tudo o que o Security Monitor guarda pertence a uma conta — é por ela que as
+telas, o histórico e a auditoria encontram as coisas —, mas ela nasce no primeiro acesso e nunca pede senha.
 
-| Rota | Quem entra | O que pode |
-|---|---|---|
-| `/admin/login` | só admin | tudo em `/admin` |
-| `/login` | só usuário comum | `/conta`: trocar nome, e-mail e senha (e-mail e senha pedem a senha atual) |
+| Variável | Para quê |
+|---|---|
+| `LOCAL_OWNER_EMAIL` | o endereço que recebe os avisos que a própria instalação manda (padrão `dono@localhost`) |
+| `LOCAL_OWNER_NAME` | o nome que aparece nas telas (padrão `Dono da instalação`) |
 
-Credencial da área errada recebe a mesma resposta de senha errada, para não
-revelar que a conta existe.
-
-O cadastro do usuário comum é aberto, em `/cadastro`: nome, e-mail e a senha
-que quiser (mínimo de 8 caracteres, digitada duas vezes), com o captcha
-(Turnstile) e o e-mail confirmado por link antes de usar os alertas. Não há mais
-convite: o link antigo `/cadastro?convite=...` abre o cadastro normalmente e o
-parâmetro é ignorado. A tabela `invites` ficou no banco só como histórico de
-quem entrou por convite. O admin vê as contas em **Admin → Usuários**
-(`/admin/usuarios`; o antigo `/admin/convites` redireciona para lá).
-
-A senha é a que a pessoa digitou no cadastro; ela troca em `/conta`. Só quem se
-cadastra com o GitHub recebe uma senha gerada, mostrada uma vez em `/conta`, para
-poder entrar também pelo e-mail.
-
-**Trocar o e-mail pede a senha atual** (ou a reautenticação recente, abaixo); trocar
-só o nome não pede. Sem isso, quem roubasse a sessão trocaria o e-mail de entrada
-e, por ele, ligaria o próprio GitHub à conta, porque o primeiro login com o GitHub
-liga a conta pelo e-mail verificado. **Trocar a senha** encerra as outras sessões e
-o "continuar conectado" dos outros aparelhos, como na troca pelo admin; a sessão de
-quem trocou continua.
-
-**Reautenticação recente.** Antes de uma ação sensível, a pessoa confirma que é
-ela, além de estar logada: quem tem só a sessão (um cookie roubado) não passa. A
-confirmação vale 10 minutos, na mesma sessão e para o mesmo usuário, e o id da
-sessão muda ao confirmar, então quem tiver uma cópia do cookie antigo fica sem
-ela. Na rota, é o middleware `reauth` (`App\Http\Middleware\EnsureRecentReauth`):
-o formulário da ação pode mandar a senha junto, no campo `reauth_password`, e o
-método usado (`password`, `github` ou `code`) sai de `Reauthentication::method()`
-para o registro da ação. A senha conferida com a sessão aberta (na ação sensível,
-na troca de e-mail e na troca de senha) tem um limite só: 5 tentativas a cada 5
-minutos por conta. Ver uma tela nunca pede confirmação, e parar algo também não.
-
-Quem não sabe a senha (a senha inicial de quem se cadastrou pelo GitHub) confirma
-de outro jeito, na caixa "Confirme que é você"
-(`resources/views/account/partials/reauth.blade.php`):
-
-- **pelo GitHub**, só se a conta já tem o GitHub ligado, comparado pelo id. A
-  reautenticação nunca liga nada pelo e-mail (o login liga, na primeira vez), e o
-  admin, que entra só por senha, não confirma pelo GitHub. A volta é
-  `/login/github/callback/reautenticar`, subcaminho do callback do OAuth App.
-- **por um código de 6 dígitos** num app conectado, só numa conversa privada do
-  Telegram ou mensagem direta do Discord (num grupo, outras pessoas leriam) e só
-  numa que já estava conectada, no mesmo destino, quando a pessoa entrou com a
-  senha ou o GitHub (o login guarda a lista; entrar pelo "continuar conectado"
-  não conta). Assim, quem só tem a sessão não conecta o próprio Telegram para
-  receber o código. Vale 10 minutos, uma vez só, 5 tentativas, só na sessão que
-  pediu, e 3 códigos a cada 10 minutos por conta. O cache guarda só o HMAC, e o
-  envio sai na hora (sem fila) e fica no histórico do app como `code`, com pontos
-  no lugar do código; o admin não reenvia código.
-
-O **diário de bordo** da `/sobre` fica no banco (`log_entries`) e o admin cria,
-edita e remove os registros em **Admin → Diário de bordo**. A página mostra os 3
-mais recentes (ou todos, se forem até 4) e guarda os mais antigos atrás de "ver mais".
-
-**E-mail.** O envio sai pelo servidor do próprio stack, o serviço `mail`
-(`docker/mail`): Postfix só de saída com assinatura DKIM (OpenDKIM). Ele não tem
-porta publicada, fica só na rede interna (o app fala com `mail:25`, sem usuário e
-senha), aceita só os containers dessa rede (o gateway, que é o host, é recusado) e
-só remetente `@example.com`. Não recebe e-mail: o recebimento segue no Email Routing
-da Cloudflare. Apresenta-se com o nome reverso do IP do servidor
-(`MAIL_HELO=mail.example.com`, que volta para o mesmo IP). A chave DKIM nasce
-no primeiro boot, no volume `mail_dkim`, e o registro a cadastrar fica no volume
-`mail_log`, junto do log de entrega.
-
-Todo e-mail passa pelo `App\Services\Mail\Outbox`: uma linha em `email_messages` e
-o job `SendEmail` (fila `notifications`, no máximo `MAIL_PER_MINUTE` por minuto,
-porque a VPS aceita poucos envios pela porta 25). O job anota o id da fila do Postfix
-("queued as …"), e o `secmon:mail-status` (a cada minuto) lê o log de entrega e marca
-cada mensagem como entregue, adiada ou devolvida, com a resposta do servidor do
-destinatário. **Admin → E-mails** mostra se o envio está de pé (mailer, servidor,
-DKIM, SPF e DMARC publicados, leitor do log), o que saiu, o que deu erro e um botão
-de teste. Em produção: `MAIL_MAILER=smtp`, `MAIL_HOST=mail`, `MAIL_PORT=25`, o SPF
-com `ip4:` do servidor e o TXT `secmon1._domainkey`. O teste do container
-(`docker/mail/test/run.sh`, job "Servidor de envio" do CI) confere a assinatura com
-a chave publicada, a recusa de remetente de fora e do host, e o log de entrega.
-
----
+> **Quem expõe esta instalação na rede está abrindo o painel inteiro para quem alcançar a porta.** Rode em
+> `localhost`, ou atrás da sua própria autenticação (um proxy reverso com senha, uma VPN, uma regra de firewall).
 
 ## Arquitetura
 
@@ -744,7 +671,7 @@ Depois de mexer em **CSS/JS**, rode `make assets`.
 | `PENTEST_ALLOWED` | testes de segurança: a chave do ambiente (desligada); com ela, quem usa é a conta liberada pelo admin em Admin → Usuários |
 | `PENTEST_FORBIDDEN_DOMAINS` / `PENTEST_FORBIDDEN_ADDRESSES` | domínios (além do `example.com`) e IPs (além dos do Security Monitor e da saída) que nunca entram nos testes de segurança |
 | `PENTEST_EGRESS_IPS` / `PENTEST_TERMS_PUBLISHED_*` / `PENTEST_NOTICE_*` / `PENTEST_LEGAL_OPINION_AT` / `PENTEST_ABUSE_ALERT_AT` | pré-condições da chave global dos testes de segurança, registradas pelo dono |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | credenciais criadas pelo seeder |
+| `LOCAL_OWNER_EMAIL` / `LOCAL_OWNER_NAME` | a conta do dono, criada no primeiro acesso (sem senha) |
 
 ---
 

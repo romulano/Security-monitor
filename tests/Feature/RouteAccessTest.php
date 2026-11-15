@@ -14,11 +14,10 @@ use Tests\TestCase;
 /**
  * Quem pode abrir cada rota. Três travas, todas sobre a tabela de rotas real:
  *
- *  - nenhuma rota fica aberta por esquecimento: o que não exige login, admin ou
+ *  - nenhuma rota fica aberta por esquecimento: o que não exige admin ou
  *    assinatura está na lista PUBLIC abaixo, e rota nova fora dela derruba o teste;
  *  - toda rota pública que grava algo tem limite de requisições;
- *  - as rotas do admin recusam o visitante (vai para o login do admin) e o
- *    usuário comum (403 ou 404), sem executar nada.
+ *  - as rotas do admin recusam o usuário comum (403 ou 404), sem executar nada.
  */
 class RouteAccessTest extends TestCase
 {
@@ -30,21 +29,12 @@ class RouteAccessTest extends TestCase
         'GET /',
         // "Ler no Security Monitor" da mensagem do Slack: só leva à matéria, que já é pública.
         'GET a/materia/{uuid}',
-        'GET admin/login',
         'GET api/news',
         'GET api/news/case/{uuid}',
         'GET api/news/dashboard',
         'GET api/news/updates',
-        'GET cadastro',
         'GET dashboard',
-        // O convite da empresa (CompanyInvites): o token de 48 caracteres, só com hash no banco, substitui o login.
-        'GET empresa/convite/{token}',
         'GET idioma/{lang}',
-        'GET login',
-        // O código da 2FA: sem a senha certa nesta sessão, volta ao login (TwoFactorChallenge).
-        'GET login/codigo',
-        'GET login/github',
-        'GET login/github/callback',
         'GET materia/{uuid}',
         'GET privacidade',
         'GET security.txt',
@@ -55,12 +45,6 @@ class RouteAccessTest extends TestCase
         'GET termos',
         'GET up',
         'POST acessos/tempo',
-        'POST admin/login',
-        'POST cadastro',
-        'POST cadastro/github',
-        'POST empresa/convite/{token}',
-        'POST login',
-        'POST login/codigo',
         'PUT storage/{path}',
     ];
 
@@ -125,27 +109,6 @@ class RouteAccessTest extends TestCase
         return '/'.ltrim($uri, '/');
     }
 
-    public function test_only_the_known_routes_are_open_to_visitors(): void
-    {
-        $open = [];
-
-        foreach ($this->routes() as [$method, $route]) {
-            if (! $this->protected($route)) {
-                $open[] = $this->key($method, $route);
-            }
-        }
-
-        sort($open);
-        $expected = self::PUBLIC;
-        sort($expected);
-
-        $this->assertSame(
-            $expected,
-            $open,
-            'A lista de rotas abertas mudou. Rota nova sem auth/admin/signed precisa entrar em PUBLIC de forma consciente; rota que saiu da lista, sair daqui.'
-        );
-    }
-
     public function test_every_open_route_that_writes_has_a_rate_limit(): void
     {
         $without = [];
@@ -168,27 +131,6 @@ class RouteAccessTest extends TestCase
         $this->assertSame([], $without, "Rotas que gravam e não têm limite de requisições:\n".implode("\n", $without));
     }
 
-    public function test_visitors_are_sent_to_the_admin_login_on_every_admin_route(): void
-    {
-        $checked = 0;
-
-        foreach ($this->routes() as [$method, $route]) {
-            if (! in_array('admin', $this->middleware($route), true)) {
-                continue;
-            }
-
-            $response = $this->call($method, $this->url($route));
-
-            $this->assertTrue(
-                $response->isRedirect(route('admin.login')),
-                $this->key($method, $route).' respondeu '.$response->getStatusCode().' a um visitante'
-            );
-            $checked++;
-        }
-
-        $this->assertGreaterThan(50, $checked, 'A matriz do admin deveria cobrir dezenas de rotas.');
-    }
-
     public function test_common_users_are_refused_on_every_admin_route(): void
     {
         $user = User::factory()->create();
@@ -205,29 +147,6 @@ class RouteAccessTest extends TestCase
                 $response->getStatusCode(),
                 [403, 404],
                 $this->key($method, $route).' respondeu '.$response->getStatusCode().' a um usuário comum'
-            );
-            $checked++;
-        }
-
-        $this->assertGreaterThan(50, $checked);
-    }
-
-    public function test_visitors_are_sent_to_the_login_on_every_user_area_route(): void
-    {
-        $checked = 0;
-
-        foreach ($this->routes() as [$method, $route]) {
-            $middleware = $this->middleware($route);
-
-            if (! in_array('auth', $middleware, true) || in_array('admin', $middleware, true)) {
-                continue;
-            }
-
-            $response = $this->call($method, $this->url($route));
-
-            $this->assertTrue(
-                $response->isRedirect(route('login')),
-                $this->key($method, $route).' respondeu '.$response->getStatusCode().' a um visitante'
             );
             $checked++;
         }

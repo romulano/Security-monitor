@@ -11,13 +11,6 @@
             </p>
         </div>
 
-        <form method="POST" action="{{ route('admin.users.password', auth()->user()) }}"
-              data-confirm="Gerar uma nova senha para a sua conta de administrador? A senha atual deixa de valer e os seus outros aparelhos são desconectados.">
-            @csrf
-            <button class="rounded-lg border border-ink-800 px-4 py-2 text-sm text-ink-200 hover:border-accent">
-                Gerar nova senha de admin
-            </button>
-        </form>
     </div>
 
     @if (session('new_password'))
@@ -135,11 +128,6 @@
                         <td class="px-3 py-2">
                             <div class="flex justify-end gap-2">
                                 @if (! $account->is_admin)
-                                    <form method="POST" action="{{ route('admin.users.password', $account) }}"
-                                          data-confirm="Gerar uma nova senha para {{ $account->name }}? A senha atual deixa de valer e a pessoa é desconectada.">
-                                        @csrf
-                                        <button class="rounded-md border border-ink-800 px-2.5 py-1 text-xs text-ink-200 hover:border-accent">Nova senha</button>
-                                    </form>
 
                                     <form method="POST" action="{{ route('admin.users.destroy', $account) }}"
                                           data-confirm="Remover {{ $account->name }} ({{ $account->email }})? A conta e tudo o que está ligado a ela são apagados e a pessoa perde o acesso na hora. Não dá para desfazer.">

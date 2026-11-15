@@ -90,24 +90,13 @@
             <a href="{{ route('about') }}"
                class="hidden rounded-md px-2.5 py-1.5 sm:inline-block {{ request()->routeIs('about') ? 'bg-ink-850 text-white' : 'text-ink-400 hover:text-ink-200' }}">Sobre</a>
 
-            @auth
-                <a href="{{ route('alerts.index') }}"
-                   class="rounded-md px-2.5 py-1.5 {{ request()->routeIs('alerts.*') ? 'bg-ink-850 text-white' : 'text-ink-400 hover:text-ink-200' }}">Alertas</a>
-                @if (auth()->user()->is_admin)
-                    <a href="{{ route('admin.dashboard') }}" class="rounded-md px-2.5 py-1.5 text-ink-400 hover:text-ink-200">Admin</a>
-                @else
-                    <a href="{{ route('account.show') }}"
-                       class="rounded-md px-2.5 py-1.5 {{ request()->routeIs('account.*') ? 'bg-ink-850 text-white' : 'text-ink-400 hover:text-ink-200' }}">Conta</a>
-                @endif
-            @else
-                <a href="{{ route('login') }}" class="rounded-md px-2.5 py-1.5 text-ink-400 hover:text-ink-200">Entrar</a>
-            @endauth
+            <a href="{{ route('alerts.index') }}"
+               class="rounded-md px-2.5 py-1.5 {{ request()->routeIs('alerts.*') ? 'bg-ink-850 text-white' : 'text-ink-400 hover:text-ink-200' }}">Alertas</a>
+            <a href="{{ route('admin.dashboard') }}" class="rounded-md px-2.5 py-1.5 text-ink-400 hover:text-ink-200">Admin</a>
         </nav>
     </div>
 
-    @auth
-        @include('alerts.tests.partials.banner')
-    @endauth
+    @include('alerts.tests.partials.banner')
 
     @hasSection('subheader')
         @yield('subheader')

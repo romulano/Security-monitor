@@ -74,10 +74,6 @@
         de e-mail no meio. De cada envio guardamos o destinatário,
         o assunto, a data e o resultado da entrega (a resposta do servidor de quem recebe, como "entregue" ou "endereço não
         existe"). O texto da mensagem não fica guardado depois do envio.</p>
-    <p><strong>Login e cadastro:</strong> o captcha da Cloudflare (Turnstile) recebe o seu IP e sinais do navegador para
-        confirmar que é uma pessoa. Tentativas recusadas (senha errada, excesso de tentativas, captcha recusado, e-mail já
-        cadastrado) ficam registradas com o IP, o navegador e um código calculado a partir do e-mail digitado, que permite contar
-        tentativas contra a mesma conta sem guardar o e-mail.</p>
     <p><strong>Alertas personalizados:</strong> as respostas da entrevista, que são o nome da empresa ou do produto, as marcas,
         os setores, as regiões, o sistema dos servidores, as tecnologias usadas e as versões delas (se você informar), os tipos
         de ataque que interessam, a criticidade mínima e o idioma. Também ficam guardados o que você escrever no campo “Outro”, os alertas gerados

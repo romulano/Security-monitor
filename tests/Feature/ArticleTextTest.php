@@ -89,7 +89,6 @@ class ArticleTextTest extends TestCase
     {
         $article = $this->article();
 
-        $this->get(route('admin.articles.text', $article))->assertRedirect(route('admin.login'));
         $this->actingAs(User::factory()->create())->get(route('admin.articles.text', $article))->assertForbidden();
         $this->actingAs(User::factory()->create())
             ->put(route('admin.articles.text.update', $article), ['content' => $this->fullText()])

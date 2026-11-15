@@ -96,14 +96,11 @@ class WebhookSnippetRunner
 
         data = json.load(sys.stdin)
 
-
         class Aborted(Exception):
             pass
 
-
         def abort(code):
             raise Aborted(code)
-
 
         class Headers:
             def __init__(self, items):
@@ -111,7 +108,6 @@ class WebhookSnippetRunner
 
             def get(self, name, default=None):
                 return self.items.get(name.lower(), default)
-
 
         class Request:
             headers = Headers(data["headers"])
@@ -122,9 +118,7 @@ class WebhookSnippetRunner
             def get_json(self):
                 return json.loads(self.get_data())
 
-
         routes = {}
-
 
         class Flask:
             def __init__(self, name):
@@ -135,7 +129,6 @@ class WebhookSnippetRunner
                     routes[path] = view
                     return view
                 return register
-
 
         flask = types.ModuleType("flask")
         flask.Flask, flask.abort, flask.request = Flask, abort, Request()

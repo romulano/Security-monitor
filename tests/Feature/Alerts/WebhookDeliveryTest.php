@@ -14,7 +14,6 @@ use App\Services\Alerts\ProfileIndex;
 use App\Services\Alerts\Webhook\MessageBuilder;
 use App\Services\Alerts\Webhook\WebhookClient;
 use App\Services\Alerts\Webhook\WebhookExample;
-use App\Services\Auth\ReauthCodes;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Carbon;
@@ -307,23 +306,4 @@ class WebhookDeliveryTest extends TestCase
         $this->assertFalse($webhook->refresh()->signs());
     }
 
-    public function test_security_codes_never_go_to_a_webhook(): void
-    {
-        Http::fake();
-        $user = $this->client(['password' => bcrypt('senha-forte-1')]);
-        $webhook = $this->webhook($user);
-        $session = $this->app['session.store'];
-
-        $this->assertFalse($webhook->isPrivate());
-
-        // Nem como destino guardado no login, nem como app que recebe o código agora.
-        app(ReauthCodes::class)->rememberDestinations($user, $session);
-        $this->assertSame([], $session->get('reauth_destinations')['channels']);
-        $this->assertTrue(app(ReauthCodes::class)->channels($user, $session)->isEmpty());
-
-        $this->actingAs($user)->post(route('account.reauth.code'), ['channel' => $webhook->id])->assertSessionHas('error', fn ($message) => str_contains($message, 'Esse app não recebe o código'));
-
-        Http::assertNothingSent();
-        $this->assertSame(0, NotificationDelivery::query()->where('kind', 'code')->count());
-    }
 }

@@ -133,22 +133,4 @@ class AdminLogbookTest extends TestCase
         $this->get(route('admin.logbook'))->assertOk()->assertSee('Texto digitado');
     }
 
-    public function test_only_admins_reach_the_logbook(): void
-    {
-        $user = User::factory()->create();
-        $entry = $this->entry();
-        $data = ['logged_on' => '2026-10-23', 'title' => 'Invasor', 'text' => 'Não deveria entrar.'];
-
-        $this->actingAs($user)->get(route('admin.logbook'))->assertForbidden();
-        $this->actingAs($user)->post(route('admin.logbook.store'), $data)->assertForbidden();
-        $this->actingAs($user)->put(route('admin.logbook.update', $entry), $data)->assertForbidden();
-        $this->actingAs($user)->delete(route('admin.logbook.destroy', $entry))->assertForbidden();
-
-        auth()->logout();
-        $this->get(route('admin.logbook'))->assertRedirect(route('admin.login'));
-        $this->post(route('admin.logbook.store'), $data)->assertRedirect(route('admin.login'));
-
-        $this->assertDatabaseMissing('log_entries', ['title' => 'Invasor']);
-        $this->assertSame('Acoplagem', $entry->refresh()->title);
-    }
 }

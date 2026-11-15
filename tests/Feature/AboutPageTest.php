@@ -75,7 +75,7 @@ class AboutPageTest extends TestCase
     {
         $this->get(route('about'))
             ->assertOk()
-            ->assertSee(route('register'))
+            ->assertSee(route('alerts.index'))
             ->assertSee('href="'.route('about').'"', false);
     }
 

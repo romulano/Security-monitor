@@ -43,14 +43,7 @@
         </nav>
 
         <div class="ml-auto flex items-center gap-3 text-sm">
-            @if (\App\Services\Auth\TwoFactor::available())
-                <a href="{{ route('account.two-factor') }}" class="text-ink-400 hover:text-ink-200">Duas etapas</a>
-            @endif
             <a href="{{ route('feed.index') }}" class="text-ink-400 hover:text-ink-200">Ver o site ↗</a>
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit" class="text-ink-700 hover:text-red-400">Sair</button>
-            </form>
         </div>
     </div>
 </header>

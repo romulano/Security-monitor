@@ -43,7 +43,7 @@ class AdminSecurityTest extends TestCase
 
     // ---- acesso ----------------------------------------------------------------
 
-    public function test_visitors_go_to_the_admin_login_and_common_users_are_refused_everywhere(): void
+    public function test_common_users_are_refused_everywhere(): void
     {
         $site = $this->site(['user_id' => $this->admin->id]);
         $urls = [
@@ -52,10 +52,6 @@ class AdminSecurityTest extends TestCase
             ['post', route('admin.security.ownership', $site)], ['post', route('admin.security.toggle', $site)],
             ['delete', route('admin.security.destroy', $site)],
         ];
-
-        foreach ($urls as [$method, $url]) {
-            $this->{$method}($url)->assertRedirect(route('admin.login'));
-        }
 
         $user = User::factory()->create();
         foreach ($urls as [$method, $url]) {

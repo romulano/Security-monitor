@@ -258,21 +258,4 @@ class AdminQueueTest extends TestCase
         $this->post(route('admin.queue.advance-all'))->assertSessionHas('error', 'Não há job agendado para adiantar.');
     }
 
-    public function test_only_the_admin_advances(): void
-    {
-        $later = now()->addHours(2)->timestamp;
-        $id = $this->queue(new RunCrawler, 'default', 3600, availableAt: $later);
-
-        $this->post(route('admin.queue.advance', $id))->assertRedirect(route('admin.login'));
-        $this->actingAs(User::factory()->create());
-        $this->post(route('admin.queue.advance', $id))->assertForbidden();
-        $this->post(route('admin.queue.advance-all'))->assertForbidden();
-        $this->assertSame($later, (int) DB::table('jobs')->where('id', $id)->value('available_at'));
-    }
-
-    public function test_only_the_admin_opens_the_queue(): void
-    {
-        $this->get(route('admin.queue'))->assertRedirect(route('admin.login'));
-        $this->actingAs(User::factory()->create())->get(route('admin.queue'))->assertForbidden();
-    }
 }

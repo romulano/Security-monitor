@@ -30,24 +30,6 @@ class AdminAlertsTest extends TestCase
         Http::fake(['hooks.slack.com/*' => Http::response('ok')]);
     }
 
-    public function test_only_admins_get_in(): void
-    {
-        $pages = ['admin.alerts.overview', 'admin.alerts.clients', 'admin.alerts.deliveries', 'admin.alerts.catalog', 'admin.alerts.questions'];
-
-        foreach ($pages as $page) {
-            $this->get(route($page))->assertRedirect(route('admin.login'));
-        }
-
-        $this->actingAs($this->client());
-
-        foreach ($pages as $page) {
-            $this->get(route($page))->assertForbidden();
-        }
-
-        $this->put(route('admin.alerts.config'), ['enabled' => '0'])->assertForbidden();
-        $this->assertTrue(Settings::bool('alerts.enabled'));
-    }
-
     public function test_overview_shows_health_numbers_and_issues(): void
     {
         $user = $this->client();
