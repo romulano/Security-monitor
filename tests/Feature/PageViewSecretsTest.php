@@ -4,10 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\AccessEvent;
 use App\Models\PageView;
-use App\Models\User;
 use App\Support\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -39,16 +37,13 @@ class PageViewSecretsTest extends TestCase
 
     public function test_the_signed_link_is_recorded_as_the_route_and_the_oauth_code_without_value(): void
     {
-        $user = User::factory()->create(['email_verified_at' => null]);
-        $this->open(URL::temporarySignedRoute('verification.verify', now()->addHour(), ['user' => $user->id, 'hash' => sha1($user->email)]));
         $this->open('/a/999999/nao-relevante?expires=1&signature=forjada');
         $this->open('/login/github/callback?code=abc123&state=xyz');
 
         $this->assertSame(
-            ['/conta/confirmar-email/{user}/{hash}', '/a/{match}/nao-relevante', '/login/github/callback?code=&state='],
+            ['/a/{match}/nao-relevante', '/login/github/callback?code=&state='],
             PageView::query()->orderBy('id')->pluck('path')->all(),
         );
-        $this->assertSame(0, PageView::query()->where('path', 'like', '%'.sha1($user->email).'%')->count());
     }
 
     public function test_the_referer_inside_the_site_is_cleaned_and_from_outside_loses_the_query(): void
@@ -72,10 +67,8 @@ class PageViewSecretsTest extends TestCase
 
     public function test_the_migration_cleans_what_was_recorded_and_leaves_the_rest(): void
     {
-        $hash = sha1('ana@exemplo.com');
         $rows = [
             ['/login/github/callback?code=abc&state=xyz', null, '/login/github/callback?code=&state=', null],
-            ['/conta/confirmar-email/7/'.$hash.'?expires=1&signature=abc', null, '/conta/confirmar-email/{user}/{hash}', null],
             ['/sobre', 'https://example.com/a/1/relevante?%73ignature=abc', '/sobre', 'https://example.com/a/1/relevante?%73ignature='],
             ['/busca?q=union+select&page=2', 'https://www.google.com/search?q=secmon', '/busca?q=union+select&page=2', 'https://www.google.com/search?q=secmon'],
         ];

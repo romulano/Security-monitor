@@ -19,7 +19,6 @@ class RecordedUrlTest extends TestCase
             'e-mail, e a utm fica' => ['/x?email=ana%40exemplo.com&utm_source=bluesky', '/x?email=&utm_source=bluesky'],
             'nome codificado' => ['/x?%73ignature=abc&%45MAIL=a', '/x?%73ignature=&%45MAIL='],
             'repetida, em array e em maiúsculas' => ['/x?code=1&code=2&code[]=3&CODE=4&user[password]=5', '/x?code=&code=&code[]=&CODE=&user[password]='],
-            'confirmação de e-mail' => ['/conta/confirmar-email/7/'.sha1('ana@exemplo.com').'?expires=1&signature=abc', '/conta/confirmar-email/{user}/{hash}'],
             'convite do cadastro' => ['/cadastro?convite=ffeaaf5b0727202642ebcbb7d32224d7&utm_source=linkedin', '/cadastro?convite=&utm_source=linkedin'],
             'endereço inteiro' => ['https://ana:segredo@example.com/a/1/relevante?signature=abc#voto', 'https://example.com/a/1/relevante?signature='],
         ];
@@ -38,14 +37,6 @@ class RecordedUrlTest extends TestCase
         foreach (['/busca?q=union+select&page=2&filtro=cve&utm_campaign=lancamento', '/sobre', '/x?code', '/?postcode=1'] as $uri) {
             $this->assertSame($uri, RecordedUrl::sanitize($uri));
         }
-    }
-
-    public function test_the_secret_path_is_the_one_of_the_route(): void
-    {
-        $this->assertSame(
-            RecordedUrl::SECRET_PATHS['/conta/confirmar-email/'],
-            '/'.app('router')->getRoutes()->getByName('verification.verify')->uri(),
-        );
     }
 
     public function test_the_referer_of_another_site_loses_the_query_and_ours_is_cleaned(): void

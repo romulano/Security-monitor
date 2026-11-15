@@ -94,8 +94,10 @@ class IpGuardTest extends TestCase
             'logo depois do relay 6to4' => ['192.88.100.1'],
             'logo depois do ORCHIDv2 (só confere a máscara /28)' => ['2001:30::1'],
             // O IP do servidor do Security Monitor é público aqui de propósito: a monitoria do admin lê os sites que
-            // resolvem para ele (prova "servidor"). Quem não pode visitá-lo recebe a lista à parte.
-            'IP do servidor do Security Monitor' => ['203.0.113.10'],
+            // resolvem para ele (prova "servidor"). Quem não pode visitá-lo recebe a lista à parte. Não pode ser um
+            // dos endereços de documentação (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24): o IpGuard os trata como
+            // reservados, não públicos, então o exemplo precisa de um IP fora dessas faixas.
+            'IP do servidor do Security Monitor' => ['45.33.12.10'],
         ];
     }
 
