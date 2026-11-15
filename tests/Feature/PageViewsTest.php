@@ -146,12 +146,6 @@ class PageViewsTest extends TestCase
         $this->assertFalse(Settings::bool(PageViewRecorder::SETTING));
     }
 
-    public function test_only_the_admin_opens_the_accesses_page(): void
-    {
-        $this->get(route('admin.accesses'))->assertRedirect(route('admin.login'));
-        $this->actingAs(User::factory()->create())->get(route('admin.accesses'))->assertForbidden();
-    }
-
     public function test_records_go_away_after_six_months(): void
     {
         $this->open('/sobre');

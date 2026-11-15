@@ -41,12 +41,6 @@ class InterviewFlowTest extends TestCase
         return $this->put(route('alerts.interview.update', $n), ['answers' => $answers] + $extra);
     }
 
-    public function test_guest_is_sent_to_login(): void
-    {
-        $this->get(route('alerts.news'))->assertRedirect(route('login'));
-        $this->get(route('alerts.interview', 1))->assertRedirect(route('login'));
-    }
-
     public function test_without_profile_the_page_invites_to_the_interview(): void
     {
         $this->actingAs($this->client())

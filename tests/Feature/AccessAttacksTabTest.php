@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\AccessEvent;
 use App\Models\PageView;
 use App\Models\User;
-use App\Services\Auth\RejectedAttempts;
+use App\Services\Access\RejectedAttempts;
 use App\Support\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;

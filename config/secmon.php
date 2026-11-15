@@ -428,14 +428,16 @@ return [
     | `allowed` (do ambiente; o admin não liga). Quem usa: a conta que o admin
     | liberou em Admin → Usuários (users.pentest_access_granted_at), e a de admin.
     */
-    // Verificação em duas etapas (app autenticador + códigos de recuperação). Desligada, a tela de
-    // configurar e a do código no login respondem 404, e o login não pede o código a ninguém.
-    'two_factor' => [
-        'enabled' => (bool) env('TWO_FACTOR_ENABLED', true),
-        // O admin do Security Monitor só usa o /admin com a 2FA ligada; sem ela, cada página do admin leva à tela de
-        // configurar. Desligada por padrão: o deploy não muda nada para o dono, que liga depois de configurar.
-        'admin_required' => (bool) env('TWO_FACTOR_ADMIN_REQUIRED', false),
-        'issuer' => 'Security Monitor',
+    /*
+    |--------------------------------------------------------------------------
+    | A conta do dono desta instalação
+    |--------------------------------------------------------------------------
+    | A versão local não tem login: a conta nasce no primeiro acesso (User::localOwner) e é sempre administradora.
+    | O e-mail só serve para os avisos que a própria instalação manda.
+    */
+    'local_owner' => [
+        'email' => env('LOCAL_OWNER_EMAIL', 'dono@localhost'),
+        'name' => env('LOCAL_OWNER_NAME', 'Dono da instalação'),
     ],
 
     'pentest' => [

@@ -29,11 +29,6 @@ return [
     ],
 
     // Captcha da Cloudflare no login e no cadastro. Sem site key = desligado (dev).
-    'turnstile' => [
-        'site_key' => env('TURNSTILE_SITE_KEY'),
-        'secret_key' => env('TURNSTILE_SECRET_KEY'),
-    ],
-
     // "Entrar com o GitHub" no login e no cadastro (OAuth App da organização secmon-dev).
     // Callback do app: ${APP_URL}/login/github/callback. A reautenticação volta em
     // .../callback/reautenticar, que o GitHub aceita sem mudar o app (é um subcaminho do

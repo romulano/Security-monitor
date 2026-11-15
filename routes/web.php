@@ -1,19 +1,5 @@
 <?php
 
-use App\Http\Controllers\Account\CancelTwoFactorSetupController;
-use App\Http\Controllers\Account\ConfirmReauthCodeController;
-use App\Http\Controllers\Account\ConfirmReauthTwoFactorController;
-use App\Http\Controllers\Account\ConfirmTwoFactorController;
-use App\Http\Controllers\Account\DisableTwoFactorController;
-use App\Http\Controllers\Account\GithubReauthCallbackController;
-use App\Http\Controllers\Account\RegenerateRecoveryCodesController;
-use App\Http\Controllers\Account\SendReauthCodeController;
-use App\Http\Controllers\Account\ShowAccountController;
-use App\Http\Controllers\Account\ShowTwoFactorController;
-use App\Http\Controllers\Account\StartGithubReauthController;
-use App\Http\Controllers\Account\StartTwoFactorController;
-use App\Http\Controllers\Account\UpdateAccountController;
-use App\Http\Controllers\Account\UpdatePasswordController;
 use App\Http\Controllers\Admin\Alerts\Catalog\ShowCatalogController;
 use App\Http\Controllers\Admin\Alerts\Catalog\StoreTechController;
 use App\Http\Controllers\Admin\Alerts\Catalog\ToggleTechController;
@@ -115,7 +101,6 @@ use App\Http\Controllers\Admin\Sources\UpdateSourceController;
 use App\Http\Controllers\Admin\Users\DestroyUserController;
 use App\Http\Controllers\Admin\Users\GrantPentestAccessController;
 use App\Http\Controllers\Admin\Users\ListUsersController;
-use App\Http\Controllers\Admin\Users\ResetUserPasswordController;
 use App\Http\Controllers\Admin\Users\RevokePentestAccessController;
 use App\Http\Controllers\Alerts\Center\ToggleChannelPauseController;
 use App\Http\Controllers\Alerts\Center\UpdateAlertCenterController;
@@ -224,21 +209,6 @@ use App\Http\Controllers\Alerts\Webhooks\UpdateWebhookController;
 use App\Http\Controllers\Alerts\Webhooks\UpdateWebhookEndpointController;
 use App\Http\Controllers\Alerts\Webhooks\UpdateWebhookSecretController;
 use App\Http\Controllers\Alerts\Webhooks\VerifyWebhookDomainController;
-use App\Http\Controllers\Auth\AdminLoginController;
-use App\Http\Controllers\Auth\ConfirmTwoFactorChallengeController;
-use App\Http\Controllers\Auth\GithubCallbackController;
-use App\Http\Controllers\Auth\GithubLoginController;
-use App\Http\Controllers\Auth\GithubRegisterController;
-use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\Auth\LogoutController;
-use App\Http\Controllers\Auth\RegisterController;
-use App\Http\Controllers\Auth\ResendVerifyEmailController;
-use App\Http\Controllers\Auth\ShowAdminLoginController;
-use App\Http\Controllers\Auth\ShowLoginController;
-use App\Http\Controllers\Auth\ShowRegisterController;
-use App\Http\Controllers\Auth\ShowTwoFactorChallengeController;
-use App\Http\Controllers\Auth\ShowVerifyEmailController;
-use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Site\ShowAboutController;
 use App\Http\Controllers\Site\ShowCaseController;
 use App\Http\Controllers\Site\ShowDashboardController;
@@ -276,75 +246,10 @@ Route::get('/idioma/{lang}', SwitchLanguageController::class)
     ->whereIn('lang', array_keys(ReportLanguage::LABELS))
     ->name('report-lang');
 
-// Usuário comum: cadastro aberto (captcha e e-mail confirmado) e só mexe nos próprios dados.
-// Sem login, a chave do limite é o IP. Dois contadores (item 10 do Blue Team): entrar e cadastrar dividem
-// o `entrada`, e as 3 rotas do GitHub dividem o `github-oauth`. Assim, o abuso do login numa rede (NAT)
-// não tranca o login com o GitHub, e quem distribui entre as rotas não ganha um contador por rota.
-Route::middleware('guest')->group(function () {
-    Route::get('/login', ShowLoginController::class)->name('login');
-    Route::post('/login', LoginController::class)->middleware('throttle:10,1,entrada');
-    Route::get('/cadastro', ShowRegisterController::class)->name('register');
-    Route::post('/cadastro', RegisterController::class)->middleware('throttle:10,1,entrada');
-
-    // Entrar com o GitHub: a mesma volta serve ao login e ao cadastro (a sessão sabe qual).
-    Route::get('/login/github', GithubLoginController::class)->middleware('throttle:10,1,github-oauth')->name('login.github');
-    Route::get('/login/github/callback', GithubCallbackController::class)->middleware('throttle:10,1,github-oauth')->name('login.github.callback');
-    Route::post('/cadastro/github', GithubRegisterController::class)->middleware('throttle:10,1,github-oauth')->name('register.github');
-
-    // O código da 2FA, depois da senha certa ou da volta do GitHub (TwoFactorChallenge, com o limite por conta e por IP).
-    Route::middleware('two-factor.available')->group(function () {
-        Route::get('/login/codigo', ShowTwoFactorChallengeController::class)->name('login.two-factor');
-        Route::post('/login/codigo', ConfirmTwoFactorChallengeController::class)->middleware('throttle:10,1,login-codigo')->name('login.two-factor.confirm');
-    });
-});
-
-// O link do e-mail de confirmação: a assinatura (vale 1 h) substitui o login, então abre em qualquer aparelho.
-// Ela é conferida antes de a conta ser procurada; o hash é do e-mail atual (o link de um e-mail trocado é 404).
-Route::get('/conta/confirmar-email/{user}/{hash}', VerifyEmailController::class)
-    ->whereNumber('user')
-    ->middleware(['signed', 'throttle:6,1,email-confirmar'])
-    ->name('verification.verify');
-
 // Com login, cada limite (`throttle:N,M`) tem o seu contador, no 3º parâmetro. Sem ele, a chave do limite
 // é só a conta: todos os limites dela somam no mesmo contador, e gravar a entrevista do Radar (30/min)
 // esgotava o "Verificar agora" (6/min). O RouteTableTest cobra o contador próprio em toda rota com login.
-// `two-factor.required`: o admin com TWO_FACTOR_ADMIN_REQUIRED e sem a 2FA só chega à tela de configurar (I1 do Red Team).
-Route::middleware(['auth', 'two-factor.required'])->group(function () {
-    Route::get('/conta', ShowAccountController::class)->name('account.show');
-
-    Route::put('/conta', UpdateAccountController::class)->name('account.update');
-    Route::put('/conta/senha', UpdatePasswordController::class)->name('account.password');
-    Route::post('/logout', LogoutController::class)->name('logout');
-
-    // Confirmação do e-mail: o aviso e o pedido de outro link (o link em si fica fora do login, acima).
-    // Os alertas pedem o e-mail confirmado (`verified` no grupo abaixo); a conta não.
-    Route::get('/conta/confirmar-email', ShowVerifyEmailController::class)->name('verification.notice');
-    Route::post('/conta/confirmar-email/reenviar', ResendVerifyEmailController::class)->middleware('throttle:3,10,email-reenviar')->name('verification.send');
-
-    // Confirmar que é você (reautenticação recente) pelo GitHub ou por um código num app; a senha
-    // vai no formulário da própria ação. A volta do GitHub é um subcaminho do callback do login, o
-    // que o OAuth App aceita como redirect_uri, mas fica aqui, só para quem está logado.
-    Route::post('/conta/reautenticar/github', StartGithubReauthController::class)->middleware('throttle:10,1,reauth-github')->name('account.reauth.github');
-    Route::get('/login/github/callback/reautenticar', GithubReauthCallbackController::class)->middleware('throttle:10,1,reauth-github-volta')->name('account.reauth.github.callback');
-    Route::post('/conta/reautenticar/codigo', SendReauthCodeController::class)->middleware('throttle:6,1,reauth-codigo')->name('account.reauth.code');
-    Route::post('/conta/reautenticar/codigo/confirmar', ConfirmReauthCodeController::class)->middleware('throttle:10,1,reauth-codigo-confirmar')->name('account.reauth.code.confirm');
-    // Com a 2FA, o código do app depois de qualquer uma das três (o limite de erros é o mesmo do login).
-    Route::post('/conta/reautenticar/duas-etapas', ConfirmReauthTwoFactorController::class)->middleware(['two-factor.available', 'throttle:10,1,reauth-duas-etapas'])->name('account.reauth.two-factor');
-
-    // Verificação em duas etapas (app autenticador): só com TWO_FACTOR_ENABLED (senão, 404, antes do
-    // limite e da senha). Ver a tela é livre; ligar, confirmar, gerar códigos novos e desligar pedem a
-    // reautenticação: com só o cookie da sessão, ninguém liga a 2FA com o próprio app (trancando a dona
-    // da conta para fora), vê códigos de recuperação nem desliga a 2FA.
-    Route::middleware('two-factor.available')->group(function () {
-        Route::get('/conta/duas-etapas', ShowTwoFactorController::class)->name('account.two-factor');
-        Route::post('/conta/duas-etapas', StartTwoFactorController::class)->middleware(['throttle:10,1,duas-etapas-ligar', 'reauth'])->name('account.two-factor.start');
-        Route::post('/conta/duas-etapas/confirmar', ConfirmTwoFactorController::class)->middleware(['throttle:6,1,duas-etapas-confirmar', 'reauth'])->name('account.two-factor.confirm');
-        Route::post('/conta/duas-etapas/codigos', RegenerateRecoveryCodesController::class)->middleware(['throttle:5,1,duas-etapas-codigos', 'reauth'])->name('account.two-factor.codes');
-        Route::delete('/conta/duas-etapas', DisableTwoFactorController::class)->middleware(['throttle:5,1,duas-etapas-desligar', 'reauth'])->name('account.two-factor.disable');
-        // Cancelar a configuração ainda não confirmada não diminui a proteção: sem a senha.
-        Route::delete('/conta/duas-etapas/configuracao', CancelTwoFactorSetupController::class)->middleware('throttle:10,1,duas-etapas-cancelar')->name('account.two-factor.cancel');
-    });
-
+Route::middleware('auth')->group(function () {
     // As execuções dos testes de segurança, pelo número (uuid): ver, a situação para a consulta periódica, Parar e a
     // faixa de qualquer página. Fora do `verified` (M1 do Red Team na P6a): quem trocou o e-mail e ainda não confirmou
     // o novo continua vendo e parando o próprio teste. A execução é resolvida só entre as da conta (outra dá 404), e
@@ -363,7 +268,7 @@ Route::middleware(['auth', 'two-factor.required'])->group(function () {
 
     // Alertas: o hub (tudo o que saiu), a Integração (que abre Notícias, Radar e GitHub) e os notificadores.
     // Só com o e-mail confirmado: sem ele, o `verified` manda para o aviso de confirmação.
-    Route::prefix('alertas')->name('alerts.')->middleware('verified')->group(function () {
+    Route::prefix('alertas')->name('alerts.')->group(function () {
         Route::get('/', ShowAlertsController::class)->name('index');
         Route::get('/integracao', ShowIntegrationsController::class)->name('integrations');
 
@@ -485,10 +390,10 @@ Route::middleware(['auth', 'two-factor.required'])->group(function () {
                 Route::put('/testes/autorizar/{passo}', UpdatePentestStepController::class)->whereNumber('passo')->middleware('throttle:30,1,pentest-passos')->name('tests.authorize.update');
                 Route::post('/testes/dominios', StorePentestDomainController::class)->middleware('throttle:10,1,pentest-dominios')->name('tests.domains.store');
                 Route::post('/testes/dominios/{dominio}/verificar', VerifyPentestDomainController::class)->middleware('throttle:6,1,pentest-posse')->name('tests.domains.verify');
-                Route::post('/testes/dominios/{dominio}/termo', AcceptPentestConsentController::class)->middleware(['pentest.domain:7', 'reauth:dominio', 'throttle:10,1,pentest-aceite'])->name('tests.domains.accept');
+                Route::post('/testes/dominios/{dominio}/termo', AcceptPentestConsentController::class)->middleware(['pentest.domain:7', 'throttle:10,1,pentest-aceite'])->name('tests.domains.accept');
                 // "Nova execução", com a reautenticação como o aceite; pausar e retomar, cada um com o seu limite. Retomar
                 // também pede a reautenticação (volta a mandar tráfego), conferida no controller depois do 404 da execução.
-                Route::post('/testes/dominios/{dominio}/execucoes', StartPentestRunController::class)->middleware(['pentest.domain', 'reauth:dominio', 'throttle:3,1,pentest-execucoes'])->name('tests.runs.store');
+                Route::post('/testes/dominios/{dominio}/execucoes', StartPentestRunController::class)->middleware(['pentest.domain', 'throttle:3,1,pentest-execucoes'])->name('tests.runs.store');
                 Route::post('/testes/execucoes/{execucao}/pausar', PausePentestRunController::class)->whereUuid('execucao')->middleware('throttle:10,1,pentest-pausar')->name('tests.runs.pause');
                 Route::post('/testes/execucoes/{execucao}/retomar', ResumePentestRunController::class)->whereUuid('execucao')->middleware('throttle:10,1,pentest-retomar')->name('tests.runs.resume');
             });
@@ -548,11 +453,6 @@ Route::post('/g/{finding}/motivo', SignedGithubNoteController::class)
     ->whereNumber('finding')
     ->middleware(['signed', 'throttle:20,1', 'signed.active'])
     ->name('github.feedback.signed.note');
-
-Route::middleware('guest')->prefix('admin')->group(function () {
-    Route::get('/login', ShowAdminLoginController::class)->name('admin.login');
-    Route::post('/login', AdminLoginController::class)->middleware('throttle:10,1');
-});
 
 // Os limites do admin também têm contador próprio (ver o grupo com login acima).
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
@@ -682,7 +582,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // Só o GET: o POST e o DELETE dos convites deixaram de existir.
     Route::get('/usuarios', ListUsersController::class)->name('users');
     Route::get('/convites', RedirectController::class)->defaults('destination', '/admin/usuarios')->defaults('status', 301)->name('users.legacy');
-    Route::post('/usuarios/{user}/senha', ResetUserPasswordController::class)->middleware('throttle:20,1,admin-usuario-senha')->name('users.password');
     Route::delete('/usuarios/{user}', DestroyUserController::class)->name('users.destroy');
     Route::post('/usuarios/{user}/testes', GrantPentestAccessController::class)->whereNumber('user')->middleware('throttle:30,1,admin-usuario-testes')->name('users.pentest.grant');
     Route::delete('/usuarios/{user}/testes', RevokePentestAccessController::class)->whereNumber('user')->name('users.pentest.revoke');

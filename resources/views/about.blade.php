@@ -342,15 +342,11 @@
         <p class="{{ $eyebrow }}">Fim da transmissão</p>
         <h2 class="mt-3.5 text-3xl font-bold tracking-tight text-white md:text-4xl">O Security Monitor está no ar agora.</h2>
         <p class="mx-auto mt-3.5 max-w-[560px] text-[16.5px] leading-[1.7] text-ink-400">
-            Acompanhe o que ele captou nas últimas horas ou crie uma conta para receber alertas da sua stack.
+            Acompanhe o que ele captou nas últimas horas, ou configure os alertas da sua stack.
         </p>
         <div class="mt-7 flex flex-wrap justify-center gap-3">
             <a href="{{ route('feed.index') }}" class="rounded-lg bg-accent px-4.5 py-2.5 text-sm font-semibold text-ink-950 hover:brightness-110">Abrir o feed</a>
-            @auth
-                <a href="{{ route('alerts.integrations') }}" class="rounded-lg border border-ink-700 px-4.5 py-2.5 text-sm font-semibold hover:border-ink-400">Configurar alertas</a>
-            @else
-                <a href="{{ route('register') }}" class="rounded-lg border border-ink-700 px-4.5 py-2.5 text-sm font-semibold hover:border-ink-400">Criar conta</a>
-            @endauth
+            <a href="{{ route('alerts.integrations') }}" class="rounded-lg border border-ink-700 px-4.5 py-2.5 text-sm font-semibold hover:border-ink-400">Configurar alertas</a>
         </div>
     </div>
 @endsection

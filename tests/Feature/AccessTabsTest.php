@@ -50,7 +50,6 @@ class AccessTabsTest extends TestCase
         $this->visit('198.51.100.9', '/', ['is_bot' => true, 'bot_kind' => 'search', 'bot_owner' => 'Google', 'duration_ms' => null]);
 
         foreach (array_keys(self::TABS) as $tab) {
-            $this->get(route($tab))->assertRedirect(route('admin.login'));
             $this->actingAs(User::factory()->create())->get(route($tab))->assertForbidden();
             auth()->logout();
         }

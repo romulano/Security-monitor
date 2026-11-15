@@ -17,7 +17,7 @@
         @include('alerts.partials.crumbs', ['parent' => ['Testes de segurança', route('alerts.tests')], 'here' => '#'.$run->shortId()])
 
         <div data-run-live="{{ route('alerts.tests.runs.status', ['execucao' => $run->uuid]) }}" data-poll="{{ (int) config('secmon.pentest.live_poll_seconds') }}"
-             data-live="{{ $live['active'] ? '1' : '0' }}" data-login="{{ route('login') }}" data-pill="{{ $live['pill'][0] }}" class="space-y-6">
+             data-live="{{ $live['active'] ? '1' : '0' }}" data-login="{{ route('alerts.tests') }}" data-pill="{{ $live['pill'][0] }}" class="space-y-6">
             @include('alerts.tests.partials.run-live', ['run' => $run, 'live' => $live, 'confirmed' => $confirmed])
         </div>
         {{-- O que o leitor de tela ouve da consulta periódica, uma vez por mudança: a falha e a volta (situação 9) e o

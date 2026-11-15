@@ -106,24 +106,4 @@ class AccessIpDangerZoneTest extends TestCase
         $this->get(route('admin.accesses.settings'))->assertSee('Ligar a monitoria')->assertDontSee('data-confirm', false);
     }
 
-    public function test_only_the_admin_reaches_the_settings_and_count_as_ours(): void
-    {
-        $this->get(route('admin.accesses.settings'))->assertRedirect(route('admin.login'));
-        $this->post(route('admin.accesses.own.add'), ['endereco' => '203.0.113.7'])->assertRedirect(route('admin.login'));
-
-        $this->actingAs(User::factory()->create());
-        $this->get(route('admin.accesses.settings'))->assertForbidden();
-        $this->post(route('admin.accesses.own.add'), ['endereco' => '203.0.113.7'])->assertForbidden();
-
-        $this->actingAs($this->admin());
-        $this->app['env'] = 'local';
-
-        try {
-            $this->post(route('admin.accesses.own.add'), ['endereco' => '203.0.113.7'])->assertStatus(419);
-        } finally {
-            $this->app['env'] = 'testing';
-        }
-
-        $this->assertSame([], app(OwnAddresses::class)->edited());
-    }
 }

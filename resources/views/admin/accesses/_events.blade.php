@@ -31,7 +31,7 @@
                         <span class="mt-0.5 block font-sans">
                             @if (($row->source ?? 'evento') === 'acesso')<span class="text-[10px] text-ink-700">página aberta</span>@endif
                             @if ($row->category)<span class="rounded bg-red-950/50 px-1 text-[10px] text-red-300">{{ \App\Support\AttackSignatures::label($row->category) }}</span>@endif
-                            @if ($row->auth)<span class="text-[10px] text-ink-400">{{ \App\Services\Auth\RejectedAttempts::REASONS[$row->auth] ?? $row->auth }}</span>@endif
+                            @if ($row->auth)<span class="text-[10px] text-ink-400">{{ \App\Services\Access\RejectedAttempts::REASONS[$row->auth] ?? $row->auth }}</span>@endif
                         </span>
                         @if ($row->referer)<span class="block text-[11px] break-all text-ink-700">de <code>{{ $row->referer }}</code></span>@endif
                     </td>

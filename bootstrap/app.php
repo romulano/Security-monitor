@@ -1,13 +1,11 @@
 <?php
 
+use App\Http\Middleware\AuthenticateLocalOwner;
 use App\Http\Middleware\ContentSecurityPolicy;
 use App\Http\Middleware\EnsurePentestAccess;
 use App\Http\Middleware\EnsurePentestAvailable;
 use App\Http\Middleware\EnsurePentestDomain;
-use App\Http\Middleware\EnsureRecentReauth;
 use App\Http\Middleware\EnsureSignedLinkActive;
-use App\Http\Middleware\EnsureTwoFactorAvailable;
-use App\Http\Middleware\EnsureTwoFactorWhenRequired;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\KeepSessionIdle;
 use App\Http\Middleware\RecordPageView;
@@ -32,12 +30,6 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
-            // Ação sensível: confirmar que é você há menos de 10 minutos (senha, GitHub ou código).
-            'reauth' => EnsureRecentReauth::class,
-            // Verificação em duas etapas: só com TWO_FACTOR_ENABLED; senão, 404.
-            'two-factor.available' => EnsureTwoFactorAvailable::class,
-            // A conta que precisa da 2FA (o admin com TWO_FACTOR_ADMIN_REQUIRED) e não a ligou: só a tela de configurar.
-            'two-factor.required' => EnsureTwoFactorWhenRequired::class,
             // Testes de segurança: só com PENTEST_ALLOWED; senão, 404.
             'pentest.available' => EnsurePentestAvailable::class,
             // A conta liberada pelo admin (ou a do admin); sem a liberação, volta à entrada da área sem executar nada.
@@ -65,22 +57,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToPriorityList(before: ThrottleRequests::class, prepend: EnsurePentestAvailable::class);
         $middleware->prependToPriorityList(before: ThrottleRequests::class, prepend: EnsurePentestAccess::class);
         $middleware->prependToPriorityList(before: ThrottleRequests::class, prepend: EnsurePentestDomain::class);
-        $middleware->prependToPriorityList(before: ThrottleRequests::class, prepend: EnsureTwoFactorAvailable::class);
-
-        // Cada área tem o seu login; quem já entrou cai na sua própria área.
-        $middleware->redirectGuestsTo(fn (Request $request) => $request->is('admin', 'admin/*')
-            ? route('admin.login')
-            : route('login'));
-        $middleware->redirectUsersTo(fn (Request $request) => $request->user()?->is_admin
-            ? route('admin.dashboard')
-            : route('account.show'));
 
         // Globais, para valer também no 404 de rota que não existe: a CSP e o registro de cada
         // página aberta em Admin → Acessos.
         $middleware->append([ContentSecurityPolicy::class, RecordPageView::class]);
 
         // A conta de empresa só entra com a empresa ativa e sem estar desativada (a sessão aberta também cai).
-        $middleware->web(append: [RejectOutOfRangeIds::class]);
+        // A versão local não tem login: toda requisição já começa com a conta do dono (AuthenticateLocalOwner).
+        $middleware->web(prepend: [AuthenticateLocalOwner::class], append: [RejectOutOfRangeIds::class]);
         $middleware->api(append: [RejectOutOfRangeIds::class]);
 
         // A aplicação roda atrás do nginx do compose. Dos cabeçalhos X-Forwarded-*, só os que a
@@ -97,9 +81,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->throttleApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        // A senha e o código da reautenticação e o proxy das fontes nunca voltam no old(): o
-        // old() fica gravado na sessão.
-        $exceptions->dontFlash(['reauth_password', 'reauth_code', 'reauth_two_factor_code', 'two_factor_code', 'proxy_url']);
+        // O proxy das fontes nunca volta no old(): o old() fica gravado na sessão.
+        $exceptions->dontFlash(['proxy_url']);
 
         
         // A área dos testes com a página desatualizada (419): confirmar que é você numa aba, ou sair e entrar de novo,
