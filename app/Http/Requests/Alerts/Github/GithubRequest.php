@@ -45,7 +45,6 @@ abstract class GithubRequest extends Request
         $monitor = $this->monitor();
 
         return $monitor !== null
-            && ($monitor->company_id === null || $this->filled('monitor'))
             && app(Visibility::class)->manages($this->user(), $monitor);
     }
 }

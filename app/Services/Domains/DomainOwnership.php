@@ -5,14 +5,11 @@ namespace App\Services\Domains;
 use App\Exceptions\ActionRefused;
 use App\Jobs\DiscoverDomainStack;
 use App\Models\AlertProfile;
-use App\Models\Company;
 use App\Models\LookalikeWatch;
 use App\Models\MonitoredDomain;
 use App\Models\OwnedDomain;
 use App\Models\User;
 use App\Services\Alerts\Discovery\DnsResolver;
-use App\Services\Company\Companies;
-use App\Services\Company\CompanyDomainNotices;
 use App\Support\RegistrableDomain;
 use App\Support\Settings;
 use Illuminate\Database\Eloquent\Builder;
@@ -51,10 +48,7 @@ class DomainOwnership
 {
     public const PREFIX = 'secmon-verify=';
 
-    /** A recusa da regra de compatibilidade de setor (P1 do 5.3): diz que o nome é da empresa, nunca o setor. */
-    public const OTHER_SECTOR = 'Este domínio já está cadastrado na empresa, num setor que este item não usa. Peça à admin.';
-
-    public function __construct(private DnsResolver $dns, private DomainTokens $registry, private CompanyDomainNotices $notices) {}
+    public function __construct(private DnsResolver $dns, private DomainTokens $registry) {}
 
     /**
      * O TXT do próprio nome tem um dos tokens? Devolve o token achado; falso, não tem; nulo, o DNS
@@ -115,10 +109,6 @@ class DomainOwnership
      */
     public function tokens(DomainOwner $owner): array
     {
-        if ($owner->isCompany()) {
-            return self::clean([DB::table('companies')->where('id', $owner->companyId)->value('domain_token')]);
-        }
-
         $tokens = [DB::table('users')->where('id', $owner->userId)->value('domain_token')];
 
         foreach ($owner->constrain(OwnedDomain::query())->get(['tokens', 'proof_token']) as $owned) {
@@ -134,10 +124,6 @@ class DomainOwnership
      */
     public function txtToken(DomainOwner $owner, string $name): string
     {
-        if ($owner->isCompany()) {
-            return $this->tokens($owner)[0];
-        }
-
         $owned = $this->owned($owner, $name);
 
         return $owned?->proof_token ?? ($owned?->tokens[0] ?? null) ?? $this->token(User::query()->findOrFail($owner->userId));
@@ -151,16 +137,9 @@ class DomainOwnership
      */
     public function claim(DomainOwner $owner, string $name, string $source, ?string $token = null): OwnedDomain
     {
-        // Na empresa, o nome de baixo de um domínio que ela já tem não vira domínio novo (não gasta um dos 15): o item
-        // usa a linha de cima, que cobre os subdomínios (E3b).
-        $owned = $this->owned($owner, $name) ?? ($owner->isCompany() ? $this->covering($owner, $name) : null) ?? $this->create($owner, $name, $source);
+        $owned = $this->owned($owner, $name) ?? $this->create($owner, $name, $source);
 
-        // P1 do 5.3: o nome já é da empresa num setor que este item não usa. A recusa não diz qual setor.
-        if (! $owner->fits($owned->sector_id)) {
-            throw new ActionRefused(self::OTHER_SECTOR);
-        }
-
-        if ($owner->isCompany() || $token === null || $token === '' || in_array($token, $this->tokens($owner), true)) {
+        if ($token === null || $token === '' || in_array($token, $this->tokens($owner), true)) {
             return $owned;
         }
 
@@ -173,39 +152,6 @@ class DomainOwnership
         $owned->forceFill(['tokens' => [...($owned->tokens ?? []), $token]])->save();
 
         return $owned;
-    }
-
-    /**
-     * O cadastro de um domínio na tela de domínios da empresa (E3a3): o nome não pode já estar na empresa, nem abaixo
-     * de um domínio dela (esse é subdomínio, decisão do Designer na E3b). O limite e o setor seguem o claim().
-     */
-    public function claimNew(DomainOwner $owner, string $name, string $source): OwnedDomain
-    {
-        if (! $owner->isCompany()) {
-            throw new LogicException('O cadastro pela tela de domínios é só da empresa.');
-        }
-
-        if ($this->owned($owner, $name) !== null) {
-            throw new ActionRefused("{$name} já está entre os domínios da empresa.");
-        }
-
-        if (($parent = $this->covering($owner, $name)) !== null) {
-            throw new ActionRefused("Já coberto por {$parent->domain}. Cadastre como subdomínio.");
-        }
-
-        return $this->claim($owner, $name, $source);
-    }
-
-    /**
-     * A linha da empresa de um domínio acima do nome (o mais próximo), que o cobre; nula se não há. Só a que serve ao setor
-     * do item (P1): a de outro setor não cobre, e o item fica com a linha própria do nome (Y1 do Red Team da E3b1).
-     */
-    public function covering(DomainOwner $owner, string $name): ?OwnedDomain
-    {
-        $parents = array_slice(self::selfAndParents($name), 1);
-
-        return $parents === [] ? null : $owner->constrainFitting(OwnedDomain::query())->whereIn('domain', $parents)->get()
-            ->sortByDesc(fn (OwnedDomain $owned) => strlen($owned->domain))->first();
     }
 
     /** O registro comprovado que vale para o nome: o dele ou o do domínio de cima mais próximo. Sem consulta ao DNS. */
@@ -268,10 +214,6 @@ class DomainOwnership
      */
     public function origin(OwnedDomain $owned): string
     {
-        if ($owned->source === 'news' && $owned->company_id !== null) {
-            return 'em Notícias';
-        }
-
         if ($owned->source === 'news') {
             $profile = DomainOwner::account($owned->user_id)->copies(MonitoredDomain::query()->ofAlerts())->where('domain', $owned->domain)
                 ->with('profile')->oldest('id')->first()?->profile;
@@ -283,7 +225,6 @@ class DomainOwnership
             'radar' => 'no Radar de domínios',
             'tests' => 'nos testes de segurança',
             'monitor' => 'no monitor de sites',
-            'company' => 'em Domínios da empresa',
             default => 'no webhook',
         };
     }
@@ -311,11 +252,10 @@ class DomainOwnership
      */
     public function check(DomainOwner $owner, string $name, string $source, array $extra = []): array
     {
-        // Na empresa, só o token da empresa: o que a tela de um serviço mostrou não prova nada a mais. Na conta, o que a
-        // tela mostrou vale como antes (vem de uma linha que o servidor gerou), menos o token de uma empresa e o token de
-        // outra conta: achado, o prove() o gravaria no proof_token, e dali ele provaria para a conta todo nome com aquele
-        // TXT, isto é, todos os domínios da outra conta (X1 do Red Team, DESENHO-5.3 §2.3).
-        $tokens = $owner->isCompany() ? $this->tokens($owner) : [...$this->tokens($owner), ...array_filter(
+        // O que a tela de um serviço mostrou vale (vem de uma linha que o servidor gerou), menos o token de outra
+        // conta: achado, o prove() o gravaria no proof_token, e dali ele provaria para a conta todo nome com aquele
+        // TXT, isto é, todos os domínios da outra conta (X1 do Red Team).
+        $tokens = [...$this->tokens($owner), ...array_filter(
             self::clean($extra),
             fn (string $token) => ! $this->registry->heldByAnother($token, $owner->userId),
         )];
@@ -324,24 +264,10 @@ class DomainOwnership
         foreach (self::selfAndParents($name) as $candidate) {
             $owned = $this->owned($owner, $candidate);
 
-            // Na empresa, o nome sem linha própria abaixo de um domínio dela é provado pelo de cima (o próximo da volta).
-            if ($owned === null && $owner->isCompany() && $this->covering($owner, $candidate) !== null) {
-                continue;
-            }
-
             $found = $this->find($candidate, $tokens);
 
             if (is_string($found)) {
-                // O domínio de cima achado pela busca nasce sem setor (serve a todos, P1): senão o primeiro item a
-                // comprovar um subdomínio levaria o domínio principal da empresa para o setor dele (Z3 do Red Team da E3a2).
-                $owned ??= $this->claim($candidate === $name ? $owner : $owner->withoutSector(), $candidate, $source);
-
-                // O TXT da empresa num nome de um setor que o item não usa: a prova vale para aquela linha, não cobre o item.
-                if (! $owner->fits($owned->sector_id)) {
-                    $this->prove($owned, $found, $source);
-
-                    continue;
-                }
+                $owned ??= $this->claim($owner, $candidate, $source);
 
                 return [$this->prove($owned, $found, $source), true];
             }
@@ -402,33 +328,7 @@ class DomainOwnership
 
         $root ??= $row->profile ?? $row->lookalikeWatch;
 
-        if ($root === null && ($webhook = $this->webhookOwner($row)) !== null) {
-            return $webhook;
-        }
-
-        return DomainOwner::of($root?->getAttribute('company_id'), $row->user_id, $root?->getAttribute('sector_id'));
-    }
-
-    /**
-     * O dono da posse da cópia de um webhook: o do canal da empresa é a empresa com o setor do canal (E5a; nos gerais,
-     * só domínio sem setor); o de uma conta de empresa sem canal da empresa (de antes da E5a), a empresa com qualquer
-     * setor (o domínio foi escolhido entre os que a conta vê). Nulo se a cópia não é de webhook ou o webhook é pessoal.
-     */
-    private function webhookOwner(MonitoredDomain $row): ?DomainOwner
-    {
-        $channel = DB::table('notification_channels')->where('domain_id', $row->id)->first(['company_id', 'sector_id']);
-
-        if ($channel === null) {
-            return null;
-        }
-
-        if ($channel->company_id !== null) {
-            return DomainOwner::company((int) $channel->company_id, $row->user_id, $channel->sector_id === null ? null : (int) $channel->sector_id);
-        }
-
-        $company = DB::table('company_user')->where('user_id', $row->user_id)->value('company_id');
-
-        return $company === null ? null : DomainOwner::anySectorOf((int) $company, $row->user_id);
+        return DomainOwner::of($row->user_id);
     }
 
     /**
@@ -449,95 +349,13 @@ class DomainOwnership
     /** O dono de uma linha de posse. */
     public function ownerOfOwned(OwnedDomain $owned): DomainOwner
     {
-        return DomainOwner::of($owned->company_id, $owned->user_id, $owned->sector_id);
+        return DomainOwner::of($owned->user_id);
     }
 
-    /** O dono de um item novo pelo carimbo (Visibility::stampFor): a empresa, se a conta é de empresa. */
+    /** O dono de um item novo pelo carimbo (Visibility::stampFor). */
     public static function ownerOfStamp(array $stamp): DomainOwner
     {
-        return DomainOwner::of($stamp['company_id'], $stamp['user_id'], $stamp['sector_id']);
-    }
-
-    // ---- o setor (P1 do 5.3) --------------------------------------------------------
-
-    /**
-     * O alerta ou o Radar da empresa pode ir para o setor? A linha de posse do domínio dele tem de servir ao setor novo
-     * (sem setor ou o mesmo). O domínio da empresa (OwnedDomain) pode ir se nenhum item de outro setor depender dele.
-     */
-    public function ensureFitsSector(Model $item, ?int $sectorId): void
-    {
-        if ($item->getAttribute('company_id') === null) {
-            return;
-        }
-
-        if ($item instanceof OwnedDomain) {
-            if (($n = $this->blockingItems($item, $sectorId)) > 0) {
-                throw new ActionRefused(($n === 1 ? '1 alerta ou Radar de outro setor usa' : "{$n} alertas ou Radares de outros setores usam")
-                    .' este domínio. Mova-os antes, ou deixe o domínio sem setor.');
-            }
-
-            return;
-        }
-
-        $owner = DomainOwner::company((int) $item->getAttribute('company_id'), (int) $item->getAttribute('user_id'), $sectorId);
-        $before = DomainOwner::company((int) $item->getAttribute('company_id'), (int) $item->getAttribute('user_id'), $item->getAttribute('sector_id'));
-
-        foreach ($this->namesOf($item) as $name) {
-            $owned = $this->owned($owner, $name);
-
-            // O nome do item num setor que o destino não usa, ou a prova de hoje (a do nome ou a de um domínio de cima)
-            // que deixaria de servir: o item perderia a posse calado (Z2 do Red Team da E3a2).
-            if (($owned !== null && ! $owner->fits($owned->sector_id)) || ($this->proof($before, $name) !== null && $this->proof($owner, $name) === null)) {
-                throw new ActionRefused('O domínio deste item está cadastrado na empresa num setor que o destino não usa. Peça à admin para deixar o domínio sem setor, ou escolha outro setor.');
-            }
-        }
-    }
-
-    /**
-     * Quantos alertas e Radares da empresa, com o nome ou um subdomínio dele, deixariam de servir se o domínio fosse para
-     * o setor (sem setor serve a todos). A tela de domínios mostra antes de trocar.
-     */
-    public function blockingItems(OwnedDomain $owned, ?int $sectorId): int
-    {
-        if ($sectorId === null || $owned->company_id === null) {
-            return 0;
-        }
-
-        $names = fn (Builder $q) => $q->where('domain', $owned->domain)->orWhere('domain', 'like', '%.'.$owned->domain);
-        $other = fn (Builder $q) => $q->where('company_id', $owned->company_id)->where(fn (Builder $q) => $q->whereNull('sector_id')->orWhere('sector_id', '!=', $sectorId));
-
-        return $other(AlertProfile::query())->whereHas('domains', $names)->count()
-            + $other(LookalikeWatch::query())->whereHas('domain', $names)->count();
-    }
-
-    /** Depois de trocar o setor: a posse de cada cópia do item é recalculada (pode deixar de servir, ou passar a servir). */
-    public function refreshSector(Model $item): void
-    {
-        if ($item instanceof OwnedDomain) {
-            $this->sync($this->ownerOfOwned($item), $item->domain);
-
-            return;
-        }
-
-        foreach ($this->copiesOf($item) as $row) {
-            $this->apply($row, $item);
-        }
-    }
-
-    /** @return list<string> */
-    private function namesOf(Model $item): array
-    {
-        return $this->copiesOf($item)->pluck('domain')->unique()->values()->all();
-    }
-
-    /** @return Collection<int, MonitoredDomain> */
-    private function copiesOf(Model $item): Collection
-    {
-        return match (true) {
-            $item instanceof AlertProfile => $item->domains()->get(),
-            $item instanceof LookalikeWatch => collect([$item->domain])->filter(),
-            default => collect(),
-        };
+        return DomainOwner::of($stamp['user_id']);
     }
 
     // ---- as linhas de Notícias e do Radar ---------------------------------------
@@ -730,35 +548,10 @@ class DomainOwnership
     {
         try {
             return DB::transaction(function () use ($owner, $name, $source) {
-                if ($owner->isCompany()) {
-                    $this->ensureRoom($owner->companyId);
-                }
-
-                $owned = OwnedDomain::query()->forceCreate($owner->columns() + ['domain' => $name, 'source' => $source]);
-
-                if ($owner->isCompany()) {
-                    // O aviso de 80%/100% do limite sai depois do commit (o cadastro pode ainda voltar atrás).
-                    DB::afterCommit(fn () => $this->notices->domains($owner->companyId));
-                }
-
-                return $owned;
+                return OwnedDomain::query()->forceCreate($owner->columns() + ['domain' => $name, 'source' => $source]);
             });
         } catch (UniqueConstraintViolationException) {
             return $this->owned($owner, $name) ?? throw new LogicException("Posse de {$name} sumiu no meio do cadastro.");
-        }
-    }
-
-    /**
-     * O limite de domínios da empresa (R5: 15, somando os setores; pendentes também contam, senão a espera do TXT não
-     * teria teto). A empresa fica travada até o fim da transação de quem cadastra: dois cadastros juntos não passam.
-     */
-    private function ensureRoom(int $companyId): void
-    {
-        $company = Company::query()->lockForUpdate()->findOrFail($companyId);
-        $limit = app(Companies::class)->limit($company, 'domains');
-
-        if (OwnedDomain::query()->where('company_id', $companyId)->count() >= $limit) {
-            throw new ActionRefused("A empresa chegou ao limite de {$limit} domínios. Remova um em Domínios da empresa para cadastrar outro.");
         }
     }
 
@@ -808,19 +601,9 @@ class DomainOwnership
 
             $this->sync($this->ownerOfOwned($owned), $owned->domain);
 
-            // O ponto único da queda: na empresa, quem configura o domínio fica sabendo (E3d).
-            if ($owned->company_id !== null) {
-                $this->notices->lost($owned);
-            }
-
             return;
         }
 
-        // 1º dia sem o TXT de um domínio da empresa: o aviso de que a posse cai em 7 dias (P6). A prova de antes da
-        // unificação (`legacy`) não cai, e a conta pessoal não recebe e-mail.
-        if ($first && $owned->company_id !== null && $owned->fallsAt() !== null) {
-            $this->notices->unseen($owned);
-        }
     }
 
     /** Sem a prova: num apelido (CNAME) o TXT nunca vai aparecer, e a recusa diz por quê. */

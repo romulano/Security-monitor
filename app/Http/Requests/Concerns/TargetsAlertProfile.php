@@ -21,8 +21,6 @@ trait TargetsAlertProfile
             return $query->findOrFail($this->integer('alerta'));
         }
 
-        // Na empresa, sempre pelo `?alerta=`: cada conta configura um conjunto diferente, e "o primeiro" agiria num
-        // alerta que a tela não mostrou (DESENHO-5.2 §4.3; U1 do Red Team). Sem ele, nada (as telas dão 404).
-        return $user->isCompanyAccount() ? null : $query->first();
+        return $query->first();
     }
 }

@@ -44,7 +44,6 @@ abstract class RadarPageRequest extends Request
         $watch = $this->watch();
 
         return $watch !== null
-            && ($watch->company_id === null || $this->filled('radar'))
             && app(Visibility::class)->manages($this->user(), $watch);
     }
 }

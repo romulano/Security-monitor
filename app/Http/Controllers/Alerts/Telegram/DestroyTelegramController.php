@@ -15,6 +15,6 @@ class DestroyTelegramController extends Controller
     {
         $this->telegram->disconnect($request->channel(), $request->user());
 
-        return redirect()->route($request->user()->isCompanyAccount() ? 'alerts.notifiers' : 'alerts.telegram')->with('status', 'Telegram desconectado. Os alertas continuam guardados em Alertas.');
+        return redirect()->route('alerts.telegram')->with('status', 'Telegram desconectado. Os alertas continuam guardados em Alertas.');
     }
 }

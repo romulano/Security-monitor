@@ -32,16 +32,13 @@ use Illuminate\Support\Carbon;
  * segurança) que este app não recebe, e `paused_at` segura todo envio (menos o
  * teste) sem desconectar.
  *
- * Plano empresarial (E5a, DESENHO-5.4 §2.1): o canal pode ser da empresa — `company_id` com `sector_id` nulo é um canal
- * geral, com setor é do setor (R11). Aí `user_id` é só quem conectou: quem vê e quem configura é o Visibility (raiz da
- * visibilidade, como o alerta e o Radar), e o canal da empresa nunca é conversa privada (o banco também recusa).
  */
 class NotificationChannel extends Model implements VisibilityRoot
 {
     use VisibleToAccount;
 
     /** A empresa e o setor só por forceFill, nunca por um formulário (CompanyChannels::stamp). */
-    protected $guarded = ['company_id', 'sector_id'];
+    protected $guarded = [];
 
     protected $hidden = ['webhook_url', 'bot_token', 'webhook_secret'];
 
@@ -84,7 +81,7 @@ class NotificationChannel extends Model implements VisibilityRoot
     /** O canal pessoal do cliente neste app, novo com os padrões do admin se ainda não existe (nunca um da empresa). */
     public static function forUser(int $userId, string $type): self
     {
-        return self::query()->whereNull('company_id')->firstOrNew(['user_id' => $userId, 'type' => $type], self::defaults());
+        return self::query()->firstOrNew(['user_id' => $userId, 'type' => $type], self::defaults());
     }
 
     /** As preferências de um canal novo: os padrões do admin (o webhook, que não usa o forUser, também). */
@@ -122,22 +119,6 @@ class NotificationChannel extends Model implements VisibilityRoot
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
-    }
-
-    public function sector(): BelongsTo
-    {
-        return $this->belongsTo(Sector::class);
-    }
-
-    /** Canal da empresa (geral ou de setor), e não da conta. */
-    public function isCompany(): bool
-    {
-        return $this->company_id !== null;
     }
 
     public function deliveries(): HasMany
@@ -208,11 +189,6 @@ class NotificationChannel extends Model implements VisibilityRoot
      */
     public function isPrivate(): bool
     {
-        // O canal da empresa nunca é a conversa de uma pessoa (R11; o banco recusa, isto é a segunda trava).
-        if ($this->isCompany()) {
-            return false;
-        }
-
         return ($this->isTelegram() && $this->method === 'private') || ($this->isDiscord() && $this->method === 'dm');
     }
 
@@ -233,12 +209,11 @@ class NotificationChannel extends Model implements VisibilityRoot
             return route('alerts.webhooks.show', $this);
         }
 
-        // O canal da empresa: a conta pode ter vários do mesmo app, então a tela diz qual (E5a2).
         return route(match ($this->type) {
             'discord' => 'alerts.discord',
             'telegram' => 'alerts.telegram',
             default => 'alerts.slack',
-        }, $this->isCompany() ? ['canal' => $this->id] : []);
+        });
     }
 
     /** O que falta no canal `pending`: o canal do Discord ou a posse do domínio do webhook. */

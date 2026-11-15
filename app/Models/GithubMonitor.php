@@ -20,7 +20,7 @@ class GithubMonitor extends Model implements VisibilityRoot
     use VisibleToAccount;
 
     /** Empresa e setor só pelo serviço (Visibility::stampFor + forceFill), nunca de um array da tela. */
-    protected $guarded = ['company_id', 'sector_id'];
+    protected $guarded = [];
 
     public const LEVELS = ['critical', 'high', 'medium', 'low'];
 
@@ -102,19 +102,12 @@ class GithubMonitor extends Model implements VisibilityRoot
         return $this->belongsTo(User::class);
     }
 
-    /** O setor da empresa (nulo: sem setor, a empresa toda vê; sempre nulo na conta pessoal). */
-    public function sector(): BelongsTo
-    {
-        return $this->belongsTo(Sector::class);
-    }
-
     /**
      * Parâmetro que diz qual monitoramento uma URL mira. A conta pessoal tem um só e continua com as URLs de sempre; o
-     * de empresa sempre leva o `?monitor=` (cada conta vê um conjunto, e "sem parâmetro = o primeiro" erraria o alvo).
      */
     public function urlParams(array $extra = []): array
     {
-        return $extra + ($this->exists && $this->company_id !== null ? ['monitor' => $this->id] : []);
+        return $extra;
     }
 
     /** Como as telas e a Atividade chamam o monitoramento: a 1ª organização, a 1ª marca ou o número. */

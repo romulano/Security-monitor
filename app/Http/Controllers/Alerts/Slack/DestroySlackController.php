@@ -15,6 +15,6 @@ class DestroySlackController extends Controller
     {
         $this->slack->disconnect($request->channel(), $request->user());
 
-        return redirect()->route($request->user()->isCompanyAccount() ? 'alerts.notifiers' : 'alerts.slack')->with('status', 'Slack desconectado. Os alertas continuam guardados em Alertas.');
+        return redirect()->route('alerts.slack')->with('status', 'Slack desconectado. Os alertas continuam guardados em Alertas.');
     }
 }
