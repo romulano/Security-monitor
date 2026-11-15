@@ -132,5 +132,4 @@ class AdminLogbookTest extends TestCase
 
         $this->get(route('admin.logbook'))->assertOk()->assertSee('Texto digitado');
     }
-
 }

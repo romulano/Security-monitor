@@ -5,9 +5,9 @@ namespace App\Services\Alerts\Slack;
 use App\Exceptions\ActionRefused;
 use App\Models\NotificationChannel;
 use App\Models\User;
+use App\Services\Access\Channels;
 use App\Services\Alerts\ChannelSettings;
 use App\Services\Alerts\Notifier;
-use App\Services\Access\Channels;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Str;
 

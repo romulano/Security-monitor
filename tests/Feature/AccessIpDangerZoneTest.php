@@ -105,5 +105,4 @@ class AccessIpDangerZoneTest extends TestCase
         $this->from(route('admin.accesses.settings'))->post(route('admin.accesses.toggle'))->assertRedirect(route('admin.accesses.settings'));
         $this->get(route('admin.accesses.settings'))->assertSee('Ligar a monitoria')->assertDontSee('data-confirm', false);
     }
-
 }

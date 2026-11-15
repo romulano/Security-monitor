@@ -305,5 +305,4 @@ class WebhookDeliveryTest extends TestCase
         $this->put(route('alerts.webhooks.secret', $webhook), ['autenticacao' => 'nenhuma'])->assertSessionHas('status');
         $this->assertFalse($webhook->refresh()->signs());
     }
-
 }

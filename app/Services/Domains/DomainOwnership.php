@@ -4,15 +4,12 @@ namespace App\Services\Domains;
 
 use App\Exceptions\ActionRefused;
 use App\Jobs\DiscoverDomainStack;
-use App\Models\AlertProfile;
-use App\Models\LookalikeWatch;
 use App\Models\MonitoredDomain;
 use App\Models\OwnedDomain;
 use App\Models\User;
 use App\Services\Alerts\Discovery\DnsResolver;
 use App\Support\RegistrableDomain;
 use App\Support\Settings;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;

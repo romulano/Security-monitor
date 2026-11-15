@@ -29,7 +29,6 @@ use Illuminate\Support\Carbon;
  * Central de alertas: `muted_types` são os tipos (TYPES, e o aviso dos testes de
  * segurança) que este app não recebe, e `paused_at` segura todo envio (menos o
  * teste) sem desconectar.
- *
  */
 class NotificationChannel extends Model implements VisibilityRoot
 {

@@ -192,7 +192,6 @@ class LookalikeScanner
         }
     }
 
-
     /**
      * Um lote de nomes no DNS, guardado para o último job. Em job (`final`
      * falso), lote com DNS mudo demais falha para tentar de novo mais tarde;

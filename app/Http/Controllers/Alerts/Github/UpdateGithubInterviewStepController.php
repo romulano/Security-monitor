@@ -22,7 +22,7 @@ class UpdateGithubInterviewStepController extends Controller
                 : $monitor = $this->interview->startWith($request->user(), $request->answers());
         } catch (ValidationException $e) {
             // Volta com o que foi digitado, menos o que tinha cara de segredo.
-            return redirect()->to($here())->withErrors($e->errors())->withInput(['answers' => $request->answers(), ]);
+            return redirect()->to($here())->withErrors($e->errors())->withInput(['answers' => $request->answers()]);
         }
 
         if ($removed = $request->removedSecrets()) {

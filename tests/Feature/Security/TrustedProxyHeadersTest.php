@@ -30,5 +30,4 @@ class TrustedProxyHeadersTest extends TestCase
             ->assertDontSee('atacante.invalid')
             ->assertSee('Canonical: '.route('security-txt'));
     }
-
 }

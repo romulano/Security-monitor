@@ -76,7 +76,6 @@ return Application::configure(basePath: dirname(__DIR__))
         // O proxy das fontes nunca volta no old(): o old() fica gravado na sessão.
         $exceptions->dontFlash(['proxy_url']);
 
-        
         // A área dos testes com a página desatualizada (419): confirmar que é você numa aba, ou sair e entrar de novo,
         // troca o token, e o formulário aberto em outra aba chega com o antigo. No lugar da página de erro, volta à
         // página, que vem com o token novo, dizendo por quê. O Parar volta à execução (B3 do Red Team na P6a); o resto,

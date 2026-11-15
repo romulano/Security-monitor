@@ -8,7 +8,6 @@ use App\Models\LookalikeWatch;
 use App\Models\NotificationChannel;
 use App\Models\User;
 use App\Services\Alerts\Webhook\WebhookConnector;
-use Illuminate\Support\Collection;
 
 /**
  * /alertas/notificadores: os apps (Slack, Discord, Telegram, webhook), o que cada
@@ -48,5 +47,4 @@ class AlertCenter
             ],
         ];
     }
-
 }

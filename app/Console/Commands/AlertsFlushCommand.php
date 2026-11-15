@@ -3,10 +3,10 @@
 namespace App\Console\Commands;
 
 use App\Models\AlertMatch;
-use App\Services\Alerts\AlertRouter;
-use App\Services\Alerts\Notifier;
 use App\Services\Access\DeliveryGate;
 use App\Services\Access\Destinations;
+use App\Services\Alerts\AlertRouter;
+use App\Services\Alerts\Notifier;
 use Illuminate\Console\Command;
 
 /**

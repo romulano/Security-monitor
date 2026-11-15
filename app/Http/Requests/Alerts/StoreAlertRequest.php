@@ -24,5 +24,4 @@ class StoreAlertRequest extends Request
     {
         return $this->filled('copiar') ? AlertProfile::query()->manageableBy($this->user())->findOrFail($this->integer('copiar')) : null;
     }
-
 }

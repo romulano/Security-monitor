@@ -5,8 +5,8 @@ namespace App\Services\Alerts\Telegram;
 use App\Exceptions\ActionRefused;
 use App\Models\NotificationChannel;
 use App\Models\User;
-use App\Services\Alerts\Notifier;
 use App\Services\Access\Channels;
+use App\Services\Alerts\Notifier;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
