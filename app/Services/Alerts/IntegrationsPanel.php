@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Services\Github\GithubInterview;
 use App\Services\Keys\KeysPanel;
 use App\Services\Lookalike\RadarInterview;
-use App\Services\Pentest\PentestAvailability;
 use App\Services\Pentest\PentestPanel;
 
 /**
@@ -63,7 +62,7 @@ class IntegrationsPanel
             'summary' => $this->inbox->summary($user),
             'threats' => $this->inbox->threats($ready),
             'lastRadarScan' => $ready->max('last_scan_at'),
-            'tests' => PentestAvailability::for($user) ? $this->tests->card($user, now()) : null,
+            'tests' => $this->tests->card($user, now()),
             // Chaves expostas: para toda conta (só roda em domínio comprovado).
             'keys' => $this->keys->card($user),
             'channels' => $user->notificationChannels()->get()

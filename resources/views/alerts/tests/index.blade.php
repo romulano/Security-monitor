@@ -24,9 +24,8 @@
         'revoked' => 'neutro',
         'suspended' => 'erro',
     ];
-    $granted = $access === 'granted';
     $full = $domains->count() >= $max;
-    $canAdd = $granted && ! $full && $switch['state'] !== 'paused';
+    $canAdd = ! $full;
     $contact = config('secmon.contact_email');
     // Revogar com execução (item 2 do Blue Team): o teste em andamento para, e nenhum novo começa.
     $revoke = fn (string $host) => "Revogar a autorização de {$host}? Qualquer teste em andamento para em até 30 segundos, e nenhum teste novo começa sem um aceite novo. A auditoria fica como prova.";
@@ -34,15 +33,7 @@
 
 @section('content')
     <div class="mx-auto max-w-6xl space-y-8">
-        @if ($granted)
-            @include('alerts.tests.partials.readonly')
-        @else
-            @include('alerts.tests.partials.access')
-        @endif
-
-        @if (! $granted && $domains->isEmpty())
-            {{-- Sem a liberação e sem histórico: só a mensagem. --}}
-        @elseif ($domains->isEmpty())
+        @if ($domains->isEmpty())
             <section aria-labelledby="convite" class="max-w-2xl space-y-3">
                 @include('alerts.partials.crumbs', ['here' => 'Testes de segurança'])
                 <h1 id="convite" class="text-2xl font-semibold text-white">Descubra as falhas do seu site antes de um atacante</h1>
@@ -83,10 +74,10 @@
                 <div class="flex flex-wrap items-center gap-3">
                     @if ($canAdd)
                         <a href="{{ route('alerts.tests.authorize', ['passo' => 1]) }}" class="{{ $button }} {{ $now->isEmpty() ? 'bg-accent font-semibold text-ink-950 hover:brightness-110' : 'border border-ink-700 text-ink-200 hover:border-ink-400 hover:text-white' }}">
-                            {{ $switch['state'] === 'on' ? 'Autorizar outro domínio' : 'Preparar outra autorização' }}
+                            Autorizar outro domínio
                         </a>
                     @endif
-                    <span class="text-xs text-ink-400">{{ $domains->count() }} de {{ $max }} domínios{{ $full && $granted ? ' · exclua um para autorizar outro' : '' }}{{ $granted ? ' · '.$week['count'].' de '.$week['max'].' execuções nesta semana' : '' }}</span>
+                    <span class="text-xs text-ink-400">{{ $domains->count() }} de {{ $max }} domínios{{ $full ? ' · exclua um para autorizar outro' : '' }} · {{ $week['count'] }} de {{ $week['max'] }} execuções nesta semana</span>
                 </div>
             </div>
 
@@ -187,15 +178,15 @@
                             @if ($domain->consents_exists)
                                 <a href="{{ route('alerts.tests.domains.show', ['dominio' => $domain->host]) }}" class="{{ $button }} border border-ink-700 text-ink-200 hover:border-ink-400 hover:text-white">Ver autorização</a>
                             @endif
-                            @unless ($state === 'suspended' || $consent || ! $granted)
+                            @unless ($state === 'suspended' || $consent)
                                 <a href="{{ route('alerts.tests.authorize', ['passo' => $step, 'dominio' => $domain->host]) }}" class="{{ $button }} {{ $domain->consents_exists ? 'text-accent hover:underline' : 'border border-ink-700 text-ink-200 hover:border-ink-400 hover:text-white' }}">
                                     {{ $domain->consents_exists ? 'Autorizar de novo' : 'Continuar' }} (passo {{ $step }})
                                 </a>
                             @endunless
-                            @if ($granted && in_array($state, ['waiting_ownership', 'ownership_missing'], true) && ($consent || $step !== 2))
+                            @if (in_array($state, ['waiting_ownership', 'ownership_missing'], true) && ($consent || $step !== 2))
                                 <a href="{{ route('alerts.tests.authorize', ['passo' => 2, 'dominio' => $domain->host]) }}" class="{{ $button }} text-accent hover:underline">Ver o registro TXT</a>
                             @endif
-                            @if ($granted && $state === 'expired')
+                            @if ($state === 'expired')
                                 <a href="{{ route('alerts.tests.authorize', ['passo' => 4, 'dominio' => $domain->host]) }}" class="{{ $button }} text-accent hover:underline">Escolher a janela</a>
                             @endif
                             @if ($consent)

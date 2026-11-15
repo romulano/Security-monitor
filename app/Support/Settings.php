@@ -46,8 +46,6 @@ class Settings
         'alerts.discovery_every_days' => 'secmon.alerts.discovery_every_days',
         'alerts.consent_version' => 'secmon.alerts.consent_version',
         'github.ai_threshold' => 'secmon.github.ai_threshold',
-        'pentest.enabled' => 'secmon.pentest.enabled',
-        'pentest.require_approval' => 'secmon.pentest.require_approval',
         'monitoring.enabled' => 'secmon.monitoring.enabled',
         'indexnow.enabled' => 'secmon.indexnow.enabled',
     ];

@@ -2,8 +2,6 @@
 
 use App\Http\Middleware\AuthenticateLocalOwner;
 use App\Http\Middleware\ContentSecurityPolicy;
-use App\Http\Middleware\EnsurePentestAccess;
-use App\Http\Middleware\EnsurePentestAvailable;
 use App\Http\Middleware\EnsurePentestDomain;
 use App\Http\Middleware\EnsureSignedLinkActive;
 use App\Http\Middleware\EnsureUserIsAdmin;
@@ -30,10 +28,6 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
-            // Testes de segurança: só com PENTEST_ALLOWED; senão, 404.
-            'pentest.available' => EnsurePentestAvailable::class,
-            // A conta liberada pelo admin (ou a do admin); sem a liberação, volta à entrada da área sem executar nada.
-            'pentest.access' => EnsurePentestAccess::class,
             // O domínio da rota é da conta e chegou ao passo pedido; senão, 404, antes do limite e da senha.
             'pentest.domain' => EnsurePentestDomain::class,
             // A consulta periódica lê a sessão, mas não a renova (item 6 do Blue Team).
@@ -54,8 +48,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToPriorityList(after: SubstituteBindings::class, append: EnsureSignedLinkActive::class);
         // Id da URL grande demais para o bigint: 404 logo antes do binding, que o mandaria ao Postgres (22003, era 500).
         $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: RejectOutOfRangeIds::class);
-        $middleware->prependToPriorityList(before: ThrottleRequests::class, prepend: EnsurePentestAvailable::class);
-        $middleware->prependToPriorityList(before: ThrottleRequests::class, prepend: EnsurePentestAccess::class);
         $middleware->prependToPriorityList(before: ThrottleRequests::class, prepend: EnsurePentestDomain::class);
 
         // Globais, para valer também no 404 de rota que não existe: a CSP e o registro de cada

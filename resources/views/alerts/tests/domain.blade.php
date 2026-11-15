@@ -43,7 +43,6 @@
 @section('content')
     <div class="space-y-6">
         @if ($granted)
-            @include('alerts.tests.partials.readonly')
         @else
             <p role="status" class="rounded-lg border border-amber-800 bg-amber-950/30 px-3.5 py-3 text-sm text-amber-100">
                 <b class="text-white">Os testes de segurança não estão liberados para a sua conta.</b>

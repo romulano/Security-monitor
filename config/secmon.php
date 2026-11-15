@@ -441,19 +441,7 @@ return [
     ],
 
     'pentest' => [
-        'allowed' => (bool) env('PENTEST_ALLOWED', false),
-        // A chave global (o admin liga, e só com as pré-condições abaixo) e a aprovação da 1ª execução (A6).
-        'enabled' => (bool) env('PENTEST_ENABLED', false),
-        'require_approval' => (bool) env('PENTEST_REQUIRE_APPROVAL', true),
-        // Pré-condições da chave: fatos que só o dono registra (datas no formato 2026-11-10).
-        'terms_published_version' => env('PENTEST_TERMS_PUBLISHED_VERSION'),
-        'terms_published_at' => env('PENTEST_TERMS_PUBLISHED_AT'),
-        'notice_given_at' => env('PENTEST_NOTICE_GIVEN_AT'),
-        'notice_days' => (int) env('PENTEST_NOTICE_DAYS', 30),
-        'legal_opinion_at' => env('PENTEST_LEGAL_OPINION_AT'),
-        // Desde quando um e-mail em abuse@ chama o admin no Telegram ou no Discord (Blue Team, Q8).
-        'abuse_alert_at' => env('PENTEST_ABUSE_ALERT_AT'),
-        // IPs que a stack nunca testa, além dos do Security Monitor e da saída (IP ou faixa, vírgula).
+        // Endereços que nenhum teste alcança (IP ou faixa, vírgula). Vazio: nada é barrado — veja ForbiddenAddresses.
         'forbidden_addresses' => explode(',', (string) env('PENTEST_FORBIDDEN_ADDRESSES', '')),
         // Domínios por conta (o passo 1 da autorização avisa).
         'max_domains' => 3,
