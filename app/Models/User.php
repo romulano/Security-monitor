@@ -53,10 +53,6 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
-            // A liberação dos testes de segurança pelo admin (PentestAccess).
-            'pentest_access_requested_at' => 'datetime',
-            'pentest_access_granted_at' => 'datetime',
-            'pentest_access_revoked_at' => 'datetime',
         ];
     }
 

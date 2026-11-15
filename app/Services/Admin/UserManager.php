@@ -21,12 +21,6 @@ class UserManager
             ->paginate(40, pageName: 'usuarios');
     }
 
-    /** Quantas contas pediram a liberação dos testes de segurança e esperam (PentestAccess). */
-    public function pentestRequests(): int
-    {
-        return User::query()->whereNotNull('pentest_access_requested_at')->whereNull('pentest_access_granted_at')->where('is_admin', false)->count();
-    }
-
     /**
      * Gera uma senha nova (a antiga deixa de valer, e as sessões abertas da conta caem)
      * e devolve o texto dela: aparece na tela uma vez e nunca mais. O admin troca a

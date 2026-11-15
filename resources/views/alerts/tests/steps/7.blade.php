@@ -1,7 +1,5 @@
 {{--
-    Passo 7 (Autorizar-7): o resumo do que a pessoa autoriza, o que ainda falta e o "Autorizar", que pede a
-    reautenticação recente (a senha no próprio formulário, ou o GitHub ou um código, que nomeia o domínio).
-    Com a chave desligada, o resumo aparece e o botão espera a chave.
+    Passo 7 (Autorizar-7): o resumo do que a pessoa autoriza, o que ainda falta e o "Autorizar".
 --}}
 @php
     use App\Services\Pentest\PentestBudget;
@@ -46,7 +44,7 @@
                 .($rule['exclusions'] ? ', menos '.collect($rule['exclusions'])->map(fn ($name) => PentestRunView::name($name)->toHtml())->join(', ') : '')
                 .'. Serviços de outras empresas: só o DNS é lido. A lista de alvos fecha no início do teste.', 3],
             ['Janela', e(ucfirst(PentestWindow::describe($window))).'. '
-                .($window['start_mode'] === 'date' ? 'Começa a partir de '.e(\Illuminate\Support\Carbon::parse($window['valid_from'])->format('d/m')).'.' : 'Começa na próxima janela depois da aprovação.')
+                .($window['start_mode'] === 'date' ? 'Começa a partir de '.e(\Illuminate\Support\Carbon::parse($window['valid_from'])->format('d/m')).'.' : 'Começa na próxima janela.')
                 .' Até '.e($values['duracao']).' de atividade; um teste típico leva de 30 a 40 minutos.', 4],
             ['Intensidade', e(PentestBudget::PRESETS[$rule['intensity']]['label']).'. Testes a até '.e($values['rps']).' requisições por segundo por site ('.e($values['rps_compartilhado']).' em hospedagem compartilhada), mapeamento a '.e($values['rps_mapeamento']).', portas a '.e($values['portas_cps']).' conexões por segundo por IP. No máximo '.e($values['max_requisicoes']).' requisições.', 4],
             ['Firewall', $rule['waf'] === 'release'
@@ -89,37 +87,16 @@
         </section>
     @endif
 
-    @if ($switch['state'] !== 'on')
-        <p class="rounded-xl border border-ink-800 px-5 py-4 text-sm text-ink-200">
-            O “Autorizar e agendar” só funciona quando ligarmos os testes. O rascunho e as declarações ficam guardados aqui.
-        </p>
-    @elseif ($canAuthorize)
+    @if ($canAuthorize)
         <section class="space-y-3 rounded-xl border border-ink-800 bg-ink-900 p-5">
-            <div>
-                <h3 class="text-[15px] font-semibold text-white">Confirme que é você</h3>
-                <p class="text-sm text-ink-400">Autorizar um teste ativo pede uma confirmação recente.</p>
-            </div>
-
             <form id="step-form" method="POST" action="{{ route('alerts.tests.domains.accept', ['dominio' => $domain->host]) }}" class="space-y-2"
-                  data-confirm="Autorizar e agendar testes em {{ $domain->host }}? Janela: {{ PentestWindow::describe($window) }}. Termo {{ PentestTerms::TERM }}. A primeira execução espera a aprovação de um analista do Security Monitor. Você pode revogar a autorização a qualquer momento.">
+                  data-confirm="Autorizar e agendar testes em {{ $domain->host }}? Janela: {{ PentestWindow::describe($window) }}. Termo {{ PentestTerms::TERM }}. Você pode revogar a autorização a qualquer momento.">
                 @csrf
                 <input type="hidden" name="revogacao" value="{{ $revocation }}">
-                @if ($reauth['recent'])
-                    <p class="text-sm text-emerald-300">Confirmado {{ $reauth['method'] }}; vale até as {{ $reauth['until']->timezone('America/Sao_Paulo')->format('H:i') }}.</p>
-                @elseif ($reauth['two_factor'])
-                    @include('account.partials.reauth-code')
-                @else
-                    <label for="reauth-password" class="block text-sm text-ink-200">Senha da sua conta</label>
-                    <input id="reauth-password" type="password" name="reauth_password" autocomplete="current-password"
-                           class="min-h-11 w-full max-w-sm rounded-lg border border-ink-700 bg-ink-850 px-3 text-sm text-white focus:border-accent">
-                @endif
-                @error('reauth_password', 'reauth')<p class="text-sm text-red-300">{{ $message }}</p>@enderror
                 @foreach (['revogacao', 'aviso', 'termo', 'declaracoes', 'inicio', 'fim', 'fuso', 'dias', 'validade', 'inicio_data', 'fim_de_semana', 'intensidade', 'firewall', 'exclusoes'] as $key)
                     @error($key)<p class="text-sm text-red-300">{{ $message }}</p>@enderror
                 @endforeach
             </form>
-
-            @include('account.partials.reauth', ['reauth' => $reauth, 'twoFactorBox' => false, 'context' => $domain->host, 'intro' => 'Ou confirme que é você de outro jeito:'])
         </section>
     @endif
 @endif

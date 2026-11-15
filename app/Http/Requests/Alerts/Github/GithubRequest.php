@@ -30,7 +30,7 @@ abstract class GithubRequest extends Request
     /** Os monitoramentos que a conta vê, do mais antigo ao mais novo. @return Collection<int, GithubMonitor> */
     public function monitors(): Collection
     {
-        return $this->monitors ??= GithubMonitor::query()->visibleTo($this->user())->with('sector')->oldest('id')->get();
+        return $this->monitors ??= GithubMonitor::query()->visibleTo($this->user())->oldest('id')->get();
     }
 
     /** O monitoramento de `?monitor=` (nulo se a conta não o vê) ou o primeiro. */

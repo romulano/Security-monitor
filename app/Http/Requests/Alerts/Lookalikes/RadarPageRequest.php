@@ -22,10 +22,10 @@ abstract class RadarPageRequest extends Request
         return ! $this->filled('radar') || $this->watch() !== null;
     }
 
-    /** Os Radares que a conta vê, com o domínio e o setor, do mais antigo ao mais novo. @return Collection<int, LookalikeWatch> */
+    /** Os Radares que a conta vê, com o domínio, do mais antigo ao mais novo. @return Collection<int, LookalikeWatch> */
     public function watches(): Collection
     {
-        return $this->watches ??= LookalikeWatch::query()->visibleTo($this->user())->with(['domain', 'sector'])->oldest('id')->get();
+        return $this->watches ??= LookalikeWatch::query()->visibleTo($this->user())->with('domain')->oldest('id')->get();
     }
 
     /** O Radar de `?radar=` (nulo se a conta não o vê) ou o primeiro ativo, ou o primeiro. */
