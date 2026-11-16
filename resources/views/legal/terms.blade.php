@@ -62,8 +62,9 @@
 
     <h2 id="dominio">4. Domínio monitorado</h2>
     <ul>
-        <li>Só cadastre domínios que você ou a sua empresa controlam. A verificação por registro TXT no DNS confirma isso antes de
-            qualquer consulta ao site.</li>
+        <li>Só cadastre domínios que você ou a sua empresa controlam. Esta é uma instalação própria, de um único dono: o
+            domínio cadastrado já fica em uso na hora, sem verificação por registro TXT no DNS. A responsabilidade por
+            cadastrar só domínios seus é sua.</li>
         <li>Ao informar o domínio, o Security Monitor lê o DNS público dele, que qualquer pessoa consulta, para sugerir tecnologias. Isso não
             acessa o site, e nada entra no perfil sem você confirmar.</li>
         <li>Com a sua autorização, o Security Monitor faz uma consulta passiva, conforme o termo de aceite mostrado na entrevista: lê o DNS
@@ -83,8 +84,8 @@
         <li>No Telegram, o bot do Security Monitor entra como membro comum na conversa privada ou no grupo que você escolher, pelo link de
             conexão. Ele não lê as conversas do grupo e só escreve os alertas, a mensagem de teste e a explicação de como conectar.</li>
         <li>No webhook, o Security Monitor chama a URL que você cadastrar, por POST, com a notificação em JSON. A URL precisa ser https e
-            ficar num domínio que a sua conta comprovou ser seu, pelo registro TXT do Security Monitor. O Security Monitor não segue redirecionamentos e
-            nunca chama endereço de rede interna.</li>
+            ficar num domínio seu (instalação de um dono só: sem verificação por registro TXT no DNS). O Security Monitor não segue
+            redirecionamentos e nunca chama endereço de rede interna.</li>
         <li>O endereço e o segredo do webhook são responsabilidade sua: o segredo vai no cabeçalho Security-Monitor-Notification e assina cada
             notificação (Security-Monitor-Signature), e o Security Monitor recomenda que o seu servidor confira os dois. Depois de 5 entregas seguidas com
             falha, o envio para o webhook para e avisamos você por e-mail.</li>

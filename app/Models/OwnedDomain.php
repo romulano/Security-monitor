@@ -4,18 +4,17 @@ namespace App\Models;
 
 use App\Models\Concerns\VisibleToAccount;
 use App\Models\Contracts\VisibilityRoot;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Support\Carbon;
 
 /**
- * Um nome de domínio de uma conta ou de uma empresa: a fonte única da posse (ver DomainOwnership). Uma
- * linha por conta e nome,
- * pedida por qualquer serviço (Notícias, Radar, testes de segurança, monitor de sites, webhook).
- * Comprovada (`verified_at`), vale para o nome e para os subdomínios dele. É raiz da visibilidade: na
- * empresa, quem vê e quem configura é o Visibility (DESENHO-5.3 §2.5); `user_id` é quem cadastrou.
+ * Um nome de domínio da conta: a fonte única da posse (ver DomainOwnership). Uma linha por conta e
+ * nome, pedida por qualquer serviço (Notícias, Radar, testes de segurança, monitor de sites,
+ * webhook). Instalação self-hosted, de um dono só: nasce já comprovada (`verified_at`), sem prova por
+ * registro TXT no DNS, e vale para o nome e para os subdomínios dele.
  */
 class OwnedDomain extends Model implements VisibilityRoot
 {
@@ -24,11 +23,20 @@ class OwnedDomain extends Model implements VisibilityRoot
     /** Empresa e setor só pelo DomainOwner/forceFill, nunca por atribuição em massa. */
     protected $guarded = [];
 
-    /** O serviço que pediu o nome primeiro (`source`), como as telas dizem de onde veio a prova; `company`, a tela Domínios da empresa. */
-    public const SOURCES = ['news', 'radar', 'tests', 'monitor', 'webhook', 'company'];
+    /** O serviço que pediu o nome primeiro (`source`); `company`, a tela Domínios da empresa. */
+    public const SOURCES = ['news', 'radar', 'tests', 'monitor', 'webhook', 'company', 'keys'];
 
-    /** Resultado da última conferência do TXT. */
-    public const CHECKS = ['present', 'missing', 'unknown'];
+    /** `keys_listing`: cadastrado direto em Chaves (fica sem outro serviço usando o nome). */
+    public const KEYS_ADDED = 'added';
+
+    /** `keys_listing`: herdado de outro serviço e tirado de Chaves. */
+    public const KEYS_REMOVED = 'removed';
+
+    protected static function booted(): void
+    {
+        // Instalação de um dono só: todo domínio nasce comprovado, sem prova por TXT no DNS.
+        static::creating(fn (self $owned) => $owned->verified_at ??= now());
+    }
 
     protected function casts(): array
     {
@@ -65,11 +73,9 @@ class OwnedDomain extends Model implements VisibilityRoot
         return $this->verified_at !== null;
     }
 
-    /** Quando a posse cai se o TXT continuar sem aparecer (nulo: não cai, ou o TXT está lá). */
-    public function fallsAt(): ?Carbon
+    /** Os que aparecem em Chaves expostas: todos menos os tirados de lá. */
+    public function scopeListedInKeys(Builder $query): Builder
     {
-        return $this->isVerified() && ! $this->legacy && $this->unseen_since
-            ? $this->unseen_since->copy()->addDays((int) config('secmon.ownership.grace_days'))
-            : null;
+        return $query->where(fn (Builder $q) => $q->whereNull('keys_listing')->orWhere('keys_listing', '!=', self::KEYS_REMOVED));
     }
 }

@@ -291,7 +291,7 @@ class CustomAnswersTest extends TestCase
             'profile_id' => $profile->id, 'question_key' => 'tools_outros', 'value' => json_encode(['Intercom']), 'created_at' => now(), 'updated_at' => now(),
         ]);
 
-        $this->actingAs($this->adminUser())->post(route('admin.alerts.client.recompile', $profile->user))->assertSessionHas('status', 'Perfil recompilado.');
+        $this->actingAs($this->adminUser())->post(route('admin.alerts.recompile'))->assertSessionHas('status', '1 perfil(is) recompilado(s). O percolator foi regravado.');
 
         $profile->refresh();
         $this->assertNull($profile->custom_answers);

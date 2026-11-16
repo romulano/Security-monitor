@@ -34,7 +34,6 @@
     $ready = $watches->filter->isCompleted();
     $radar = match (true) {
         $ready->contains->isActive() => ['ativo', 'on'],
-        $ready->contains->isWaiting() => ['esperando o TXT', 'warn'],
         $ready->isNotEmpty() => ['pausado', 'off'],
         (bool) $radarDraft => ['rascunho · passo '.$radarDraft->step_reached, 'warn'],
         default => ['não integrado', 'off'],
@@ -81,7 +80,7 @@
             'bullets' => [
                 'Entrevista de 3 passos: domínio, marca e posse',
                 $proven->isNotEmpty() ? 'Reaproveita '.$proven->first()->domain.', já comprovado em Notícias' : 'Reaproveita o domínio já comprovado em Notícias',
-                'Um Radar por domínio, até '.\App\Models\LookalikeWatch::MAX_PER_USER,
+                'Um Radar por domínio',
             ],
             'numbers' => [
                 [$ready->count(), $ready->count() === 1 ? 'domínio vigiado' : 'domínios vigiados', null, null],

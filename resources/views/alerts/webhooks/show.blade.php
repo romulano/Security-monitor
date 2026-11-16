@@ -75,17 +75,7 @@
             </section>
         @endif
 
-        @if ($ownership)
-            <section class="space-y-3">
-                <div>
-                    <h2 class="font-semibold text-white">Comprove que o domínio é seu</h2>
-                    <p class="text-sm text-ink-400">
-                        Se a sua conta já comprovou o domínio em outro serviço, o Verificar aproveita. Até lá, o Security Monitor não chama o endereço, nem para o teste.
-                    </p>
-                </div>
-                <x-domain-ownership :state="$ownership" :action="route('alerts.webhooks.verify', $channel)" effect="o envio para" field="webhook-txt" />
-            </section>
-        @elseif ($channel->status === 'broken')
+        @if ($channel->status === 'broken')
             <div class="rounded-xl border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-200">
                 <b class="text-white">O envio para este webhook parou.</b> {{ $channel->last_error }}
                 Os alertas continuam guardados em Alertas; um teste que der certo põe o webhook de volta.

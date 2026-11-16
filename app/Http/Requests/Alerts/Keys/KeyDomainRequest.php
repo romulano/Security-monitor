@@ -30,7 +30,7 @@ abstract class KeyDomainRequest extends Request
         if (! $this->loaded) {
             $this->loaded = true;
             $name = $this->route('dominio');
-            $query = OwnedDomain::query()->whereNotNull('verified_at');
+            $query = OwnedDomain::query()->whereNotNull('verified_at')->listedInKeys();
             $this->changes ? $query->manageableBy($this->user()) : $query->visibleTo($this->user());
             $this->owned = is_string($name) && strlen($name) <= 253 && DomainName::isValid($name) ? $query->where('domain', $name)->oldest('id')->first() : null;
         }

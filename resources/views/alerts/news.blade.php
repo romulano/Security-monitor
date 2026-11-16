@@ -164,7 +164,7 @@
                                 @if (! $domain->consent_at)
                                     sem descoberta automática
                                 @elseif (! $domain->verified_at)
-                                    aguardando o registro TXT
+                                    posse ainda não comprovada
                                 @elseif (! $domain->last_run_at)
                                     verificado · descoberta na fila
                                 @else

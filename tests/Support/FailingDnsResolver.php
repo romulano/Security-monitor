@@ -28,13 +28,6 @@ class FailingDnsResolver implements DnsResolver
         return null;
     }
 
-    public function txtOwnedOrNull(string $host): ?array
-    {
-        $this->asked[] = "txt {$host}";
-
-        return null;
-    }
-
     public function ptrOrNull(string $ip): ?array
     {
         $this->asked[] = "ptr {$ip}";

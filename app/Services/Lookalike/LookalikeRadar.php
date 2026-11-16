@@ -9,7 +9,6 @@ use App\Models\LookalikeDomain;
 use App\Models\LookalikeWatch;
 use App\Models\User;
 use App\Services\Access\Visibility;
-use App\Services\Domains\DomainOwnership;
 use Illuminate\Support\Collection;
 
 /**
@@ -30,7 +29,6 @@ class LookalikeRadar
 
     public function __construct(
         private AbuseKit $kit,
-        private DomainOwnership $ownership,
         private Visibility $visibility,
         private RadarInterview $interview,
     ) {}
@@ -82,14 +80,12 @@ class LookalikeRadar
             'watches' => $watches,
             'watch' => $watch,
             'domain' => $watch?->domain,
-            // A posse do domínio (a da conta): o TXT a criar, ou o aviso de que ele sumiu do DNS.
-            'ownership' => $watch?->domain ? $this->ownership->screenFor($watch->domain) : null,
             'filter' => $chosen,
             'lookalikes' => $lookalikes,
             'counts' => $counts,
             // O que esta conta faz aqui (R14): configurar o Radar, criar outro e, no de empresa, trocar o setor.
             'canManage' => $manage = $watch !== null && $this->visibility->manages($user, $watch),
-            'canCreate' => $this->interview->mayCreate($user) && ! $user->reachedRadarLimit(),
+            'canCreate' => $this->interview->mayCreate($user),
             // Os subdomínios que o Radar de empresa vigia (E4a); nulo fora da empresa ou com a chave desligada.
         ];
     }
@@ -98,9 +94,7 @@ class LookalikeRadar
     public function scanNow(LookalikeWatch $watch): void
     {
         if (! $watch->isActive()) {
-            throw new ActionRefused($watch->isWaiting()
-                ? 'O Radar começa quando a posse do domínio for comprovada (registro TXT).'
-                : 'Retome o Radar para verificar de novo.');
+            throw new ActionRefused('Retome o Radar para verificar de novo.');
         }
 
         if ($at = $watch->manualScanAvailableAt()) {
@@ -115,10 +109,6 @@ class LookalikeRadar
     /** Pausa ou retoma o Radar; devolve se ficou pausado. Ao retomar, a próxima varredura fica para já. */
     public function togglePause(LookalikeWatch $watch): bool
     {
-        if ($watch->isWaiting()) {
-            throw new ActionRefused('O Radar ainda espera a comprovação do domínio: não há o que pausar.');
-        }
-
         $paused = $watch->isActive();
         $watch->update(['status' => $paused ? 'paused' : 'active', 'next_scan_at' => $paused ? $watch->next_scan_at : now()]);
 

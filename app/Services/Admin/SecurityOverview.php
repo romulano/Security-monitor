@@ -6,8 +6,6 @@ use App\Models\SecurityCheck;
 use App\Models\SecurityEvent;
 use App\Models\SecurityFinding;
 use App\Models\SecuritySite;
-use App\Services\Domains\DomainOwner;
-use App\Services\Domains\DomainOwnership;
 use App\Services\Security\CheckCatalog;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -15,8 +13,6 @@ use Illuminate\Support\Collection;
 /** Admin → Segurança: o que as telas mostram (lista, detalhe de um site e o cartão do painel). */
 class SecurityOverview
 {
-    public function __construct(private DomainOwnership $ownership) {}
-
     /** @return array<string, mixed> */
     public function index(): array
     {
@@ -29,7 +25,6 @@ class SecurityOverview
         return [
             'sites' => $sites,
             'staleHours' => (int) config('secmon.security.stale_after_hours'),
-            'max' => (int) config('secmon.security.max_sites'),
             'card' => $this->card(),
         ];
     }
@@ -56,8 +51,6 @@ class SecurityOverview
             'events' => $site->events()->orderByDesc('created_at')->orderByDesc('id')->limit(30)->get(),
             'history' => $site->checks()->orderByDesc('started_at')->limit(15)->get(['id', 'site_id', 'started_at', 'status', 'score', 'error']),
             'staleHours' => (int) config('secmon.security.stale_after_hours'),
-            // O quadro do TXT (a posse da conta). O monitor confere ao vivo em cada varredura: sem posse, é o quadro do TXT.
-            'ownership' => $site->ownership ? null : $this->ownership->screen(DomainOwner::account($site->user_id), $site->host, $site->verify_token, pending: true),
         ];
     }
 

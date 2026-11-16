@@ -19,7 +19,6 @@ class ActivateRadarController extends Controller
 
         return redirect()->route('alerts.lookalikes', $watch->urlParams())->with('status', match ($result) {
             'started' => 'Radar ativado. A primeira varredura confere centenas de nomes no DNS e leva uns minutos.',
-            'waiting' => 'Radar ativado. Ele começa sozinho assim que o registro TXT aparecer.',
             default => 'Radar salvo.',
         });
     }

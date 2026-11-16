@@ -17,30 +17,6 @@ class NativeDnsResolver implements DnsResolver
         return $records === null ? null : self::texts($records);
     }
 
-    /**
-     * O dono vem no `host` de cada registro: o do destino, quando a resposta veio por um CNAME. Mas o `host`
-     * sozinho não basta: no musl (a libc da imagem), o dn_expand não escapa o rótulo e o PHP lê o nome até
-     * o 1º byte nulo, e o dono "loja.empresa.com.br\0.atacante.com", na zona do atacante, chega aqui como
-     * "loja.empresa.com.br". Por isso o CNAME se pergunta antes: um apelido nunca tem TXT próprio
-     * (RFC 1034 §3.6.2) e nunca prova a posse; sem resposta, é "não sei".
-     */
-    public function txtOwnedOrNull(string $host): ?array
-    {
-        $alias = $this->answer($host, DNS_CNAME);
-
-        if ($alias !== []) {
-            return $alias === null ? null : [];
-        }
-
-        $records = $this->answer($host, DNS_TXT);
-        $name = strtolower(rtrim($host, '.'));
-
-        return $records === null ? null : self::texts(array_filter(
-            $records,
-            fn ($r) => strtolower(rtrim((string) ($r['host'] ?? ''), '.')) === $name,
-        ));
-    }
-
     /** @return list<string> */
     private static function texts(array $records): array
     {

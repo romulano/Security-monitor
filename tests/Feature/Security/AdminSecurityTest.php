@@ -49,7 +49,7 @@ class AdminSecurityTest extends TestCase
         $urls = [
             ['get', route('admin.security')], ['post', route('admin.security.store')],
             ['get', route('admin.security.show', $site)], ['post', route('admin.security.run', $site)],
-            ['post', route('admin.security.ownership', $site)], ['post', route('admin.security.toggle', $site)],
+            ['post', route('admin.security.toggle', $site)],
             ['delete', route('admin.security.destroy', $site)],
         ];
 
@@ -70,7 +70,7 @@ class AdminSecurityTest extends TestCase
 
     // ---- cadastro ------------------------------------------------------------------
 
-    public function test_the_admin_registers_a_site_with_consent_and_gets_the_txt_to_prove_ownership(): void
+    public function test_the_admin_registers_a_site_with_consent(): void
     {
         $this->dns->set('acme.com.br', 'ips', ['104.21.1.1']);
 
@@ -84,28 +84,12 @@ class AdminSecurityTest extends TestCase
         $this->assertSame('acme.com.br', $site->host);
         $this->assertSame('198.51.100.7', $site->consent_ip);
         $this->assertNotNull($site->consent_at);
-        $this->assertSame($this->admin->fresh()->domain_token, $site->verify_token, 'o token da conta: o mesmo TXT de todos os serviços');
-        $this->assertNull($site->ownership, 'declarar não prova: o TXT ainda não existe');
         $this->assertSame(360, $site->interval_minutes);
         $this->assertTrue($site->next_check_at->lte(now()));
 
         $this->asAdmin()->get(route('admin.security.show', $site))
             ->assertOk()
-            ->assertSee('Comprove que o domínio é seu')
-            ->assertSee($site->txtValue());
-    }
-
-    public function test_a_site_that_already_proves_ownership_through_the_txt_is_registered_as_owned(): void
-    {
-        $this->dns->set('acme.com.br', 'txt', []);
-        $this->asAdmin()->post(route('admin.security.store'), ['host' => 'acme.com.br', 'consent' => '1']);
-        $site = SecuritySite::query()->sole();
-        $this->dns->set('acme.com.br', 'txt', [$site->txtValue()]);
-
-        $this->asAdmin()->post(route('admin.security.ownership', $site))->assertRedirect()->assertSessionHas('status');
-
-        $this->assertSame('txt', $site->fresh()->ownership);
-        $this->asAdmin()->get(route('admin.security.show', $site))->assertDontSee('Comprove que o domínio é seu');
+            ->assertDontSee('Comprove que o domínio é seu');
     }
 
     public function test_it_refuses_without_the_consent_checkbox(): void
@@ -116,47 +100,52 @@ class AdminSecurityTest extends TestCase
         $this->assertSame(0, SecuritySite::query()->count());
     }
 
-    public function test_it_refuses_every_address_that_could_point_inside(): void
+    public function test_it_refuses_malformed_input(): void
     {
-        foreach (['127.0.0.1', 'localhost', '10.0.0.5', '169.254.169.254', '0x7f000001', '2130706433', '[::1]', 'secmon-db', 'es', 'hermes',
-            'servidor.internal', 'acme.com.br:9200', 'admin:senha@acme.com.br', "acme.com.br\r\nX-Injetado: 1", 'meu_site.acme.com.br', ''] as $input) {
+        foreach (['[::1]', 'acme.com.br:9200', 'admin:senha@acme.com.br', "acme.com.br\r\nX-Injetado: 1", 'meu_site.acme.com.br', ''] as $input) {
             $this->asAdmin()->from(route('admin.security'))->post(route('admin.security.store'), ['host' => $input, 'consent' => '1'])
                 ->assertRedirect(route('admin.security'));
         }
 
         $this->assertSame(0, SecuritySite::query()->count());
-        $this->asAdmin()->from(route('admin.security'))->post(route('admin.security.store'), ['host' => '10.0.0.5', 'consent' => '1'])
+        $this->asAdmin()->from(route('admin.security'))->post(route('admin.security.store'), ['host' => "acme.com.br\r\nX-Injetado: 1", 'consent' => '1'])
             ->assertSessionHas('error', fn ($m) => str_contains($m, 'Endereço inválido'));
     }
 
-    public function test_a_duplicate_and_the_limit_are_refused_with_a_message(): void
+    /** Instalação local, de um dono só: IP, nome de container e nome interno agora são alvo válido. */
+    public function test_it_accepts_ip_and_internal_names(): void
+    {
+        foreach (['127.0.0.1', 'localhost', '10.0.0.5', '169.254.169.254', '0x7f000001', '2130706433', 'secmon-db', 'es', 'hermes', 'servidor.internal'] as $input) {
+            $this->asAdmin()->from(route('admin.security'))->post(route('admin.security.store'), ['host' => $input, 'consent' => '1'])
+                ->assertSessionHasNoErrors();
+        }
+
+        $this->assertSame(10, SecuritySite::query()->count());
+    }
+
+    public function test_a_duplicate_is_refused_with_a_message(): void
     {
         $this->site(['host' => 'acme.com.br']);
 
         $this->asAdmin()->from(route('admin.security'))->post(route('admin.security.store'), ['host' => 'acme.com.br', 'consent' => '1'])
             ->assertSessionHas('error', 'acme.com.br já está na lista.');
 
-        config(['secmon.security.max_sites' => 1]);
-        $this->asAdmin()->from(route('admin.security'))->post(route('admin.security.store'), ['host' => 'outro.com.br', 'consent' => '1'])
-            ->assertSessionHas('error', fn ($m) => str_contains($m, 'Limite de 1 sites'));
-
         $this->assertSame(1, SecuritySite::query()->count());
     }
 
     // ---- telas -----------------------------------------------------------------------
 
-    public function test_the_list_shows_state_score_problems_and_ownership(): void
+    public function test_the_list_shows_state_score_and_problems(): void
     {
         $ok = $this->site(['host' => 'bom.com.br']);
-        $bad = $this->site(['host' => 'ruim.com.br', 'ownership' => null]);
+        $bad = $this->site(['host' => 'ruim.com.br']);
         $this->record($ok, [CheckResult::ok('tls.valid')]);
         $this->record($bad, [CheckResult::critical('file.exposed', 'x', '/.env'), CheckResult::warning('http.hsts', 'ausente')]);
 
         $this->asAdmin()->get(route('admin.security'))
             ->assertOk()
             ->assertSee('bom.com.br')->assertSee('100/100')->assertSee('Em ordem')
-            ->assertSee('ruim.com.br')->assertSee('71/100')->assertSee('Crítico')->assertSee('1 crítico(s)')
-            ->assertSee('comprovada')->assertSee('pendente');
+            ->assertSee('ruim.com.br')->assertSee('71/100')->assertSee('Crítico')->assertSee('1 crítico(s)');
     }
 
     public function test_the_list_turns_red_when_a_site_has_gone_two_days_without_a_scan(): void
@@ -273,17 +262,13 @@ class AdminSecurityTest extends TestCase
 
     // ---- ações -----------------------------------------------------------------------------
 
-    public function test_verify_now_queues_the_scan_once_an_hour_per_site(): void
+    public function test_verify_now_queues_the_scan(): void
     {
         $site = $this->site();
 
         $this->asAdmin()->post(route('admin.security.run', $site))->assertRedirect()->assertSessionHas('status');
         Queue::assertPushedOn('security', ScanSecuritySite::class, fn ($job) => $job->siteId === $site->id);
 
-        $this->asAdmin()->post(route('admin.security.run', $site))->assertSessionHas('error', fn ($m) => str_contains($m, 'foi verificado à mão há pouco'));
-        Queue::assertPushed(ScanSecuritySite::class, 1);
-
-        $this->travel(61)->minutes();
         $this->asAdmin()->post(route('admin.security.run', $site))->assertSessionHas('status');
         Queue::assertPushed(ScanSecuritySite::class, 2);
     }
@@ -302,14 +287,6 @@ class AdminSecurityTest extends TestCase
         $this->asAdmin()->post(route('admin.security.toggle', $site))->assertSessionHas('status', 'acme.com.br voltou para a monitoria.');
         $this->assertTrue($site->fresh()->enabled);
         $this->assertTrue($site->fresh()->next_check_at->lte(now()->addSecond()), 'retomar agenda a verificação para já');
-    }
-
-    public function test_the_ownership_recheck_says_when_the_txt_is_still_missing(): void
-    {
-        $site = $this->site(['ownership' => null]);
-
-        $this->asAdmin()->post(route('admin.security.ownership', $site))->assertSessionHas('error', fn ($m) => str_contains($m, 'Ainda não achamos o registro TXT'));
-        $this->assertNull($site->fresh()->ownership);
     }
 
     public function test_removing_the_site_removes_its_history(): void

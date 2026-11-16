@@ -307,11 +307,11 @@ scheduler ─▶ secmon:alerts-digest (resumo diário) · secmon:alerts-flush (s
   `ALERTS_DISCOVERY_EGRESS_IPS`, exige também o IP de saída do Security Monitor. Depois
   de liberar, o cliente relê só as páginas barradas (1 vez por dia).
   Tecnologia achada revela a de baixo ("pertence a" no catálogo): Laravel →
-  PHP, Ubuntu → Linux, com evidência "deduzido de …". O IP é validado antes
-  de cada request e de cada redirect (bloqueia rede privada, loopback, metadata
-  da nuvem, CGNAT, IPv6 local, o IPv6 que leva um IPv4 dentro — 6to4, Teredo,
-  NAT64 local — e todo IPv6 fora do espaço global 2000::/3) e fixado no cURL
-  contra DNS rebinding; até 3 redirects, portas 80/443. Lê cabeçalhos,
+  PHP, Ubuntu → Linux, com evidência "deduzido de …". O IP é resolvido antes
+  de cada request e de cada redirect e fixado no cURL contra DNS rebinding;
+  até 3 redirects, portas 80/443. Instalação local, de um dono só: o `IpGuard`
+  não bloqueia mais por faixa (rede privada, loopback, metadata da nuvem,
+  CGNAT...) — só recusa o que não é um IP. Lê cabeçalhos,
   cookies, `<meta generator>`, scripts de terceiros e plugins/temas WordPress.
   O que for reconhecido entra direto no perfil (origem "domínio"), sem revisão;
   o cliente pode remover, e o que ele remove não volta. Sinal que **nenhuma
@@ -409,9 +409,10 @@ terceiro). Sem prova, só rodam as verificações passivas. A prova é o host re
 endereços do servidor do Security Monitor (`SECURITY_OWN_IPS`) ou um registro **TXT** `secmon-verify=<token>` no host ou
 no domínio principal (o token aparece na tela do site; é o caso de quem está atrás da Cloudflare).
 
-**Travas** (reaproveitam as da descoberta de domínios): só nome DNS no cadastro (nada de IP, porta,
-`localhost` ou nome de container; `SiteHost`), todo IP resolvido passa pelo `IpGuard`, a conexão vai para o
-IP já validado, só portas 80 e 443, no máximo 3 redirecionamentos conferidos um a um, teto de 25
+**Travas** (reaproveitam as da descoberta de domínios): o cadastro aceita qualquer host (`SiteHost`;
+instalação local, de um dono só — o dono decide o que varrer, inclusive IP, `localhost` ou nome de
+container), o IP é resolvido e passa pelo `IpGuard` (que só confere se é um IP, não a faixa), a conexão
+vai para o IP já resolvido, só portas 80 e 443, no máximo 3 redirecionamentos conferidos um a um, teto de 25
 requisições, 8 s de espera e 256 KB (4 KB nos caminhos sensíveis) por varredura. "Verificar agora": no
 máximo uma vez por hora por site. **Nunca se guarda** o corpo das páginas, valor de cookie ou o certificado
 inteiro; guarda-se estado, um valor curto (até 120 caracteres) e a data. Varreduras e eventos ficam 365
@@ -432,21 +433,13 @@ site não atrasa alerta nem análise.
 O teste de segurança **ativo**, só no domínio que o cliente comprovou e autorizou, entra por partes (a
 série de PRs da stack de testes). O que já existe:
 
-- **Desligado por padrão.** Sem `PENTEST_ALLOWED=true` no ambiente, a área do cliente não existe (404) e
-  nada da stack roda; o admin não liga isso. Na rota, é o middleware `pentest.available`.
-- **O admin libera, conta por conta.** Com `PENTEST_ALLOWED=true`, toda conta vê a entrada (o cartão da
-  Integração e o `/alertas/testes`), mas só usa a conta que o admin liberou em Admin → Usuários
-  (`users.pentest_access_granted_at`). Sem a liberação, a página diz para pedir ao admin e tem o botão
-  "Pedir liberação" (um pedido por conta); os passos e os outros POSTs voltam a ela sem executar nada
-  (middleware `pentest.access`). Retirar a liberação para as execuções ativas da conta e não deixa
-  autorizar nem iniciar; ver o histórico, revogar e excluir continuam valendo. O portão também confere
-  (A5c). A conta de admin usa a área sempre, para os domínios dela, e a 1ª execução dela não espera a
-  aprovação (`run.approval_skipped` na auditoria), porque ninguém aprova a própria execução.
+- **A área é a mesma para a conta única da instalação**: o cartão da Integração e o `/alertas/testes` abrem
+  direto, sem liberação por conta — não há mais de uma conta para liberar.
 - **A posse é a do Radar.** O domínio inscrito ganha a própria cópia da linha de `monitored_domains`
   (dona: `pentest_domains`), com o mesmo token e a data da prova quando vem de um domínio já comprovado
   no Radar ou em Notícias. O aceite passivo daqueles termos não vem junto: ele nunca vale para teste
-  ativo. Excluir o Radar não leva a stack, e vice-versa. São até 3 domínios por conta; o `example.com` e os
-  de `PENTEST_FORBIDDEN_DOMAINS` (com os subdomínios) nunca entram.
+  ativo. Excluir o Radar não leva a stack, e vice-versa. O `example.com` e os de `PENTEST_FORBIDDEN_DOMAINS`
+  (com os subdomínios) nunca entram.
 - **A posse é reconferida.** `DiscoveryService::recheck()` usa o `txtOrNull()` do DNS e separa o TXT no ar,
   o TXT que sumiu e o DNS que não respondeu (que não prova nada: só pausa). O resultado fica em
   `pentest_domains.ownership_status`, e a conferência a cada 10 minutos cobre os domínios recém-inscritos.
@@ -473,9 +466,8 @@ série de PRs da stack de testes). O que já existe:
   leitura: dá para preparar o rascunho, mas não para autorizar; revogar funciona sempre.
 - **Admin → Testes ativos** (`/admin/testes`): a chave com as pré-condições, Ligar e Desligar, o "Agora" com
   o Parar de cada execução, a fila, as aprovações da 1ª execução (aprovar; recusar com o motivo que o cliente
-  vê) e os bastidores de cada execução (a linha do tempo da auditoria, os contadores, Parar, Pausar, Retomar e
-  o "liberar reteste", com motivo). O motivo de desligar e de parar tudo fica só na auditoria: o cliente vê
-  sempre o texto fixo.
+  vê) e os bastidores de cada execução (a linha do tempo da auditoria, os contadores, Parar, Pausar e Retomar).
+  O motivo de desligar e de parar tudo fica só na auditoria: o cliente vê sempre o texto fixo.
 - **"Parar tudo agora" (emergência): só o root religa.** O botão desliga a chave e para todas as execuções
   (inclusive as agendadas e as que esperam a aprovação). Com alguma execução ativa, grava uma trava
   (`pentest.stop_all`, qualquer valor não nulo trava): a chave não liga, nem pelo painel nem forçada no banco,
@@ -501,11 +493,8 @@ docker exec -it "$(docker compose ps -q app)" php artisan secmon:pentest-religar
   máquina de estados (`RunStateMachine`) muda o estado e a fase, e o portão de política (`PolicyGate`,
   código determinístico, falha fechada) decide cada entrada em `running`: a chave, o aceite, a janela, a
   posse reconferida no começo de cada fase, o trabalho de todas as fases registrado e um teste por vez no
-  servidor. Parar nunca passa pelo portão. Limites por conta: uma execução por domínio a cada 24 h e 4
-  por semana (`PENTEST_RUNS_PER_DOMAIN_PER_DAY`, `PENTEST_RUNS_PER_WEEK`). E o teto por site, somando todas
-  as contas: 2 a cada 24 h e 6 por semana (`PENTEST_RUNS_PER_HOST_PER_DAY`, `PENTEST_RUNS_PER_HOST_PER_WEEK`);
-  o "liberar reteste" do admin tira a execução dele também. Com `PENTEST_ALLOWED=false`, o vigia cancela o que
-  ainda não começou.
+  servidor. Parar nunca passa pelo portão; a conta liberada tem uma execução ativa por domínio. Com
+  `PENTEST_ALLOWED=false`, o vigia cancela o que ainda não começou.
 - **Os passos e o vigia.** Cada fase anda em passos curtos (`pentest_steps`, até 120 s no PHP), rodados
   pelo job `AdvancePentestRun` na fila `pentest` (o worker `fila-pentest`). Um CAS na tentativa impede o
   passo em dobro. O vigia `secmon:pentest-tick`, a cada minuto, redespacha o passo que um deploy matou,
@@ -668,9 +657,8 @@ Depois de mexer em **CSS/JS**, rode `make assets`.
 | `EXPLOITS_ENABLED` / `EXPLOITS_EXPLAIN` | sincronização diária do Exploit-DB e a explicação de cada exploit pela IA (hermes) |
 | `GITHUB_SEARCH_TOKEN` | token do GitHub (sem escopo) para a busca em código do monitoramento do GitHub; vazio = só repositórios |
 | `GITHUB_AI_TRIAGE` / `GITHUB_AI_REVIEW` | as duas etapas da IA de cada achado do GitHub (classificação e parecer de envio) |
-| `PENTEST_ALLOWED` | testes de segurança: a chave do ambiente (desligada); com ela, quem usa é a conta liberada pelo admin em Admin → Usuários |
 | `PENTEST_FORBIDDEN_DOMAINS` / `PENTEST_FORBIDDEN_ADDRESSES` | domínios (além do `example.com`) e IPs (além dos do Security Monitor e da saída) que nunca entram nos testes de segurança |
-| `PENTEST_EGRESS_IPS` / `PENTEST_TERMS_PUBLISHED_*` / `PENTEST_NOTICE_*` / `PENTEST_LEGAL_OPINION_AT` / `PENTEST_ABUSE_ALERT_AT` | pré-condições da chave global dos testes de segurança, registradas pelo dono |
+| `PENTEST_EGRESS_IPS` / `PENTEST_EGRESS_RDNS` | o IP de saída dos testes de segurança (e o nome reverso dele) |
 | `LOCAL_OWNER_EMAIL` / `LOCAL_OWNER_NAME` | a conta do dono, criada no primeiro acesso (sem senha) |
 
 ---

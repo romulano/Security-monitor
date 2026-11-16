@@ -4,13 +4,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    @isset($pageViewToken)
-        {{-- Admin → Acessos: o tempo que a página ficou aberta volta com este token (resources/js/app.js). data-device:
-             o navegador manda também o código do aparelho, só de quem está sem login e sem o sinal Global Privacy
-             Control, e só para segurança (DeviceSightings; /privacidade, seção 2). --}}
-        <meta name="page-view" content="{{ $pageViewToken }}" data-url="{{ route('page-views.duration') }}"
-              @if (auth()->guest() && request()->header('Sec-GPC') !== '1') data-device="1" @endif>
-    @endisset
     <title>@yield('title', 'Security Monitor')</title>
     {{-- A divulgação sai em inglês (decisão do dono, 2026-11-01): a descrição e o cartão de link (Open Graph e
          Twitter, que o Product Hunt, o Slack e as redes leem) ficam em inglês; a interface continua em português.

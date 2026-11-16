@@ -9,9 +9,10 @@ use Carbon\CarbonImmutable;
 /**
  * O handshake TLS de um site, só para ler o certificado e o protocolo: nenhum dado é enviado depois.
  *
- * As travas são as da descoberta: o nome é resolvido aqui, todo IP passa pelo IpGuard e a conexão vai
- * para o IP já validado (com o nome só no SNI e na conferência do certificado), então um DNS que muda
- * no meio do caminho não leva a rede interna. Primeiro conecta conferindo cadeia e nome; se falhar,
+ * As travas são as da descoberta: o nome é resolvido aqui, todo IP passa pelo IpGuard (que, numa
+ * instalação local, de um dono só, só recusa endereço mal formado) e a conexão vai para o IP já
+ * resolvido (com o nome só no SNI e na conferência do certificado), então um DNS que muda no meio
+ * do caminho não troca de endereço depois da checagem. Primeiro conecta conferindo cadeia e nome; se falhar,
  * conecta de novo sem conferir, só para ler o certificado e dizer por que não é confiável.
  */
 class TlsProbe

@@ -15,7 +15,7 @@ trait WebhookTestHelpers
 
     protected const HOOK = 'https://hooks.cliente.com.br/secmon';
 
-    /** Um IP público qualquer (não é faixa de documentação, que o IpGuard recusa). */
+    /** Um IP público qualquer, para parecer real nos testes (o IpGuard não filtra mais por faixa). */
     protected const PUBLIC_IP = '93.184.215.14';
 
     protected FakeDnsResolver $dns;

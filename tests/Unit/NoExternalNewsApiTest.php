@@ -35,7 +35,6 @@ class NoExternalNewsApiTest extends TestCase
         'app/Services/Lookalike/RdapClient.php' => 'Radar de domínios: data de registro, registrador e contato de abuso (RDAP)',
         'app/Services/Github/GithubClient.php' => 'Monitoramento do GitHub: busca em código e repositórios públicos pela API oficial',
         'app/Services/Hermes/Hermes.php' => 'o cliente único da ponte de IA (hermes): toda etapa com IA passa por ele',
-        'app/Services/Admin/EmailReport.php' => 'Admin → E-mails: a saudação do servidor de envio do próprio stack (mail:25, rede interna), para dizer se ele está no ar',
     ];
 
     /** `\bHttp::` é só a facade: `CrawlerHttp::redact()` limpa texto e não sai para a rede. */

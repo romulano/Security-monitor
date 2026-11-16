@@ -26,7 +26,6 @@ class MonitoredDomainManager
             'counts' => [
                 'total' => MonitoredDomain::query()->ofAlerts()->count(),
                 'verified' => MonitoredDomain::query()->ofAlerts()->whereNotNull('verified_at')->count(),
-                'waiting' => MonitoredDomain::query()->ofAlerts()->whereNull('verified_at')->whereNotNull('consent_at')->count(),
                 'blocked' => MonitoredDomain::query()->ofAlerts()->where('discovery_status', 'blocked')->count(),
             ],
         ];

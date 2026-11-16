@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\CaseMerge;
 use App\Models\NewsCase;
-use App\Models\PageView;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -16,7 +15,7 @@ use Tests\TestCase;
 /**
  * O /sitemap.xml (2026-11-01): as páginas fixas e as matérias publicadas, do
  * banco, com a data da última mudança; nada de busca, API, admin, área com
- * login ou link assinado. Sem sessão e fora de Admin → Acessos.
+ * login ou link assinado. Sem sessão.
  */
 class SitemapTest extends TestCase
 {
@@ -31,8 +30,6 @@ class SitemapTest extends TestCase
 
         // O endereço do mapa é o da aplicação, não o da requisição (que nos testes é http://localhost).
         config(['app.url' => 'https://example.com']);
-        // Teste sem RefreshDatabase que abre uma página grava fora da transação e o registro fica (como no PageViewsTest).
-        PageView::query()->delete();
     }
 
     private function xml(TestResponse $response): SimpleXMLElement
@@ -136,7 +133,7 @@ class SitemapTest extends TestCase
         $this->assertSame('', (string) $again->getContent());
     }
 
-    public function test_reading_the_sitemap_opens_no_session_and_is_not_a_page_view(): void
+    public function test_reading_the_sitemap_opens_no_session(): void
     {
         $this->newsCase('Nginx RCE exploited in the wild');
 
@@ -145,10 +142,7 @@ class SitemapTest extends TestCase
             ->assertOk()
             ->assertCookieMissing(config('session.cookie'))
             ->assertCookieMissing('XSRF-TOKEN');
-        // A parte que não existe (o site cabe num arquivo) também não vira acesso.
         $this->get('/sitemap-1.xml')->assertNotFound();
-
-        $this->assertSame(0, PageView::query()->count());
     }
 
     public function test_a_large_sitemap_becomes_an_index_of_parts(): void

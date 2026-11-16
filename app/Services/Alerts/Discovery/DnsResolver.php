@@ -9,22 +9,11 @@ interface DnsResolver
     public function txt(string $host): array;
 
     /**
-     * Como txt(), mas nulo quando o DNS não respondeu: "o TXT sumiu" é diferente
-     * de "não sei". A reconferência da posse da stack de testes depende disso.
+     * Como txt(), mas nulo quando o DNS não respondeu: "o TXT sumiu" é diferente de "não sei".
      *
      * @return list<string>|null
      */
     public function txtOrNull(string $host): ?array;
-
-    /**
-     * Como txtOrNull(), mas só os registros cujo dono é o próprio nome perguntado.
-     * Num apelido (CNAME), o DNS segue o apelido e devolve o TXT do destino, que é
-     * de outra zona: quem controla o destino provaria a posse do apelido. Toda
-     * prova de posse usa este, e um nome com CNAME nunca prova a posse.
-     *
-     * @return list<string>|null
-     */
-    public function txtOwnedOrNull(string $host): ?array;
 
     /**
      * O DNS reverso (PTR) de um IP: os nomes, lista vazia quando o IP não tem

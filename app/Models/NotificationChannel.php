@@ -12,9 +12,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
- * Canal do cliente: um Slack, um Discord e um Telegram no máximo (type), e até
- * 5 webhooks, cada um com as próprias preferências. Os alertas vão para todos
- * os canais ativos.
+ * Canal do cliente: um Slack, um Discord e um Telegram no máximo (type), e
+ * quantos webhooks quiser, cada um com as próprias preferências. Os alertas
+ * vão para todos os canais ativos.
  *
  * Slack: method `webhook` ou `oauth`. Discord: `channel` (o bot num canal do
  * servidor), `dm` (mensagem direta para quem conectou) ou `webhook`.

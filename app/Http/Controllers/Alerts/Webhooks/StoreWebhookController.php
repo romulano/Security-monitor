@@ -22,8 +22,7 @@ class StoreWebhookController extends Controller
             $request->session(),
         );
 
-        return redirect()->route('alerts.webhooks.show', $channel)->with('status', $channel->status === 'pending'
-            ? 'Webhook cadastrado. Falta comprovar o domínio: até lá, o Security Monitor não chama o endereço.'
-            : 'Webhook cadastrado com o domínio que você já comprovou. Mande um teste para conferir o seu servidor.');
+        // Instalação de um dono só: o domínio da URL já nasce comprovado, nunca pendente.
+        return redirect()->route('alerts.webhooks.show', $channel)->with('status', 'Webhook cadastrado. Mande um teste para conferir o seu servidor.');
     }
 }

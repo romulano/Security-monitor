@@ -7,12 +7,15 @@ use Illuminate\Routing\Middleware\ValidateSignature;
 use Illuminate\Routing\Route;
 
 /**
- * Admin → Acessos: o endereço da página e o de onde a pessoa veio, como ficam
- * gravados, sem o que vale como senha. O link assinado (confirmação de e-mail,
- * voto do alerta) abre a ação sem login por 30 dias e fica gravado por 180: dele
- * sobra só o modelo da rota. Nas outras páginas, as chaves sensíveis da query
- * (o code e o state do OAuth, token, e-mail...) ficam só com o nome: `code=`.
- * O Referer de outro site perde a query, que é dele e não diz nada a nós.
+ * Era de Admin → Acessos (removida): o endereço da página e o de onde a pessoa
+ * veio, como ficavam gravados, sem o que vale como senha. A classe sobrevive
+ * sozinha, sem o resto do pacote, só porque as migrations
+ * 2026_12_05_000100_redact_secrets_in_page_views e
+ * 2026_12_05_000800_redact_invites_in_accesses (já aplicadas, não reescritas)
+ * chamam RecordedUrl::SENSITIVE/SECRET_PATHS/sanitize() para limpar o que
+ * ficou gravado em page_views e access_events antes da remoção. Nada na
+ * aplicação grava URL nova com isto; é só o que um `migrate:fresh` precisa
+ * para não quebrar.
  */
 final class RecordedUrl
 {

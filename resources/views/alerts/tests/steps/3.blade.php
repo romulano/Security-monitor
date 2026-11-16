@@ -20,7 +20,7 @@
     <ul class="list-disc space-y-1.5 pl-5 text-sm text-ink-200">
         <li>
             <b class="font-semibold text-white">Subdomínio que aponta para serviço de outra empresa</b> (CNAME para fora do seu domínio, como loja, e-mail marketing ou central de ajuda
-            hospedados por terceiros). O TXT prova o seu DNS, não o servidor deles. Só olhamos o DNS, para avisar se ele foi abandonado; nunca visitamos o serviço.
+            hospedados por terceiros). A autorização prova o seu DNS, não o servidor deles. Só olhamos o DNS, para avisar se ele foi abandonado; nunca visitamos o serviço.
         </li>
         <li>
             <b class="font-semibold text-white">Portas de CDN, de balanceador de nuvem e de hospedagem compartilhada.</b> Ali testamos só o site pelo nome (HTTP e HTTPS).
@@ -28,7 +28,7 @@
         </li>
         <li>
             <b class="font-semibold text-white">Nomes que não conseguimos ligar a você:</b> sem certificado válido para o nome, só com endereço IPv6 (o Security Monitor ainda não testa por IPv6)
-            ou com servidor de nomes próprio sem o TXT.
+            ou com servidor de nomes próprio não cadastrado como outro domínio.
         </li>
         <li><b class="font-semibold text-white">Os IPs do próprio Security Monitor</b> e endereços internos.</li>
     </ul>
@@ -50,8 +50,8 @@
         </p>
     </section>
     <section class="{{ $box }}">
-        <h3 class="text-sm font-semibold text-white">Precisa de TXT próprio</h3>
-        <p class="text-sm text-ink-200">Subdomínio com servidor de nomes próprio (NS) só entra com o TXT no nome dele, do mesmo jeito do passo 2.</p>
+        <h3 class="text-sm font-semibold text-white">Precisa de cadastro próprio</h3>
+        <p class="text-sm text-ink-200">Subdomínio com servidor de nomes próprio (NS) só entra se você o cadastrar como outro domínio, do mesmo jeito do passo 1.</p>
     </section>
 </div>
 

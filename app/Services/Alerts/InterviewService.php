@@ -2,6 +2,7 @@
 
 namespace App\Services\Alerts;
 
+use App\Jobs\DiscoverDomainStack;
 use App\Jobs\ExpandCustomAnswer;
 use App\Models\AlertProfile;
 use App\Models\CustomAnswerTerm;
@@ -349,8 +350,6 @@ class InterviewService
             'text' => self::STEP_TEXT[$step],
             'questions' => $questions,
             'domain' => $domain,
-            // O quadro da posse (a mesma de todos os serviços da conta): o TXT a criar ou a prova.
-            'ownership' => $domain ? $this->ownership->screenFor($domain) : null,
             // tecnologia => origem (interview | discovery | admin), para o passo 5 saber o que dá para remover
             'profileTechSources' => $profile->techs()->pluck('alert_profile_techs.source', 'tech_catalog.id')->all(),
             'dnsSuggestions' => $step === 5 ? $this->dnsSuggestionsFor($profile) : [],
@@ -786,17 +785,18 @@ class InterviewService
             return;
         }
 
-        // O dono da posse: a empresa do alerta (o token da empresa) ou a conta (DESENHO-5.3 §2.1).
+        // O dono da posse: a conta (instalação de um dono só).
         $owner = DomainOwner::of($profile->user_id);
 
         if (! $current || $current->domain !== $wanted) {
             $this->forgetDomain($profile);
-            $current = $profile->domains()->create([
-                'domain' => $wanted,
-                // O token do dono (ou o que já comprovou este nome): o mesmo TXT para todos os serviços.
-                'verify_token' => $this->ownership->txtToken($owner, $wanted),
-            ]);
+            $current = $profile->domains()->create(['domain' => $wanted]);
         }
+
+        // O domínio já nasce comprovado (instalação de um dono só): quem decide se a descoberta
+        // entra na fila agora é o aceite, não mais a posse. `$wasDiscoverable` é de antes do aceite
+        // desta chamada, para só enfileirar na transição de "sem aceite" para "com aceite".
+        $wasDiscoverable = $current->canDiscover();
 
         $version = (string) Settings::get('alerts.consent_version');
 
@@ -826,16 +826,21 @@ class InterviewService
             ])->save();
         }
 
-        // A posse é do dono: o domínio já comprovado em outro serviço (ou em outro alerta) chega
-        // comprovado, sem pedir o TXT de novo, e com o aceite a descoberta já entra na fila.
-        $this->ownership->claim($owner, $wanted, 'news', $current->verify_token);
+        // A posse é do dono: todo domínio nasce comprovado (instalação de um dono só), e com o
+        // aceite a descoberta já entra na fila.
+        $this->ownership->claim($owner, $wanted, 'news');
         $this->ownership->apply($current);
+
+        if (! $wasDiscoverable && $current->refresh()->canDiscover() && Settings::bool('alerts.enabled') && Settings::bool('alerts.discovery_enabled')) {
+            // Depois do commit: a entrevista grava o domínio numa transação.
+            DiscoverDomainStack::dispatch($current->id)->afterCommit();
+        }
     }
 
     /** Domínio trocado ou removido: some com ele o que a descoberta pôs no perfil. */
     private function forgetDomain(AlertProfile $profile): void
     {
-        $profile->domains()->delete();
+        $profile->domains()->get()->each->delete();
         $this->forgetDiscovered($profile);
     }
 

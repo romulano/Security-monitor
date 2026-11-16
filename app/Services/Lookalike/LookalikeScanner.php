@@ -24,8 +24,8 @@ use Throwable;
  * 1. gera as variações do nome (e busca certificados com a marca);
  * 2. confere no DNS quais existem (só DNS: nenhuma página é aberta aqui);
  * 3. dos que existem, lê o registro (RDAP) e a hospedagem;
- * 4. pede ao navegador a visita dos que têm IP público e mudaram ou ficaram
- *    sem print recente;
+ * 4. pede ao navegador a visita dos que têm IP (instalação local, de um dono só: o
+ *    IpGuard não filtra mais por faixa, só formato) e mudaram ou ficaram sem print recente;
  *
  * A completa roda todo dia às `scan_at` (01:00 de Brasília). Os passos 1 e 2 vão em lotes de
  * jobs na fila `lookalikes` (`scanInBatches`: cada lote tem o seu retry e um
@@ -420,7 +420,7 @@ class LookalikeScanner
             $lookalike->rdap_checked_at = now();
         }
 
-        // Hospedagem: dona da faixa do primeiro IP público, quando ele muda.
+        // Hospedagem: dona da faixa do primeiro IP válido, quando ele muda (o IpGuard só confere o formato).
         $firstPublic = fn (LookalikeDomain $d) => collect($d->ips ?? [])->first(fn ($ip) => IpGuard::blockReason($ip) === null);
         $needHosting = $alive->filter(fn (LookalikeDomain $d) => ($ip = $firstPublic($d)) && ($d->hosting['ip'] ?? null) !== $ip);
         $hosting = $this->rdap->ips($needHosting->map($firstPublic)->unique()->values()->all());
@@ -498,7 +498,9 @@ class LookalikeScanner
             $this->note("{$lookalike->host}: IP mudou (".(implode(', ', $previousIps) ?: 'nenhum').' → '.(implode(', ', $ips) ?: 'nenhum').').');
         }
 
-        // Sem IP, ou com IP interno (10.x, 127.x): não há página para abrir.
+        // Sem IP: não há página para abrir. $publicIps só tira o que não é um IP (o IpGuard não
+        // filtra mais faixa privada/interna; instalação local, de um dono só), então na prática
+        // as duas contagens são iguais sempre que $ips vier do DNS.
         if ($ips === [] || count($publicIps) < count($ips)) {
             $lookalike->state = 'no_site';
 

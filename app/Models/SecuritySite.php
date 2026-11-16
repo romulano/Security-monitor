@@ -13,8 +13,12 @@ class SecuritySite extends Model
 {
     protected $guarded = [];
 
-    /** Prefixo do TXT de posse, o mesmo do domínio de cliente (secmon-verify=<token>). */
-    public const TXT_PREFIX = MonitoredDomain::TXT_PREFIX;
+    protected static function booted(): void
+    {
+        // `verify_token` ainda é NOT NULL no banco (a prova de posse saiu do código, a coluna
+        // não foi dropada): sem isso, todo cadastro quebraria na inserção. Nada mais lê o valor.
+        static::creating(fn (self $site) => $site->verify_token ??= 'sem-prova-de-posse');
+    }
 
     protected function casts(): array
     {
@@ -57,17 +61,6 @@ class SecuritySite extends Model
     public function scopeDue(Builder $query): Builder
     {
         return $query->where('enabled', true)->where(fn ($q) => $q->whereNull('next_check_at')->orWhere('next_check_at', '<=', now()));
-    }
-
-    /** O valor do registro TXT que prova a posse do domínio. */
-    public function txtValue(): string
-    {
-        return self::TXT_PREFIX.$this->verify_token;
-    }
-
-    public function isOwned(): bool
-    {
-        return $this->ownership !== null;
     }
 
     /** Já passou do prazo desde a última varredura (ou nunca houve)? O agendador pode ter parado. */

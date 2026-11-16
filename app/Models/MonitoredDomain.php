@@ -12,11 +12,15 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
- * Domínio do cliente: aceite, prova de posse e resultado da descoberta.
- * Com `profile_id`, é o domínio de um alerta de notícias (passo 5); sem ele,
- * é o domínio de um Radar de domínios (entrevista do Radar) ou a cópia da
- * stack de testes de segurança (`pentestDomain`). Esses dois nunca passam pela
- * descoberta de tecnologias.
+ * Domínio do cliente: aceite e resultado da descoberta. Com `profile_id`, é o
+ * domínio de um alerta de notícias (passo 5); sem ele, é o domínio de um Radar
+ * de domínios (entrevista do Radar) ou a cópia da stack de testes de segurança
+ * (`pentestDomain`). Esses dois nunca passam pela descoberta de tecnologias.
+ *
+ * Instalação self-hosted, de um dono só: todo domínio nasce comprovado
+ * (`verified_at`), sem prova por registro TXT no DNS (ver DomainOwnership).
+ * `verify_token` não é mais gerado nem conferido; a coluna continua NOT NULL
+ * no banco, por isso o valor sentinela.
  */
 class MonitoredDomain extends Model implements VisibleThroughRoot
 {
@@ -24,13 +28,26 @@ class MonitoredDomain extends Model implements VisibleThroughRoot
 
     protected static function booted(): void
     {
-        // O domínio de um alerta é do dono do alerta.
         static::creating(function (self $domain) {
+            // O domínio de um alerta é do dono do alerta.
             $domain->user_id ??= $domain->profile_id ? AlertProfile::query()->whereKey($domain->profile_id)->value('user_id') : null;
+            // Instalação de um dono só: nasce comprovado, sem prova por TXT no DNS.
+            $domain->verified_at ??= now();
+            // `verify_token` ainda é NOT NULL no banco; nada mais gera nem confere este valor.
+            $domain->verify_token ??= 'sem-prova-de-posse';
+        });
+
+        // Sem prova por TXT, o registro de posse é só a lista dos domínios em uso: quando o último serviço
+        // solta o nome, ele sai também (e, em cascata, a varredura e as chaves achadas dele em Chaves). O
+        // cadastrado direto em Chaves fica: lá ele é um serviço próprio.
+        static::deleted(function (self $domain) {
+            if ($domain->user_id && ! self::query()->where('user_id', $domain->user_id)->where('domain', $domain->domain)->exists()) {
+                OwnedDomain::query()->where('user_id', $domain->user_id)->where('domain', $domain->domain)
+                    ->where(fn ($q) => $q->whereNull('keys_listing')->orWhere('keys_listing', '!=', OwnedDomain::KEYS_ADDED))
+                    ->delete();
+            }
         });
     }
-
-    public const TXT_PREFIX = 'secmon-verify=';
 
     /** Termos que só autorizavam a página inicial; os seguintes incluem a página de erro e o blog. */
     public const HOME_ONLY_CONSENTS = ['v1'];
@@ -196,16 +213,6 @@ class MonitoredDomain extends Model implements VisibleThroughRoot
     public function allowsMorePages(): bool
     {
         return $this->hasConsent() && ! in_array($this->consent_version, self::HOME_ONLY_CONSENTS, true);
-    }
-
-    public function txtValue(): string
-    {
-        return self::TXT_PREFIX.$this->verify_token;
-    }
-
-    public static function newToken(): string
-    {
-        return bin2hex(random_bytes(8));
     }
 
     public function visibilityRoot(): ?Model

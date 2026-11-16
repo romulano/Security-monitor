@@ -59,7 +59,7 @@ class RobotCatalogTest extends TestCase
             'curl, sem dono' => ['curl/8.5.0', null, 'unknown'],
             'robô fora do catálogo' => ['Mozilla/5.0 (compatible; SomeNewCrawler/0.1; +https://example.net)', null, 'unknown'],
             'sem navegador' => ['', null, 'unknown'],
-            // Qualquer um escreve SecurityMonitorBot: o "nosso" é pelo IP (AccessReport), e o nome sozinho não diz nada.
+            // Qualquer um escreve SecurityMonitorBot: o nome sozinho não diz nada.
             'SecurityMonitorBot de fora' => ['SecurityMonitorBot/1.0 (+https://example.com)', null, 'unknown'],
         ];
     }

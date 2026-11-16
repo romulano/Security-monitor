@@ -5,11 +5,10 @@ namespace Tests\Feature\Security;
 use App\Services\Security\CheckResult;
 use App\Services\Security\SiteScanner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
-/** Arquivos sensíveis: só em site com posse, uma requisição por caminho, só vale com a assinatura do conteúdo. */
+/** Arquivos sensíveis: uma requisição por caminho, só vale com a assinatura do conteúdo. */
 class ExposureCheckTest extends TestCase
 {
     use RefreshDatabase, SecurityTestHelpers;
@@ -91,19 +90,6 @@ class ExposureCheckTest extends TestCase
         );
     }
 
-    public function test_without_proven_ownership_no_sensitive_path_is_requested(): void
-    {
-        // Sem o TXT de posse e sem os IPs do servidor.
-        $this->dns->set('acme.com.br', 'ips', ['104.21.1.1'])->set('acme.com.br', 'txt', ['v=spf1 -all']);
-        $this->fakeWeb();
-
-        $result = $this->exposures()['file.exposed|'];
-
-        $this->assertSame('nao_testavel', $result->status);
-        $this->assertStringContainsString('posse comprovada', $result->value);
-        Http::assertNotSent(fn (Request $r) => preg_match('#/(\.env|\.git|storage|phpinfo|server-status|backup|\.DS_Store)#', $r->url()) === 1);
-    }
-
     public function test_each_path_is_requested_once_with_a_small_read_and_never_followed(): void
     {
         $this->fakeWeb();
@@ -115,12 +101,4 @@ class ExposureCheckTest extends TestCase
         $this->assertContains('https://acme.com.br/.env', $urls);
     }
 
-    public function test_a_blocked_host_makes_the_probe_untestable_without_touching_the_network(): void
-    {
-        $this->dns->set('acme.com.br', 'ips', ['10.0.0.9'])->set('acme.com.br', 'txt', ['secmon-verify=tokentokentokentokentoken']);
-        $this->fakeHttp(['*' => Http::response('não devia ser chamado')]);
-
-        $this->assertSame('nao_testavel', $this->exposures()['file.exposed|']->status);
-        Http::assertNothingSent();
-    }
 }

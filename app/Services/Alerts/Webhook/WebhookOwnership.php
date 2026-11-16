@@ -2,7 +2,6 @@
 
 namespace App\Services\Alerts\Webhook;
 
-use App\Exceptions\ActionRefused;
 use App\Models\MonitoredDomain;
 use App\Models\NotificationChannel;
 use App\Models\OwnedDomain;
@@ -12,18 +11,15 @@ use App\Services\Domains\DomainOwnership;
 use App\Support\RegistrableDomain;
 
 /**
- * A posse do domínio do webhook: o Security Monitor só chama uma URL cujo host a conta
- * comprovou ser dela, pelo registro secmon-verify=<token> no DNS. A posse é a da
- * conta (DomainOwnership), a mesma de Notícias, do Radar, do monitor e dos testes.
+ * A posse do domínio do webhook. A posse é a da conta (DomainOwnership), a mesma de Notícias, do
+ * Radar, do monitor e dos testes: instalação self-hosted, de um dono só, todo domínio nasce
+ * comprovado, sem prova por registro TXT no DNS.
  *
- * - A prova vale para o próprio nome e para os subdomínios dele: quem comprovou
- *   empresa.com.br pode receber em hooks.empresa.com.br.
- * - O que a conta já comprovou em outro serviço vale aqui sem pedir de novo
- *   (proof()). O webhook guarda uma cópia da prova (`domain_id`), que acompanha a
- *   posse da conta (DomainOwnership::sync()): se ela cair, o envio para.
- * - Sem prova, a cópia nasce pendente no domínio principal do host, com o token
- *   da conta, e o botão Verificar procura o TXT (DomainOwnership: o TXT que chega
- *   por um CNAME não vale).
+ * - A prova vale para o próprio nome e para os subdomínios dele: quem cadastrou empresa.com.br pode
+ *   receber em hooks.empresa.com.br.
+ * - O que a conta já cadastrou em outro serviço vale aqui sem pedir de novo (proof()). O webhook
+ *   guarda uma cópia da prova (`domain_id`), que acompanha a posse da conta (DomainOwnership::sync()).
+ * - Sem prova em outro serviço, a cópia nasce no domínio principal do host, já comprovada.
  */
 class WebhookOwnership
 {
@@ -43,67 +39,36 @@ class WebhookOwnership
         return $host === $domain->domain || str_ends_with($host, '.'.$domain->domain);
     }
 
-    /** Onde o cliente põe o TXT quando nada da conta cobre o host: o domínio principal (vale para os subdomínios). */
+    /** Sem prova em outro serviço, a cópia nasce aqui: o domínio principal (vale para os subdomínios). */
     public static function nameFor(string $host): string
     {
         return RegistrableDomain::of($host) ?? $host;
     }
 
     /**
-     * Liga o webhook à prova do host dele: a cópia de uma prova da conta (o webhook fica ativo) ou uma
-     * cópia pendente para o cliente comprovar. A cópia anterior, que não cobre mais o host, sai.
+     * Liga o webhook à prova do host dele: a cópia de uma prova da conta, se houver, ou uma cópia nova
+     * — já comprovada, instalação de um dono só. A cópia anterior, que não cobre mais o host, sai.
      */
     public function attach(NotificationChannel $channel, User $user): void
     {
         $host = (string) $channel->webhook_host;
         $current = $channel->domain;
 
-        if ($current && self::covers($current, $host) && ($current->isVerified() || ! $this->proof($user, $host, $channel))) {
-            $channel->forceFill(['status' => $current->isVerified() ? self::activeStatus($channel) : 'pending'])->save();
+        if ($current && self::covers($current, $host)) {
+            $channel->forceFill(['status' => self::activeStatus($channel)])->save();
 
             return;
         }
 
         $source = $this->proof($user, $host, $channel);
-
         $name = $source?->domain ?? self::nameFor($host);
 
-        $copy = MonitoredDomain::query()->create([
-            'user_id' => $user->id,
-            'domain' => $name,
-            'verify_token' => $source?->proof_token ?? $this->domains->txtToken(DomainOwner::account($user->id), $name),
-            'verified_at' => $source?->verified_at,
-            'verify_checked_at' => $source?->checked_at,
-        ]);
-        $this->domains->claim(DomainOwner::account($user->id), $name, 'webhook', $copy->verify_token);
+        // Com prova de outro serviço, a cópia mostra a mesma data dela, não a de agora.
+        $copy = MonitoredDomain::query()->create(['user_id' => $user->id, 'domain' => $name, 'verified_at' => $source?->verified_at]);
+        $this->domains->claim(DomainOwner::account($user->id), $name, 'webhook');
 
-        $channel->forceFill(['domain_id' => $copy->id, 'status' => $source ? self::activeStatus($channel) : 'pending'])->save();
+        $channel->forceFill(['domain_id' => $copy->id, 'status' => self::activeStatus($channel)])->save();
         $current?->delete();
-    }
-
-    /**
-     * Botão "Verificar": vale a prova que a conta já tem em outro serviço (feita depois do cadastro do
-     * webhook); sem ela, procura o TXT. Sem o TXT, recusa dizendo o que falta (ActionRefused).
-     */
-    public function verify(NotificationChannel $channel, User $user): void
-    {
-        $copy = $channel->domain;
-
-        if (! $copy) {
-            $this->attach($channel, $user);
-
-            return;
-        }
-
-        if (! $copy->isVerified() && ($source = $this->proof($user, (string) $channel->webhook_host, $channel))) {
-            $copy->forceFill(['domain' => $source->domain, 'verify_token' => $source->proof_token, 'verified_at' => $source->verified_at, 'verify_checked_at' => $source->checked_at])->save();
-        } else {
-            $this->domains->confirmRow($copy, 'webhook');
-        }
-
-        if ($channel->status === 'pending') {
-            $channel->forceFill(['status' => 'active'])->save();
-        }
     }
 
     /**
@@ -120,14 +85,6 @@ class WebhookOwnership
         }
 
         return $copy->user_id === $channel->user_id;
-    }
-
-    /** O quadro "Comprove que o domínio é seu" (<x-domain-ownership>), o de todos os serviços, enquanto a prova falta. */
-    public function screen(NotificationChannel $channel): ?array
-    {
-        $copy = $channel->domain;
-
-        return $copy && ! $copy->isVerified() ? $this->domains->screenFor($copy) : null;
     }
 
     /** Comprovado, volta a "conectado"; o que estava parado pelas falhas segue parado até o teste dar certo. */

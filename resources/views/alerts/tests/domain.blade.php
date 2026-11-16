@@ -13,7 +13,6 @@
     use App\Services\Pentest\PentestWindow;
 
     $rule = $consent->rule;
-    $copy = $domain->domain;
     $tz = 'America/Sao_Paulo';
     $box = 'space-y-3 rounded-xl border border-ink-800 bg-ink-900 p-5';
     $title = 'text-[15px] font-semibold text-white';
@@ -23,21 +22,12 @@
     [$label, $tone] = match ($state) {
         'authorized' => ['ativa', 'ok'],
         'expired' => ['vencida', 'neutro'],
-        'ownership_missing' => ['TXT sumiu', 'erro'],
         'suspended' => ['bloqueada pelo Security Monitor', 'erro'],
-        'waiting_ownership' => ['aguardando o TXT', 'alerta'],
         default => ['revogada', 'neutro'],
     };
     // Revogada, nada mais sai desta autorização: sem "Mudar" e sem "Copiar de novo" (a faixa leva a autorizar de novo).
     // Bloqueada, sem "Mudar".
     $changeable = ! in_array($state, ['revoked', 'suspended'], true);
-    $checked = $domain->ownership_checked_at?->timezone($tz)->format('d/m \à\s H:i');
-    [$ownership, $ownershipTone] = match (true) {
-        ! $copy->isVerified() => ['aguardando o TXT', 'alerta'],
-        $domain->ownership_status === 'missing' => ['TXT sumiu'.($checked ? ' · conferido em '.$checked : ''), 'erro'],
-        $domain->ownership_status === 'unknown' => ['DNS sem resposta · conferido em '.$checked, 'alerta'],
-        default => ['TXT no ar'.($checked ? ' · conferido em '.$checked : ''), 'ok'],
-    };
 @endphp
 
 @section('content')
@@ -68,13 +58,6 @@
         </div>
 
         @switch($state)
-            @case('ownership_missing')
-                <section role="alert" class="space-y-1.5 rounded-xl border border-red-900 bg-red-950/40 px-4 py-3.5 text-sm">
-                    <p class="font-semibold text-white">O registro TXT de {{ $domain->host }} não está mais no DNS.</p>
-                    <p class="text-red-100">Nenhum teste começa sem ele. Publique o registro de novo para testar.</p>
-                    <a href="{{ route('alerts.tests.authorize', ['passo' => 2, 'dominio' => $domain->host]) }}" class="inline-flex min-h-11 items-center font-semibold text-red-200 underline">Ver o registro</a>
-                </section>
-                @break
             @case('suspended')
                 <section role="alert" class="space-y-1.5 rounded-xl border border-red-900 bg-red-950/40 px-4 py-3.5 text-sm">
                     <p class="font-semibold text-white">Os testes em {{ $domain->host }} estão bloqueados pelo Security Monitor.</p>
@@ -101,19 +84,13 @@
             <div class="space-y-4">
                 <section class="{{ $box }}">
                     <div class="flex flex-wrap items-center justify-between gap-2">
-                        <h2 class="{{ $title }}">Posse</h2>
-                        @include('alerts.tests.partials.pill', ['pill' => [$ownership, $ownershipTone]])
+                        <h2 class="{{ $title }}">Responsabilidade</h2>
+                        @include('alerts.tests.partials.pill', ['pill' => ['confirmada', 'ok']])
                     </div>
-                    <p class="text-sm text-ink-200">Mantenha o registro no ar: durante o teste conferimos de novo no início, em cada fase e a cada 15 minutos. Se ele sumir, o teste para.</p>
-                    <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                        <dt class="text-ink-400">Tipo</dt><dd class="font-mono text-white">TXT</dd>
-                        <dt class="text-ink-400">Nome</dt><dd class="font-mono text-white">@</dd>
-                        <dt class="text-ink-400">Valor</dt><dd class="font-mono break-all text-white">{{ $copy->txtValue() }}</dd>
-                    </dl>
-                    <form method="POST" action="{{ route('alerts.tests.domains.verify', ['dominio' => $domain->host]) }}">
-                        @csrf
-                        <button class="inline-flex min-h-11 items-center rounded-lg border border-ink-700 px-4 text-sm text-ink-200 hover:border-ink-400 hover:text-white">Conferir agora</button>
-                    </form>
+                    <p class="text-sm text-ink-200">
+                        Instalação de uso próprio, de um dono só: não há prova técnica de posse por registro TXT no DNS.
+                        Você confirmou, no passo 2, em {{ \Illuminate\Support\Carbon::parse($domain->draft['responsibility_ack']['at'] ?? $consent->accepted_at)->timezone($tz)->format('d/m \à\s H:i') }}, que <span class="font-mono">{{ $domain->host }}</span> é seu.
+                    </p>
                 </section>
 
                 <section class="{{ $box }}">
@@ -196,11 +173,8 @@
                 </ol>
             @endif
 
-            {{-- Nova execução: com a chave ligada, a liberação da conta, o aceite em vigor, sem outra ativa e dentro dos limites. --}}
+            {{-- Nova execução: com a chave ligada, a liberação da conta, o aceite em vigor e sem outra ativa. --}}
             @switch($runInfo['start'])
-                @case('limit')
-                    <p class="rounded-lg border border-ink-700 bg-ink-850 px-3.5 py-3 text-sm text-ink-200">Nova execução: {{ lcfirst($runInfo['refusal']) }}</p>
-                    @break
                 @case('form')
                     <div class="space-y-3 border-t border-ink-800 pt-3">
                         <h3 class="text-sm font-semibold text-white">Nova execução</h3>

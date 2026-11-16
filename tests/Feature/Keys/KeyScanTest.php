@@ -105,11 +105,14 @@ class KeyScanTest extends TestCase
     public function test_only_a_proven_domain_is_scanned_and_the_proof_is_checked_again_when_the_job_runs(): void
     {
         Queue::fake();
+        // Instalação de um dono só: todo OwnedDomain nasce comprovado. Para testar o domínio sem prova
+        // (um dado antigo, de antes desta instalação), zera o campo depois de criado.
         $unproven = OwnedDomain::query()->forceCreate(['user_id' => $this->user->id, 'domain' => 'semprova.com.br', 'source' => 'radar']);
-        $this->assertSame('A posse de semprova.com.br não está comprovada: comprove pelo registro TXT antes de varrer.',
+        $unproven->forceFill(['verified_at' => null])->save();
+        $this->assertSame('A posse de semprova.com.br não está comprovada.',
             $this->refused(fn () => app(KeySites::class)->activate($unproven, $this->user)));
 
-        // Comprovado ao pedir; a reconferência perde o TXT antes de o job rodar: nada é pedido ao site.
+        // Comprovado ao pedir; a posse cai (um dado antigo) antes de o job rodar: nada é pedido ao site.
         Http::fake();
         $owned = $this->proven('loja.com.br');
         $site = app(KeySites::class)->activate($owned, $this->user);
@@ -118,7 +121,7 @@ class KeyScanTest extends TestCase
 
         Http::assertNothingSent();
         $site->refresh();
-        $this->assertSame(['idle', 'failed', 'A posse do domínio não está mais comprovada: publique o registro TXT de novo.'], [$site->scan_status, $site->last_result, $site->last_error]);
+        $this->assertSame(['idle', 'failed', 'A posse do domínio não está mais comprovada.'], [$site->scan_status, $site->last_result, $site->last_error]);
     }
 
     public function test_varrer_agora_waits_for_the_last_one_and_for_30_minutes(): void

@@ -130,18 +130,6 @@ class MultipleAlertsTest extends TestCase
             ->assertSee('Android flaw')->assertDontSee('Nginx flaw');
     }
 
-    public function test_limit_of_alerts_per_client(): void
-    {
-        $user = $this->client();
-
-        foreach (range(1, AlertProfile::MAX_PER_USER) as $i) {
-            AlertProfile::query()->create(['user_id' => $user->id, 'status' => 'draft']);
-        }
-
-        $this->actingAs($user)->post(route('alerts.store'))->assertSessionHas('error');
-        $this->assertSame(AlertProfile::MAX_PER_USER, $user->alertProfiles()->count());
-    }
-
     public function test_one_slack_message_when_two_alerts_of_the_client_match_the_same_case(): void
     {
         $user = $this->client();
@@ -174,22 +162,5 @@ class MultipleAlertsTest extends TestCase
 
         $payload = json_encode(NotificationDelivery::query()->sole()->payload, JSON_UNESCAPED_UNICODE);
         $this->assertStringNotContainsString('Alerta *', $payload);
-    }
-
-    public function test_admin_sees_each_alert_of_the_client_and_acts_on_the_chosen_one(): void
-    {
-        $user = $this->client();
-        $store = $this->profile($user, ['name' => 'Loja virtual']);
-        $app = $this->profile($user, ['name' => 'App', 'company_name' => 'Acme App']);
-        $admin = $this->adminUser();
-
-        $this->actingAs($admin)->get(route('admin.alerts.client', $user))->assertOk()
-            ->assertSee('Loja virtual')->assertSee('App');
-        $this->get(route('admin.alerts.client', [$user, 'alerta' => $app->id]))->assertOk()
-            ->assertSee(route('admin.alerts.client.pause', [$user, 'alerta' => $app->id]), false);
-        $this->get(route('admin.alerts.clients'))->assertOk()->assertSee('2 alertas');
-
-        $this->post(route('admin.alerts.client.pause', [$user, 'alerta' => $app->id]))->assertSessionHas('status');
-        $this->assertSame(['active', 'paused'], [$store->refresh()->status, $app->refresh()->status]);
     }
 }

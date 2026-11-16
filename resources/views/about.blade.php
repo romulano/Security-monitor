@@ -11,15 +11,6 @@
 
     $sweep = $lastSweep?->copy()->timezone('America/Sao_Paulo');
 
-    // $log vem do diário de bordo que o admin edita (Admin → Diário de bordo):
-    // [data, título, texto], do mais antigo ao mais novo.
-    // O diário mostra no máximo 5 itens, o último sempre "Próxima missão".
-    // Quando os registros não cabem, o primeiro item vira "ver mais" e guarda
-    // os mais antigos.
-    $logSlots = 4;
-    $logRecent = count($log) > $logSlots ? array_slice($log, -($logSlots - 1)) : $log;
-    $logOlder = array_slice($log, 0, count($log) - count($logRecent));
-
     // Unidades confidenciais: só a largura das tarjas muda de uma para outra.
     $classified = [
         ['02', [110], [150, 90], 'cl'],
@@ -174,48 +165,12 @@
         <div class="mx-auto max-w-6xl px-4">
             <div class="flex items-baseline gap-3.5"><span class="{{ $eyebrow }}">01 — A missão</span><span class="h-px flex-1 bg-ink-800"></span></div>
 
-            <div class="mt-2 grid gap-10 md:grid-cols-[1.15fr_1fr] md:gap-16">
-                <div>
-                    <h2 class="{{ $h2 }}">Por que o Security Monitor foi lançado</h2>
-                    <div class="mt-4 space-y-4 text-[16.5px] leading-[1.75]">
-                        <p>Toda manhã, quem defende uma empresa enfrenta o mesmo problema: centenas de notícias de segurança espalhadas por dezenas de sites, quase todas em inglês, repetindo o mesmo incidente com títulos diferentes. Separar o que é crítico do que é ruído toma horas, e o que importa costuma chegar tarde.</p>
-                        <p>O Security Monitor nasceu para encurtar esse caminho. Em vez de mais um site para ler, um satélite que lê todos por você, junta as versões da mesma história e entrega um relatório só, em português ou em inglês.</p>
-                        <p class="text-ink-400">O nome diz o serviço: um monitor de segurança que fica de guarda lá em cima, lendo tudo, para que a vigília não precise ser sua.</p>
-                    </div>
-                </div>
-
-                <div class="self-start rounded-xl border border-ink-800 bg-ink-900 px-6.5 py-6 md:mt-8">
-                    <h3 class="{{ $label }}">Diário de bordo</h3>
-                    <ol class="relative mt-4.5 space-y-5 before:absolute before:top-1.5 before:bottom-1.5 before:left-1 before:w-px before:bg-ink-700">
-                        @if ($logOlder)
-                            <li>
-                                <details class="group">
-                                    {{-- Mesma cara de um registro: a bolinha e, no lugar da data, "ver mais". --}}
-                                    <summary class="relative cursor-pointer list-none pl-6.5 [&::-webkit-details-marker]:hidden">
-                                        <span class="absolute top-1 left-0 size-2.5 rounded-full border-[1.5px] border-accent bg-ink-950"></span>
-                                        <p class="font-mono text-[11.5px] tracking-wide text-accent hover:underline">
-                                            <span class="group-open:hidden">ver mais</span>
-                                            <span class="hidden group-open:inline">ver menos</span>
-                                        </p>
-                                    </summary>
-                                    <ol class="mt-5 space-y-5">
-                                        @foreach ($logOlder as [$date, $title, $text])
-                                            <x-log-entry :date="$date" :title="$title" :text="$text" />
-                                        @endforeach
-                                    </ol>
-                                </details>
-                            </li>
-                        @endif
-                        @foreach ($logRecent as [$date, $title, $text])
-                            <x-log-entry :date="$date" :title="$title" :text="$text" />
-                        @endforeach
-                        <li class="relative pl-6.5">
-                            <span class="absolute top-1 left-0 size-2.5 rounded-full border-[1.5px] border-ink-700 bg-ink-950"></span>
-                            <p class="font-mono text-[11.5px] tracking-wide text-ink-400"><span class="redact-bar w-5"></span>.<span class="redact-bar w-5"></span>.2026</p>
-                            <p class="mt-1 text-[15px] font-semibold text-white">Próxima missão</p>
-                            <p class="mt-1 text-sm"><span class="redact-bar w-52"></span> <span class="redact-bar w-22"></span></p>
-                        </li>
-                    </ol>
+            <div class="mt-2 max-w-[760px]">
+                <h2 class="{{ $h2 }}">Por que o Security Monitor foi lançado</h2>
+                <div class="mt-4 space-y-4 text-[16.5px] leading-[1.75]">
+                    <p>Toda manhã, quem defende uma empresa enfrenta o mesmo problema: centenas de notícias de segurança espalhadas por dezenas de sites, quase todas em inglês, repetindo o mesmo incidente com títulos diferentes. Separar o que é crítico do que é ruído toma horas, e o que importa costuma chegar tarde.</p>
+                    <p>O Security Monitor nasceu para encurtar esse caminho. Em vez de mais um site para ler, um satélite que lê todos por você, junta as versões da mesma história e entrega um relatório só, em português ou em inglês.</p>
+                    <p class="text-ink-400">O nome diz o serviço: um monitor de segurança que fica de guarda lá em cima, lendo tudo, para que a vigília não precise ser sua.</p>
                 </div>
             </div>
         </div>

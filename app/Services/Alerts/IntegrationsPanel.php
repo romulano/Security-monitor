@@ -46,8 +46,8 @@ class IntegrationsPanel
             'draftManaged' => ($draft = $profiles->whereNull('completed_at')->first()) !== null
                 && AlertProfile::query()->manageableBy($user)->whereKey($draft->id)->exists(),
             'watches' => $watches,
-            // Quem pode criar (a pessoal, a admin, quem responde por um setor) e ainda cabe no limite de quem cria (E2d1).
-            'canAddWatch' => $this->radar->mayCreate($user) && ! $user->reachedRadarLimit(),
+            // Quem pode criar: a pessoal, a admin, quem responde por um setor (E2d1).
+            'canAddWatch' => $this->radar->mayCreate($user),
             // O rascunho que a conta continua: só o de um Radar que ela configura (o membro não entra na entrevista).
             'radarDraft' => LookalikeWatch::query()->manageableBy($user)->whereNull('completed_at')->oldest('id')->first(),
             // Domínio comprovado em Notícias que ainda não tem Radar: o passo 1 do Radar oferece reaproveitar.

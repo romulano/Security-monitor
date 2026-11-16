@@ -18,7 +18,7 @@ use InvalidArgumentException;
 use Throwable;
 
 /**
- * /alertas/webhooks: cadastrar, mudar e excluir os webhooks da conta (até 5), cada
+ * /alertas/webhooks: cadastrar, mudar e excluir os webhooks da conta, cada
  * um com nome, URL, segredo, tipos, pausa e as preferências de envio dos outros apps.
  *
  * O segredo gerado aparece uma vez só, logo depois de criado: vai para a próxima
@@ -31,16 +31,10 @@ class WebhookConnector
 
     public function __construct(private ChannelSettings $settings, private WebhookOwnership $ownership, private Notifier $notifier) {}
 
-    public static function max(): int
-    {
-        return (int) config('secmon.alerts.webhook.max_per_user', 5);
-    }
-
-    /** A tela de cadastro: quantos ainda cabem e os domínios já comprovados (valem sem pedir de novo). */
+    /** A tela de cadastro: os domínios já comprovados (valem sem pedir de novo). */
     public function newPage(User $user): array
     {
         return [
-            'left' => max(0, self::max() - $user->webhooks()->count()),
             'proven' => DomainOwner::account($user->id)->copies(MonitoredDomain::query())
                 ->whereNotNull('verified_at')->orderBy('domain')->pluck('domain')->unique()->values(),
             'events' => MessageBuilder::EVENTS,
@@ -53,7 +47,6 @@ class WebhookConnector
     public function page(User $user, NotificationChannel $channel, Session $session): array
     {
         return $this->settings->page($user, $channel, false) + [
-            'ownership' => $this->ownership->screen($channel),
             'secret' => $this->revealSecret($session, $channel),
             'events' => MessageBuilder::EVENTS,
             'example' => WebhookExample::json(),
@@ -63,8 +56,8 @@ class WebhookConnector
     }
 
     /**
-     * Cadastra o webhook, já ligado à prova do domínio: ativo quando a conta já comprovou o domínio, pendente
-     * (nada sai, nem o teste) até o cliente comprovar. `$auth`: `gerar`, `escolher` (`$secret`) ou `nenhuma`.
+     * Cadastra o webhook, já ligado à prova do domínio (instalação de um dono só: já comprovado,
+     * nunca pendente). `$auth`: `gerar`, `escolher` (`$secret`) ou `nenhuma`.
      */
     public function create(User $user, string $name, string $url, string $auth, ?string $secret, Session $session): NotificationChannel
     {
@@ -72,12 +65,8 @@ class WebhookConnector
         $name = self::name($name);
         $secret = self::secretFor($auth, $secret);
         $channel = DB::transaction(function () use ($user, $name, $url, $host, $secret) {
-            // A conta travada: dois cadastros ao mesmo tempo não passam do limite.
+            // A conta travada: dois cadastros ao mesmo tempo não duplicam nome, URL ou segredo.
             User::query()->whereKey($user->id)->lockForUpdate()->first();
-
-            if ($user->webhooks()->count() >= self::max()) {
-                throw new ActionRefused('Você chegou ao limite de '.self::max().' webhooks. Exclua um para cadastrar outro.');
-            }
 
             $this->ensureUnique($user, null, $name, $url, $secret);
 
@@ -144,12 +133,6 @@ class WebhookConnector
         if ($auth === 'gerar') {
             $this->flashSecret($session, $channel, (string) $secret);
         }
-    }
-
-    /** Botão "Verificar": a posse do domínio (WebhookOwnership); sem o TXT, recusa dizendo o que falta. */
-    public function verify(NotificationChannel $channel, User $user): void
-    {
-        $this->ownership->verify($channel, $user);
     }
 
     /** "Enviar teste": só com o domínio comprovado. Antes disso o Security Monitor não chama o endereço. */

@@ -39,7 +39,7 @@
     $cell = fn (int $i) => count($types) === 4
         ? [0 => '', 1 => 'border-t border-ink-800 sm:border-t-0 sm:border-l', 2 => 'border-t border-ink-800', 3 => 'border-t border-ink-800 sm:border-l'][$i]
         : ($i === 0 ? '' : 'border-t border-ink-800 sm:border-t-0 sm:border-l');
-    // App ainda não conectado: o que ele oferece e onde conectar. O webhook continua aqui até o limite.
+    // App ainda não conectado: o que ele oferece e onde conectar. O webhook continua aqui sempre (a conta pode ter vários).
     $offers = [
         'slack' => ['Alertas na hora e resumo diário num canal do seu workspace.', route('alerts.slack')],
         'discord' => ['Numa mensagem direta, só para você, ou num canal do servidor, para a equipe toda.', route('alerts.discord')],
@@ -188,7 +188,7 @@
                                 <div class="min-w-0 flex-1">
                                     <p class="text-lg font-semibold text-white">{{ $another ? 'Outro webhook' : \App\Models\NotificationChannel::APPS[$type] }}</p>
                                     <span class="mt-0.5 inline-flex items-center gap-1.5 rounded-full border border-ink-700 bg-ink-850 px-2.5 py-0.5 text-xs whitespace-nowrap text-ink-400">
-                                        <span class="size-1.5 rounded-full bg-ink-400"></span>{{ $another ? $webhooks.' de '.\App\Services\Alerts\Webhook\WebhookConnector::max() : 'não conectado' }}
+                                        <span class="size-1.5 rounded-full bg-ink-400"></span>{{ $another ? $webhooks.' '.($webhooks === 1 ? 'conectado' : 'conectados') : 'não conectado' }}
                                     </span>
                                 </div>
                                 @if ($missing->count() > 1)

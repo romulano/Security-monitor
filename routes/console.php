@@ -28,13 +28,8 @@ Schedule::command('secmon:alerts-flush')
     ->everyFiveMinutes()
     ->withoutOverlapping(10);
 
-// A posse de domínio (a mesma para todos os serviços da conta): o TXT de quem espera a prova é
-// conferido a cada 10 minutos (por 72 h), e cada posse comprovada, uma vez por dia (some por 7 dias,
-// cai). A descoberta passiva se repete quando a próxima execução vence.
-Schedule::command('secmon:alerts-verify-domains')
-    ->everyTenMinutes()
-    ->withoutOverlapping(10);
-
+// Instalação de um dono só: todo domínio nasce comprovado (DomainOwnership), sem reconferência de
+// TXT no DNS. A descoberta passiva se repete quando a próxima execução vence.
 Schedule::command('secmon:alerts-discover --due')
     ->dailyAt('03:00')
     ->withoutOverlapping(60);

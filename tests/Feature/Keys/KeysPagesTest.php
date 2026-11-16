@@ -42,7 +42,10 @@ class KeysPagesTest extends TestCase
     public function test_only_proven_domains_are_listed_and_activating_queues_the_first_scan(): void
     {
         $owned = $this->proven('loja.com.br');
-        OwnedDomain::query()->forceCreate(['user_id' => $this->user->id, 'domain' => 'semprova.com.br', 'source' => 'radar']);
+        // Instalação de um dono só: todo OwnedDomain nasce comprovado. Para testar o domínio sem prova
+        // (um dado antigo, de antes desta instalação), zera o campo depois de criado.
+        OwnedDomain::query()->forceCreate(['user_id' => $this->user->id, 'domain' => 'semprova.com.br', 'source' => 'radar'])
+            ->forceFill(['verified_at' => null])->save();
 
         $this->actingAs($this->user)->get(route('alerts.integrations'))->assertOk()
             ->assertSee('data-source="keys"', false)
@@ -52,7 +55,7 @@ class KeysPagesTest extends TestCase
         $this->get(route('alerts.keys'))->assertOk()
             ->assertSee('loja.com.br')
             ->assertDontSee('semprova.com.br')
-            ->assertSee('Posse comprovada no Radar de domínios.')
+            ->assertSee('Cadastrado no Radar de domínios.')
             ->assertSee('Ativar e varrer');
         $this->get(route('alerts.keys.domain', ['dominio' => 'semprova.com.br']))->assertNotFound();
         $this->post(route('alerts.keys.scan', ['dominio' => 'semprova.com.br']))->assertNotFound();
@@ -162,12 +165,12 @@ class KeysPagesTest extends TestCase
         $this->actingAs($this->client())->put(route('alerts.keys.paths', ['dominio' => 'loja.com.br']), ['paths' => '/x'])->assertNotFound();
     }
 
-    public function test_without_a_proven_domain_the_page_says_how_to_prove_one(): void
+    public function test_without_a_domain_the_page_offers_to_add_one(): void
     {
         $this->actingAs($this->user)->get(route('alerts.keys'))->assertOk()
-            ->assertSee('Nenhum domínio comprovado na sua conta.')
-            ->assertSee('href="'.route('alerts.lookalikes.interview', ['passo' => 1]).'"', false);
-        $this->get(route('alerts.integrations'))->assertSee('sem domínio comprovado');
+            ->assertSee('Nenhum domínio ainda.')
+            ->assertSee('action="'.route('alerts.keys.store').'"', false);
+        $this->get(route('alerts.integrations'))->assertSee('sem domínio');
     }
 
     public function test_the_security_tests_domain_page_points_to_the_keys_area(): void

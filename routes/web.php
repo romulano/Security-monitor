@@ -4,12 +4,6 @@ use App\Http\Controllers\Admin\Alerts\Catalog\ShowCatalogController;
 use App\Http\Controllers\Admin\Alerts\Catalog\StoreTechController;
 use App\Http\Controllers\Admin\Alerts\Catalog\ToggleTechController;
 use App\Http\Controllers\Admin\Alerts\Catalog\UpdateTechController;
-use App\Http\Controllers\Admin\Alerts\Clients\ListClientsController;
-use App\Http\Controllers\Admin\Alerts\Clients\RecompileClientController;
-use App\Http\Controllers\Admin\Alerts\Clients\ShowClientController;
-use App\Http\Controllers\Admin\Alerts\Clients\TestClientController;
-use App\Http\Controllers\Admin\Alerts\Clients\ToggleClientPauseController;
-use App\Http\Controllers\Admin\Alerts\Clients\UpdateClientTechController;
 use App\Http\Controllers\Admin\Alerts\CustomAnswers\ListCustomAnswersController;
 use App\Http\Controllers\Admin\Alerts\CustomAnswers\RegenerateCustomAnswerController;
 use App\Http\Controllers\Admin\Alerts\CustomAnswers\UpdateCustomAnswerController;
@@ -35,25 +29,6 @@ use App\Http\Controllers\Admin\Articles\UpdateArticleTextController;
 use App\Http\Controllers\Admin\Cases\DestroyCaseController;
 use App\Http\Controllers\Admin\Cases\ReindexCasesController;
 use App\Http\Controllers\Admin\Cases\ToggleCaseVisibilityController;
-use App\Http\Controllers\Admin\Emails\SendTestEmailController;
-use App\Http\Controllers\Admin\Emails\ShowEmailsController;
-use App\Http\Controllers\Admin\Logbook\DestroyLogEntryController;
-use App\Http\Controllers\Admin\Logbook\ListLogEntriesController;
-use App\Http\Controllers\Admin\Logbook\StoreLogEntryController;
-use App\Http\Controllers\Admin\Logbook\UpdateLogEntryController;
-use App\Http\Controllers\Admin\Monitoring\AddMyAddressController;
-use App\Http\Controllers\Admin\Monitoring\AddOwnAddressController;
-use App\Http\Controllers\Admin\Monitoring\DestroyAccessController;
-use App\Http\Controllers\Admin\Monitoring\DestroyAccessesByIpController;
-use App\Http\Controllers\Admin\Monitoring\ShowAccessAttacksController;
-use App\Http\Controllers\Admin\Monitoring\ShowAccessesController;
-use App\Http\Controllers\Admin\Monitoring\ShowAccessIpController;
-use App\Http\Controllers\Admin\Monitoring\ShowAccessOriginsController;
-use App\Http\Controllers\Admin\Monitoring\ShowAccessRobotsController;
-use App\Http\Controllers\Admin\Monitoring\ShowAccessSettingsController;
-use App\Http\Controllers\Admin\Monitoring\ToggleAccessMonitoringController;
-use App\Http\Controllers\Admin\Monitoring\UpdateOwnAddressesController;
-use App\Http\Controllers\Admin\Pentest\AllowPentestRetestController;
 use App\Http\Controllers\Admin\Pentest\ListAdminPentestRunsController;
 use App\Http\Controllers\Admin\Pentest\PauseAdminPentestRunController;
 use App\Http\Controllers\Admin\Pentest\ResumeAdminPentestRunController;
@@ -76,7 +51,6 @@ use App\Http\Controllers\Admin\Queue\RetryFailedJobsController;
 use App\Http\Controllers\Admin\Queue\ShowQueueController;
 use App\Http\Controllers\Admin\Security\DestroySecuritySiteController;
 use App\Http\Controllers\Admin\Security\ListSecuritySitesController;
-use App\Http\Controllers\Admin\Security\RecheckSecurityOwnershipController;
 use App\Http\Controllers\Admin\Security\RunSecurityScanController;
 use App\Http\Controllers\Admin\Security\ShowSecuritySiteController;
 use App\Http\Controllers\Admin\Security\StoreSecuritySiteController;
@@ -92,8 +66,6 @@ use App\Http\Controllers\Admin\Sources\RunSourceController;
 use App\Http\Controllers\Admin\Sources\StoreSourceController;
 use App\Http\Controllers\Admin\Sources\ToggleSourceController;
 use App\Http\Controllers\Admin\Sources\UpdateSourceController;
-use App\Http\Controllers\Admin\Users\DestroyUserController;
-use App\Http\Controllers\Admin\Users\ListUsersController;
 use App\Http\Controllers\Alerts\Center\ToggleChannelPauseController;
 use App\Http\Controllers\Alerts\Center\UpdateAlertCenterController;
 use App\Http\Controllers\Alerts\DestroyAlertController;
@@ -108,7 +80,6 @@ use App\Http\Controllers\Alerts\Discord\UpdateDiscordController;
 use App\Http\Controllers\Alerts\Domain\DecideDnsSuggestionsController;
 use App\Http\Controllers\Alerts\Domain\DecideFindingController;
 use App\Http\Controllers\Alerts\Domain\RerunDomainWallsController;
-use App\Http\Controllers\Alerts\Domain\VerifyDomainController;
 use App\Http\Controllers\Alerts\Github\DestroyGithubMonitorController;
 use App\Http\Controllers\Alerts\Github\FinishGithubInterviewController;
 use App\Http\Controllers\Alerts\Github\ResendGithubFindingController;
@@ -125,11 +96,13 @@ use App\Http\Controllers\Alerts\Interview\FinishInterviewController;
 use App\Http\Controllers\Alerts\Interview\ShowInterviewStepController;
 use App\Http\Controllers\Alerts\Interview\UpdateInterviewStepController;
 use App\Http\Controllers\Alerts\Keys\ClassifyExposedKeyController;
+use App\Http\Controllers\Alerts\Keys\DestroyKeyDomainController;
 use App\Http\Controllers\Alerts\Keys\PauseKeyDomainController;
 use App\Http\Controllers\Alerts\Keys\ResumeKeyDomainController;
 use App\Http\Controllers\Alerts\Keys\ScanKeyDomainController;
 use App\Http\Controllers\Alerts\Keys\ShowKeyDomainController;
 use App\Http\Controllers\Alerts\Keys\ShowKeysController;
+use App\Http\Controllers\Alerts\Keys\StoreKeyDomainController;
 use App\Http\Controllers\Alerts\Keys\UpdateKeyDomainPathsController;
 use App\Http\Controllers\Alerts\Lookalikes\ActivateRadarController;
 use App\Http\Controllers\Alerts\Lookalikes\DestroyRadarController;
@@ -147,7 +120,6 @@ use App\Http\Controllers\Alerts\Lookalikes\StoreLookalikeVerdictController;
 use App\Http\Controllers\Alerts\Lookalikes\ToggleAbuseReportController;
 use App\Http\Controllers\Alerts\Lookalikes\ToggleLookalikesPauseController;
 use App\Http\Controllers\Alerts\Lookalikes\UpdateRadarInterviewStepController;
-use App\Http\Controllers\Alerts\Lookalikes\VerifyRadarDomainController;
 use App\Http\Controllers\Alerts\News\ShowNewsController;
 use App\Http\Controllers\Alerts\ReadAlertCaseController;
 use App\Http\Controllers\Alerts\ResendAlertController;
@@ -189,7 +161,6 @@ use App\Http\Controllers\Alerts\Tests\StartPentestRunController;
 use App\Http\Controllers\Alerts\Tests\StopPentestRunController;
 use App\Http\Controllers\Alerts\Tests\StorePentestDomainController;
 use App\Http\Controllers\Alerts\Tests\UpdatePentestStepController;
-use App\Http\Controllers\Alerts\Tests\VerifyPentestDomainController;
 use App\Http\Controllers\Alerts\ToggleAlertPauseController;
 use App\Http\Controllers\Alerts\Webhooks\DestroyWebhookController;
 use App\Http\Controllers\Alerts\Webhooks\ShowNewWebhookController;
@@ -199,14 +170,12 @@ use App\Http\Controllers\Alerts\Webhooks\TestWebhookController;
 use App\Http\Controllers\Alerts\Webhooks\UpdateWebhookController;
 use App\Http\Controllers\Alerts\Webhooks\UpdateWebhookEndpointController;
 use App\Http\Controllers\Alerts\Webhooks\UpdateWebhookSecretController;
-use App\Http\Controllers\Alerts\Webhooks\VerifyWebhookDomainController;
 use App\Http\Controllers\Site\ShowAboutController;
 use App\Http\Controllers\Site\ShowCaseController;
 use App\Http\Controllers\Site\ShowDashboardController;
 use App\Http\Controllers\Site\ShowFeedController;
 use App\Http\Controllers\Site\ShowSecurityTxtController;
 use App\Http\Controllers\Site\ShowSitemapController;
-use App\Http\Controllers\Site\StorePageViewDurationController;
 use App\Http\Controllers\Site\SwitchLanguageController;
 use App\Services\Github\GithubFeedback;
 use App\Services\Lookalike\AbuseKit;
@@ -231,8 +200,6 @@ Route::get('/security.txt', RedirectController::class)->defaults('destination', 
 Route::get('/sitemap.xml', ShowSitemapController::class)->withoutMiddleware('web')->name('sitemap');
 Route::get('/sitemap-{part}.xml', ShowSitemapController::class)->whereNumber('part')->withoutMiddleware('web')->name('sitemap.part');
 Route::get('/materia/{uuid}', ShowCaseController::class)->whereUuid('uuid')->name('feed.show');
-// Admin → Acessos: o navegador manda, ao sair, quanto tempo a página ficou aberta.
-Route::post('/acessos/tempo', StorePageViewDurationController::class)->middleware('throttle:60,1')->name('page-views.duration');
 Route::get('/idioma/{lang}', SwitchLanguageController::class)
     ->whereIn('lang', array_keys(ReportLanguage::LABELS))
     ->name('report-lang');
@@ -312,10 +279,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/webhooks/{webhook}', DestroyWebhookController::class)->whereNumber('webhook')->name('webhooks.destroy');
         Route::put('/webhooks/{webhook}/endereco', UpdateWebhookEndpointController::class)->whereNumber('webhook')->middleware('throttle:10,1,webhook-endereco')->name('webhooks.endpoint');
         Route::put('/webhooks/{webhook}/autenticacao', UpdateWebhookSecretController::class)->whereNumber('webhook')->middleware('throttle:10,1,webhook-segredo')->name('webhooks.secret');
-        Route::post('/webhooks/{webhook}/verificar', VerifyWebhookDomainController::class)->whereNumber('webhook')->middleware('throttle:6,1,webhook-posse')->name('webhooks.verify');
         Route::post('/webhooks/{webhook}/teste', TestWebhookController::class)->whereNumber('webhook')->middleware('throttle:3,1,webhook-teste')->name('webhooks.test');
 
-        Route::post('/dominio/verificar', VerifyDomainController::class)->middleware('throttle:6,1,noticias-posse')->name('domain.verify');
         Route::post('/dominio/rodar', RerunDomainWallsController::class)->middleware('throttle:6,1,noticias-reler')->name('domain.rerun');
         Route::post('/dominio/sugestoes', DecideDnsSuggestionsController::class)->middleware('throttle:20,1,noticias-sugestoes')->name('domain.suggestions');
         Route::post('/sugestoes/{finding}/{acao}', DecideFindingController::class)
@@ -326,7 +291,6 @@ Route::middleware('auth')->group(function () {
         Route::delete('/radar-de-dominios', DestroyRadarController::class)->name('lookalikes.destroy');
         Route::get('/radar-de-dominios/entrevista/{passo}', ShowRadarInterviewStepController::class)->whereNumber('passo')->name('lookalikes.interview');
         Route::put('/radar-de-dominios/entrevista/{passo}', UpdateRadarInterviewStepController::class)->whereNumber('passo')->middleware('throttle:30,1,radar-entrevista')->name('lookalikes.interview.update');
-        Route::post('/radar-de-dominios/entrevista/verificar', VerifyRadarDomainController::class)->middleware('throttle:6,1,radar-posse')->name('lookalikes.interview.verify');
         Route::post('/radar-de-dominios/entrevista/ativar', ActivateRadarController::class)->middleware('throttle:10,1,radar-ativar')->name('lookalikes.interview.activate');
         Route::post('/radar-de-dominios/verificar', ScanLookalikesNowController::class)->middleware('throttle:6,1,radar-varredura')->name('lookalikes.scan');
         Route::post('/radar-de-dominios/pausar', ToggleLookalikesPauseController::class)->name('lookalikes.pause');
@@ -352,27 +316,28 @@ Route::middleware('auth')->group(function () {
         Route::post('/github/{finding}/avaliar', StoreGithubFeedbackController::class)->whereNumber('finding')->middleware('throttle:30,1,github-avaliar')->name('github.feedback');
         Route::post('/github/{finding}/enviar', ResendGithubFindingController::class)->whereNumber('finding')->middleware('throttle:10,1,github-reenviar')->name('github.resend');
 
-        // Chaves expostas: a varredura só de leitura dos domínios comprovados (a posse é a autorização) e a decisão do dono
-        // sobre cada chave. Ver basta ver o domínio; varrer, pausar e decidir pedem configurá-lo (KeyDomainRequest).
+        // Chaves expostas: os domínios dos outros serviços mais os cadastrados aqui, a varredura só de leitura de cada um e a
+        // decisão do dono sobre cada chave. Ver basta ver o domínio; varrer, pausar, decidir e remover pedem configurá-lo.
         Route::get('/chaves', ShowKeysController::class)->name('keys');
+        Route::post('/chaves', StoreKeyDomainController::class)->middleware('throttle:20,1,chaves-cadastrar')->name('keys.store');
         Route::get('/chaves/{dominio}', ShowKeyDomainController::class)->name('keys.domain');
+        Route::delete('/chaves/{dominio}', DestroyKeyDomainController::class)->middleware('throttle:20,1,chaves-remover')->name('keys.destroy');
         Route::post('/chaves/{dominio}/varrer', ScanKeyDomainController::class)->middleware('throttle:10,1,chaves-varrer')->name('keys.scan');
         Route::post('/chaves/{dominio}/pausar', PauseKeyDomainController::class)->middleware('throttle:20,1,chaves-pausar')->name('keys.pause');
         Route::post('/chaves/{dominio}/retomar', ResumeKeyDomainController::class)->middleware('throttle:20,1,chaves-retomar')->name('keys.resume');
         Route::put('/chaves/{dominio}/enderecos', UpdateKeyDomainPathsController::class)->middleware('throttle:20,1,chaves-enderecos')->name('keys.paths');
         Route::put('/chaves/{dominio}/{chave}', ClassifyExposedKeyController::class)->whereNumber('chave')->middleware('throttle:60,1,chaves-decidir')->name('keys.classify');
 
-        // Testes de segurança (teste ativo, só com autorização): a lista, os passos da autorização, a posse e
+        // Testes de segurança (teste ativo, só com autorização): a lista, os passos da autorização e
         // a página de cada domínio. O domínio vai pelo nome. Cada limite tem o seu contador (o 3º parâmetro):
         // sem ele, todo `throttle:N,M` da conta soma no mesmo, e gravar os passos em sequência esgotava o
-        // "Verificar agora".
+        // de outro.
         Route::get('/testes', ShowPentestController::class)->name('tests');
         Route::get('/testes/dominios/{dominio}', ShowPentestDomainController::class)->name('tests.domains.show');
         Route::get('/testes/dominios/{dominio}/termo', ShowPentestConsentController::class)->name('tests.domains.consent');
         Route::get('/testes/autorizar/{passo}', ShowPentestStepController::class)->whereNumber('passo')->name('tests.authorize');
         Route::put('/testes/autorizar/{passo}', UpdatePentestStepController::class)->whereNumber('passo')->middleware('throttle:30,1,pentest-passos')->name('tests.authorize.update');
         Route::post('/testes/dominios', StorePentestDomainController::class)->middleware('throttle:10,1,pentest-dominios')->name('tests.domains.store');
-        Route::post('/testes/dominios/{dominio}/verificar', VerifyPentestDomainController::class)->middleware('throttle:6,1,pentest-posse')->name('tests.domains.verify');
         Route::post('/testes/dominios/{dominio}/termo', AcceptPentestConsentController::class)->middleware(['pentest.domain:7', 'throttle:10,1,pentest-aceite'])->name('tests.domains.accept');
         // "Nova execução"; pausar e retomar, cada um com o seu limite.
         Route::post('/testes/dominios/{dominio}/execucoes', StartPentestRunController::class)->middleware(['pentest.domain', 'throttle:3,1,pentest-execucoes'])->name('tests.runs.store');
@@ -478,13 +443,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::post('/enviar-resumos', SendDigestsController::class)->name('send-digests');
         Route::post('/recompilar', RecompileProfilesController::class)->name('recompile');
 
-        Route::get('/clientes', ListClientsController::class)->name('clients');
-        Route::get('/clientes/{user}', ShowClientController::class)->name('client');
-        Route::post('/clientes/{user}/pausar', ToggleClientPauseController::class)->name('client.pause');
-        Route::post('/clientes/{user}/teste', TestClientController::class)->middleware('throttle:10,1,admin-cliente-teste')->name('client.test');
-        Route::post('/clientes/{user}/recompilar', RecompileClientController::class)->name('client.recompile');
-        Route::post('/clientes/{user}/tecnologia', UpdateClientTechController::class)->name('client.tech');
-
         Route::get('/entregas', ListDeliveriesController::class)->name('deliveries');
         Route::post('/entregas/{delivery}/reenviar', RetryDeliveryController::class)->name('deliveries.retry');
 
@@ -519,50 +477,13 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::post('/revisoes/{revision}/restaurar', RestorePromptRevisionController::class)->name('restore');
     });
 
-    // Diário de bordo da /sobre: criar, editar e remover os registros.
-    Route::get('/diario-de-bordo', ListLogEntriesController::class)->name('logbook');
-    Route::post('/diario-de-bordo', StoreLogEntryController::class)->name('logbook.store');
-    Route::put('/diario-de-bordo/{entry}', UpdateLogEntryController::class)->name('logbook.update');
-    Route::delete('/diario-de-bordo/{entry}', DestroyLogEntryController::class)->name('logbook.destroy');
-
-    // Acessos: quem abre o site (IP, país, navegador, conta), quantas vezes, que página e por quanto tempo.
-    // Em abas, com os mesmos filtros: a visão geral, os robôs e de onde vêm as pessoas.
-    Route::get('/acessos', ShowAccessesController::class)->name('accesses');
-    Route::get('/acessos/robos', ShowAccessRobotsController::class)->name('accesses.robots');
-    Route::get('/acessos/origens', ShowAccessOriginsController::class)->name('accesses.origins');
-    Route::get('/acessos/ataques', ShowAccessAttacksController::class)->name('accesses.attacks');
-    Route::get('/acessos/por-ip', ShowAccessIpController::class)->name('accesses.ip');
-    // Ajustes: a chave da monitoria e a lista de IPs nossos.
-    Route::get('/acessos/ajustes', ShowAccessSettingsController::class)->name('accesses.settings');
-    Route::post('/acessos/alternar', ToggleAccessMonitoringController::class)->name('accesses.toggle');
-    // Os IPs "nossos" (o deploy, os scripts, quem cuida do site): a lista da tela e o "Adicionar o meu IP atual".
-    Route::put('/acessos/nossos', UpdateOwnAddressesController::class)->name('accesses.own');
-    Route::post('/acessos/nossos/meu-ip', AddMyAddressController::class)->name('accesses.own.mine');
-    // "Contar como nosso", na ficha do IP.
-    Route::post('/acessos/nossos/ip', AddOwnAddressController::class)->name('accesses.own.add');
-    // Apagar um acesso, ou todos os de um IP (o período inteiro), na ficha do IP.
-    Route::delete('/acessos/ip', DestroyAccessesByIpController::class)->name('accesses.destroy-ip');
-    Route::delete('/acessos/{view}', DestroyAccessController::class)->whereNumber('view')->name('accesses.destroy');
-
-    // E-mails: se o envio está de pé, o que saiu e o que deu erro, e o envio de teste.
-    Route::get('/emails', ShowEmailsController::class)->name('emails');
-    Route::post('/emails/teste', SendTestEmailController::class)->middleware('throttle:5,1,email-teste')->name('emails.test');
-
     // Monitoria de segurança dos sites do admin: só leitura (GET, DNS e TLS) e só em site cadastrado.
     Route::get('/seguranca', ListSecuritySitesController::class)->name('security');
     Route::post('/seguranca', StoreSecuritySiteController::class)->middleware('throttle:20,1,admin-seguranca-novo')->name('security.store');
     Route::get('/seguranca/{site}', ShowSecuritySiteController::class)->whereNumber('site')->name('security.show');
     Route::post('/seguranca/{site}/verificar', RunSecurityScanController::class)->whereNumber('site')->middleware('throttle:20,1,admin-seguranca-verificar')->name('security.run');
-    Route::post('/seguranca/{site}/posse', RecheckSecurityOwnershipController::class)->whereNumber('site')->middleware('throttle:20,1,admin-seguranca-posse')->name('security.ownership');
     Route::post('/seguranca/{site}/pausar', ToggleSecuritySiteController::class)->whereNumber('site')->name('security.toggle');
     Route::delete('/seguranca/{site}', DestroySecuritySiteController::class)->whereNumber('site')->name('security.destroy');
-
-    // Usuários: a lista, nova senha, remoção da conta e a liberação dos testes de segurança. A tela era
-    // "Convites e usuários" em /convites até o cadastro abrir; o endereço antigo (favoritos) leva para cá.
-    // Só o GET: o POST e o DELETE dos convites deixaram de existir.
-    Route::get('/usuarios', ListUsersController::class)->name('users');
-    Route::get('/convites', RedirectController::class)->defaults('destination', '/admin/usuarios')->defaults('status', 301)->name('users.legacy');
-    Route::delete('/usuarios/{user}', DestroyUserController::class)->name('users.destroy');
 
     // Testes ativos (P6b): a chave e o "Parar tudo", as aprovações e as execuções de todas as contas. Desligar, "Parar
     // tudo" e o Parar de uma execução não têm limite de requisições: parar nunca é recusado.
@@ -574,6 +495,5 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::post('/execucoes/{execucao}/parar', StopAdminPentestRunController::class)->whereUuid('execucao')->name('runs.stop');
         Route::post('/execucoes/{execucao}/pausar', PauseAdminPentestRunController::class)->whereUuid('execucao')->middleware('throttle:30,1,admin-testes-pausar')->name('runs.pause');
         Route::post('/execucoes/{execucao}/retomar', ResumeAdminPentestRunController::class)->whereUuid('execucao')->middleware('throttle:30,1,admin-testes-retomar')->name('runs.resume');
-        Route::post('/execucoes/{execucao}/reteste', AllowPentestRetestController::class)->whereUuid('execucao')->middleware('throttle:30,1,admin-testes-reteste')->name('runs.retest');
     });
 });

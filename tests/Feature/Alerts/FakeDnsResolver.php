@@ -6,7 +6,7 @@ use App\Services\Alerts\Discovery\DnsResolver;
 
 /**
  * DNS em memória: host => [tipo => valores], e os curingas (`*.nível`) para o que não tem registro próprio. Como o
- * DNS de verdade, o TXT de um apelido (records[host]['cname']) é o do destino; o txtOwnedOrNull() não o aproveita.
+ * DNS de verdade, o TXT de um apelido (records[host]['cname']) é o do destino.
  */
 class FakeDnsResolver implements DnsResolver
 {
@@ -35,14 +35,6 @@ class FakeDnsResolver implements DnsResolver
     public function txtOrNull(string $host): ?array
     {
         return $this->failure($host) ? null : $this->lookup($host, 'txt');
-    }
-
-    /** Pelo txtOrNull(): o teste que o troca para simular o DNS também vale aqui. */
-    public function txtOwnedOrNull(string $host): ?array
-    {
-        $records = $this->txtOrNull($host);
-
-        return $records === null || ($this->records[$host]['cname'] ?? []) === [] ? $records : [];
     }
 
     /** O PTR fica em records[ip]['ptr']. */

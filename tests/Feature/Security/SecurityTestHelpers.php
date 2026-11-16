@@ -54,8 +54,6 @@ trait SecurityTestHelpers
             'interval_minutes' => 360,
             'consent_at' => now(),
             'consent_ip' => '203.0.113.9',
-            'verify_token' => 'tokentokentokentokentoken',
-            'ownership' => 'txt',
             'next_check_at' => now(),
         ]);
     }

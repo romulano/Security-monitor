@@ -56,8 +56,7 @@
     </div>
 
     <p class="text-xs text-ink-400">
-        Termo {{ \App\Support\Settings::get('alerts.consent_version') }}. Guardamos data, hora e IP do aceite. Antes de ler o
-        site pedimos uma prova de que o domínio é seu (um registro TXT). O que entrar no perfil pode ser removido a qualquer
-        momento. Desmarcar revoga a autorização e apaga os achados.
+        Termo {{ \App\Support\Settings::get('alerts.consent_version') }}. Guardamos data, hora e IP do aceite. O que entrar no
+        perfil pode ser removido a qualquer momento. Desmarcar revoga a autorização e apaga os achados.
     </p>
 </section>

@@ -18,14 +18,10 @@
     $tones = [
         'authorized' => 'ok',
         'draft' => 'neutro',
-        'waiting_ownership' => 'alerta',
-        'ownership_missing' => 'erro',
         'expired' => 'neutro',
         'revoked' => 'neutro',
         'suspended' => 'erro',
     ];
-    $full = $domains->count() >= $max;
-    $canAdd = ! $full;
     $contact = config('secmon.contact_email');
     // Revogar com execução (item 2 do Blue Team): o teste em andamento para, e nenhum novo começa.
     $revoke = fn (string $host) => "Revogar a autorização de {$host}? Qualquer teste em andamento para em até 30 segundos, e nenhum teste novo começa sem um aceite novo. A auditoria fica como prova.";
@@ -43,7 +39,7 @@
                 </p>
                 <ol class="mt-2 space-y-2 text-sm text-ink-200">
                     @foreach ([
-                        'Só no seu domínio: a mesma prova por registro TXT do Radar, conferida de novo durante o teste.',
+                        'Só no seu domínio: você confirma, antes de autorizar, que o domínio é seu.',
                         'Você escolhe os dias, o horário e a intensidade. Parar é um clique, a qualquer momento, e tudo para em segundos.',
                         'Nada destrutivo: sem login, sem envio de formulários, sem força bruta e sem sobrecarga. O que o teste nunca faz está no termo, antes do aceite.',
                         'Cada achado é testado de novo, de outro jeito, antes de entrar no relatório.',
@@ -67,16 +63,14 @@
                     @include('alerts.partials.crumbs', ['here' => 'Testes de segurança'])
                     <h1 class="text-xl font-semibold text-white">Testes de segurança</h1>
                     <p class="text-sm text-ink-400">
-                        Os domínios que você autorizou e cada execução, com o relatório. Só testamos domínio comprovado pelo TXT e dentro da janela que você escolheu.
+                        Os domínios que você autorizou e cada execução, com o relatório. Só testamos domínio seu, confirmado por você, e dentro da janela que você escolheu.
                     </p>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
-                    @if ($canAdd)
-                        <a href="{{ route('alerts.tests.authorize', ['passo' => 1]) }}" class="{{ $button }} {{ $now->isEmpty() ? 'bg-accent font-semibold text-ink-950 hover:brightness-110' : 'border border-ink-700 text-ink-200 hover:border-ink-400 hover:text-white' }}">
-                            Autorizar outro domínio
-                        </a>
-                    @endif
-                    <span class="text-xs text-ink-400">{{ $domains->count() }} de {{ $max }} domínios{{ $full ? ' · exclua um para autorizar outro' : '' }} · {{ $week['count'] }} de {{ $week['max'] }} execuções nesta semana</span>
+                    <a href="{{ route('alerts.tests.authorize', ['passo' => 1]) }}" class="{{ $button }} {{ $now->isEmpty() ? 'bg-accent font-semibold text-ink-950 hover:brightness-110' : 'border border-ink-700 text-ink-200 hover:border-ink-400 hover:text-white' }}">
+                        Autorizar outro domínio
+                    </a>
+                    <span class="text-xs text-ink-400">{{ $domains->count() }} {{ $domains->count() === 1 ? 'domínio' : 'domínios' }} · {{ $week['count'] }} {{ $week['count'] === 1 ? 'execução' : 'execuções' }} nesta semana</span>
                 </div>
             </div>
 
@@ -120,11 +114,6 @@
                         <div class="flex flex-wrap items-center gap-2">
                             <h3 class="mr-1 max-w-full font-mono text-[15px] [overflow-wrap:anywhere] text-white">{{ $domain->host }}</h3>
                             @include('alerts.tests.partials.pill', ['pill' => [PentestAuthorization::STATES[$state], $tones[$state]]])
-                            @if ($domain->ownershipHolds() && $domain->ownership_checked_at)
-                                @include('alerts.tests.partials.pill', ['pill' => ['TXT no ar · conferido em '.$when($domain->ownership_checked_at).' às '.$at($domain->ownership_checked_at), 'ok']])
-                            @elseif ($domain->ownership_status === 'unknown')
-                                @include('alerts.tests.partials.pill', ['pill' => ['DNS sem resposta na última conferência', 'alerta']])
-                            @endif
                             @if ($consent)
                                 @include('alerts.tests.partials.pill', ['pill' => ['termo '.$consent->version.' aceito em '.$when($consent->accepted_at), 'neutro']])
                             @endif
@@ -137,12 +126,6 @@
                                     @break
                                 @case('expired')
                                     Venceu em {{ \Illuminate\Support\Carbon::parse($consent->rule['window']['valid_until'])->format('d/m') }}. Para testar de novo, escolha uma janela nova e aceite o termo.
-                                    @break
-                                @case('waiting_ownership')
-                                    Falta o registro TXT em {{ $domain->host }}. Dá para seguir os passos enquanto isso; só não dá para autorizar sem ele.
-                                    @break
-                                @case('ownership_missing')
-                                    O registro TXT de {{ $domain->host }} não está mais no DNS. Publique de novo: sem ele, não dá para autorizar nem testar.
                                     @break
                                 @case('authorized')
                                     Janela: {{ PentestWindow::describe($consent->rule['window']) }}.
@@ -163,9 +146,6 @@
                                 @include('alerts.tests.partials.pill', ['pill' => $shown['pill']])
                             </p>
                         @endif
-                        @if ($info['start'] === 'limit')
-                            <p class="text-sm text-ink-400">Nova execução: {{ lcfirst($info['refusal']) }}</p>
-                        @endif
 
                         <div class="flex flex-wrap items-center gap-2">
                             @if ($info['start'] === 'form')
@@ -179,9 +159,6 @@
                                     {{ $domain->consents_exists ? 'Autorizar de novo' : 'Continuar' }} (passo {{ $step }})
                                 </a>
                             @endunless
-                            @if (in_array($state, ['waiting_ownership', 'ownership_missing'], true) && ($consent || $step !== 2))
-                                <a href="{{ route('alerts.tests.authorize', ['passo' => 2, 'dominio' => $domain->host]) }}" class="{{ $button }} text-accent hover:underline">Ver o registro TXT</a>
-                            @endif
                             @if ($state === 'expired')
                                 <a href="{{ route('alerts.tests.authorize', ['passo' => 4, 'dominio' => $domain->host]) }}" class="{{ $button }} text-accent hover:underline">Escolher a janela</a>
                             @endif

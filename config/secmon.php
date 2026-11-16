@@ -293,8 +293,6 @@ return [
         ],
 
         'webhook' => [
-            // Webhooks por conta (cada um com nome, tipos, pausa e segredo próprios).
-            'max_per_user' => 5,
             // Espera da conexão e da resposta inteira, em segundos: um endereço lento não segura a fila.
             'connect_timeout' => 3,
             'timeout' => 10,
@@ -360,33 +358,17 @@ return [
         'skip_days' => 7,
     ],
 
-    'ownership' => [
-        // O domínio esperando o TXT é conferido a cada 10 minutos, por este tempo.
-        'verify_window_hours' => 72,
-        // A posse comprovada é conferida de novo uma vez neste intervalo...
-        'recheck_hours' => 24,
-        // ... e cai quando o TXT fica este tempo sem aparecer (o DNS mudo conta junto).
-        'grace_days' => 7,
-        // Reconferências por rodada do agendador (a cada 10 minutos).
-        'recheck_batch' => 50,
-    ],
-
     /*
     |--------------------------------------------------------------------------
     | Monitoria de segurança dos sites do admin (Admin → Segurança)
     |--------------------------------------------------------------------------
-    | Só leitura e sem intrusão: GET, DNS e um handshake TLS, sempre pelo SafeFetcher/IpGuard
-    | (nada de IP interno), e nunca se guarda o corpo da página, valor de cookie ou o
-    | certificado inteiro. A exposição de arquivos (/.env, /.git...) só é conferida em site
-    | com posse comprovada.
+    | Só leitura e sem intrusão: GET, DNS e um handshake TLS, e nunca se guarda o corpo da
+    | página, valor de cookie ou o certificado inteiro.
     */
     'security' => [
-        'max_sites' => 30,
         // Intervalo padrão e mínimo entre varreduras de um mesmo site.
         'interval_minutes' => 360,
         'min_interval_minutes' => 60,
-        // "Verificar agora": no máximo uma vez por hora por site.
-        'manual_cooldown_minutes' => 60,
         // O agendador parou? Sem varredura há mais que isso, o painel fica vermelho.
         'stale_after_hours' => 48,
         'retention_days' => 365,
@@ -421,15 +403,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Testes de segurança (teste ativo, só com autorização)
-    |--------------------------------------------------------------------------
-    | A stack de testes ativos fica desligada por padrão em tudo. A posse é a do
-    | Radar (o mesmo TXT), numa cópia própria do domínio. Quem enxerga a área:
-    | `allowed` (do ambiente; o admin não liga). Quem usa: a conta que o admin
-    | liberou em Admin → Usuários (users.pentest_access_granted_at), e a de admin.
-    */
-    /*
-    |--------------------------------------------------------------------------
     | A conta do dono desta instalação
     |--------------------------------------------------------------------------
     | A versão local não tem login: a conta nasce no primeiro acesso (User::localOwner) e é sempre administradora.
@@ -443,23 +416,6 @@ return [
     'pentest' => [
         // Endereços que nenhum teste alcança (IP ou faixa, vírgula). Vazio: nada é barrado — veja ForbiddenAddresses.
         'forbidden_addresses' => explode(',', (string) env('PENTEST_FORBIDDEN_ADDRESSES', '')),
-        // Domínios por conta (o passo 1 da autorização avisa).
-        'max_domains' => 3,
-        // Execuções por conta: uma por domínio a cada 24 h e até 4 por semana. As canceladas e as
-        // recusadas não contam. Na semana, também não conta a que terminou sem testar o site, e o admin
-        // pode liberar um reteste fora das 24 h (item 6 do Blue Team). O Blue Team pode mudar só os números.
-        'runs_per_domain_per_day' => (int) env('PENTEST_RUNS_PER_DOMAIN_PER_DAY', 1),
-        'runs_per_week' => (int) env('PENTEST_RUNS_PER_WEEK', 4),
-        // O teto por site, somando todas as contas (item 2 do Blue Team, rodada 4): protege o servidor do
-        // cliente quando duas contas miram o mesmo host (agência e cliente, ou multiconta). Não conta o
-        // que não testou o site nem o que o admin liberou (o reteste).
-        'runs_per_host_per_day' => (int) env('PENTEST_RUNS_PER_HOST_PER_DAY', 2),
-        'runs_per_host_per_week' => (int) env('PENTEST_RUNS_PER_HOST_PER_WEEK', 6),
-        // A posse durante a execução (termo, seção 6): reconferida no começo de cada fase e a cada 15
-        // minutos; com o DNS mudo, tenta de novo a cada 5 minutos e, depois de 20, para.
-        'ownership_recheck_minutes' => 15,
-        'ownership_unknown_retry_minutes' => 5,
-        'ownership_unknown_stop_minutes' => 20,
         // O trabalho de cada fase da execução (fase => classe que implementa PhaseWork). Enquanto faltar o
         // de alguma, o portão não deixa nenhuma execução começar: ela espera agendada e expira, nunca
         // "conclui com 0 achados". O recon passivo entrou na P9a, a lista de alvos (`scope`) na P9b, o recon ativo
@@ -827,36 +783,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Monitoria de acessos (Admin → Acessos)
-    |--------------------------------------------------------------------------
-    | Cada página aberta no site, fora do admin: IP, país, navegador, a página e
-    | o tempo aberta. O padrão vale até o admin ligar ou desligar na tela.
-    */
-
-    'monitoring' => [
-        'enabled' => (bool) env('MONITORING_ENABLED', true),
-        // Código do aparelho de quem navega sem login, só para segurança (DeviceSightings; /privacidade, seção 2).
-        // Sem env, de propósito: mudar estes números é decisão de código, revista junto com a /privacidade.
-        'devices' => [
-            // Códigos distintos aceitos por IP por dia: quem inventa códigos para encher o banco para no 4º.
-            'per_ip_per_day' => 3,
-            // Raridade de um código pelos IPs distintos em que apareceu na janela: até `rare_ips`, raro
-            // (liga os IPs); acima de `common_ips`, comum (iPhones iguais, headless em datacenter) e não liga.
-            'window_days' => 30,
-            'rare_ips' => 5,
-            'common_ips' => 20,
-        ],
-    ],
-
-    // O que o site recusa ou que tem cara de ataque (Admin → Acessos): o teto por minuto de um IP e o de todos.
-    // Passado o teto, fica só a contagem do minuto (AccessEventRecorder).
-    'access_events' => [
-        'per_ip_per_minute' => (int) env('ACCESS_EVENTS_PER_IP_PER_MINUTE', 20),
-        'per_minute' => (int) env('ACCESS_EVENTS_PER_MINUTE', 120),
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
     | Retenção (secmon:prune, todo dia de madrugada)
     |--------------------------------------------------------------------------
     | Dias que cada coisa fica no banco; 0 desliga a poda daquele item. Sessões
@@ -872,12 +798,6 @@ return [
         // O texto enviado (payload) sai antes da linha: some o conteúdo, fica o registro de que houve envio.
         'delivery_payload_days' => (int) env('RETENTION_DELIVERY_PAYLOAD_DAYS', 90),
         'delivery_days' => (int) env('RETENTION_DELIVERY_DAYS', 365),
-        // Páginas abertas no site (Admin → Acessos): IP, país, navegador e página, o prazo dos registros de acesso.
-        'page_views_days' => (int) env('RETENTION_PAGE_VIEWS_DAYS', 180),
-        // Código do aparelho (só segurança): a /privacidade promete 6 meses, contados da última vez que foi visto.
-        'device_sightings_days' => (int) env('RETENTION_DEVICE_SIGHTINGS_DAYS', 180),
-        // O que o site recusou ou que pareceu ataque, e a contagem do que passou do teto: o mesmo prazo.
-        'access_events_days' => (int) env('RETENTION_ACCESS_EVENTS_DAYS', 180),
         // Registro dos e-mails enviados (Admin → E-mails): para quem, o assunto e o resultado.
         'email_messages_days' => (int) env('RETENTION_EMAIL_MESSAGES_DAYS', 90),
     ],

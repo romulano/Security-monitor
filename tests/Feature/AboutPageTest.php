@@ -3,11 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\CrawlRun;
-use App\Models\LogEntry;
 use App\Models\NewsCase;
 use App\Models\Source;
-use Dom\Element;
-use Dom\HTMLDocument;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -77,83 +74,6 @@ class AboutPageTest extends TestCase
             ->assertOk()
             ->assertSee(route('alerts.index'))
             ->assertSee('href="'.route('about').'"', false);
-    }
-
-    private function logEntry(string $day, string $title, string $text = 'O que mudou.'): LogEntry
-    {
-        return LogEntry::create(['logged_on' => $day, 'title' => $title, 'text' => $text]);
-    }
-
-    /** @return list<Element> os itens do <ol> do diário de bordo */
-    private function logItems(): array
-    {
-        $html = $this->get(route('about'))->assertOk()->getContent();
-        $doc = HTMLDocument::createFromString($html, LIBXML_NOERROR);
-
-        $heading = collect($doc->querySelectorAll('h3'))->first(fn ($h) => trim($h->textContent) === 'Diário de bordo');
-
-        return collect($heading->nextElementSibling->childNodes)->whereInstanceOf(Element::class)->values()->all();
-    }
-
-    public function test_log_shows_five_items_with_older_ones_behind_see_more(): void
-    {
-        LogEntry::query()->delete();
-        $this->logEntry('2026-10-19', 'Lançamento');
-        $this->logEntry('2026-10-21', 'Radar de domínios');
-        $this->logEntry('2026-10-20', 'Radar de exploits');
-        $this->logEntry('2026-10-21', 'Acoplagem');
-        $this->logEntry('2026-10-22', 'Sonda no GitHub');
-
-        $items = $this->logItems();
-
-        $this->assertCount(5, $items);
-        $this->assertStringContainsString('ver mais', $items[0]->textContent);
-        $older = $items[0]->querySelector('details')->textContent;
-        $this->assertStringContainsString('Lançamento', $older);
-        $this->assertStringContainsString('Radar de exploits', $older);
-        $this->assertStringContainsString('Radar de domínios', $items[1]->textContent);
-        $this->assertStringContainsString('Acoplagem', $items[2]->textContent);
-        $this->assertStringContainsString('Sonda no GitHub', $items[3]->textContent);
-        $this->assertStringContainsString('Próxima missão', $items[4]->textContent);
-    }
-
-    public function test_log_dates_are_shown_as_day_month_year(): void
-    {
-        LogEntry::query()->delete();
-        $this->logEntry('2026-10-21', 'Acoplagem');
-
-        $this->get(route('about'))->assertOk()->assertSee('21.10.2026');
-    }
-
-    public function test_few_entries_show_no_see_more(): void
-    {
-        LogEntry::query()->delete();
-        $this->logEntry('2026-10-19', 'Lançamento');
-
-        $items = $this->logItems();
-
-        $this->assertCount(2, $items);
-        $this->assertStringContainsString('Lançamento', $items[0]->textContent);
-        $this->assertStringNotContainsString('ver mais', $items[0]->textContent);
-        $this->assertStringContainsString('Próxima missão', $items[1]->textContent);
-    }
-
-    public function test_an_empty_log_shows_only_the_next_mission(): void
-    {
-        LogEntry::query()->delete();
-
-        $items = $this->logItems();
-
-        $this->assertCount(1, $items);
-        $this->assertStringContainsString('Próxima missão', $items[0]->textContent);
-    }
-
-    public function test_the_log_that_launched_with_the_site_comes_from_the_migration(): void
-    {
-        $this->get(route('about'))
-            ->assertOk()
-            ->assertSee('Sonda no GitHub')
-            ->assertSee('19.10.2026');
     }
 
     public function test_copy_speaks_of_the_team_and_both_channels(): void

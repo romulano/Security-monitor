@@ -17,17 +17,28 @@
             @include('alerts.partials.crumbs', ['here' => 'Chaves expostas'])
             <h1 class="text-xl font-semibold text-white">Chaves expostas</h1>
             <p class="text-sm text-ink-300">
-                Com a posse comprovada como autorização, o Security Monitor navega o seu site inteiro (só leitura e devagar, inclusive o que o robots.txt esconde dos buscadores) e procura chaves de API, tokens e senhas
-                esquecidos nas páginas e nos scripts. Você diz se cada uma pode ficar exposta. Só funciona em domínio com a posse comprovada pelo
-                registro TXT, e a varredura se repete toda semana.
+                O Security Monitor navega o seu site inteiro (só leitura e devagar, inclusive o que o robots.txt esconde dos buscadores) e procura chaves de API, tokens e senhas
+                esquecidos nas páginas e nos scripts. Você diz se cada uma pode ficar exposta. Aparecem aqui os domínios que você cadastrou no Radar, em Notícias, no webhook
+                ou nos testes de segurança, mais os que adicionar abaixo. A varredura se repete toda semana.
             </p>
         </div>
 
+        <form method="POST" action="{{ route('alerts.keys.store') }}" class="{{ $box }} max-w-3xl">
+            @csrf
+            <label for="dominio" class="text-[15px] font-semibold text-white">Adicionar domínio</label>
+            <div class="flex flex-col gap-2 sm:flex-row">
+                <input id="dominio" type="text" name="dominio" value="{{ old('dominio') }}" placeholder="empresa.com.br"
+                       autocomplete="off" spellcheck="false" maxlength="253" required
+                       class="min-h-11 w-full rounded-lg border border-ink-700 bg-ink-850 px-3 font-mono text-sm text-white placeholder:text-ink-400 focus:border-accent">
+                <button class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-accent px-4 text-sm font-semibold text-ink-950 hover:brightness-110">Adicionar</button>
+            </div>
+            <p class="text-xs text-ink-400">Sem “www” nem “https://”. Adicionar não varre: a primeira varredura começa no “Ativar e varrer” do domínio.</p>
+            @error('dominio')<p class="text-sm text-red-300">{{ $message }}</p>@enderror
+        </form>
+
         @if ($rows === [])
             <section class="{{ $box }}">
-                <p class="text-sm text-ink-200"><b class="text-white">Nenhum domínio comprovado na sua conta.</b> A varredura só roda em domínio cuja posse você comprovou pelo registro TXT.</p>
-                <p class="text-sm text-ink-300">Comprove um domínio no Radar de domínios (é o passo 3 da entrevista) e ele aparece aqui.</p>
-                <a href="{{ route('alerts.lookalikes.interview', ['passo' => 1]) }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-accent hover:underline">Comprovar um domínio no Radar</a>
+                <p class="text-sm text-ink-200"><b class="text-white">Nenhum domínio ainda.</b> Adicione um acima, ou cadastre no Radar de domínios, em Notícias ou no webhook, e ele aparece aqui.</p>
             </section>
         @else
             <ul class="space-y-3">
@@ -46,7 +57,7 @@
                                     </h2>
                                     @include('alerts.tests.partials.pill', ['pill' => $row['state'], 'pulse' => $site?->isBusy() ?? false])
                                 </div>
-                                <p class="text-xs text-ink-400">Posse comprovada {{ $owned->origin }}.</p>
+                                <p class="text-xs text-ink-400">Cadastrado {{ $owned->origin }}.</p>
                                 @if ($counts['total'] > 0)
                                     <p class="text-sm text-ink-200">
                                         {{ $counts['total'] }} {{ $counts['total'] === 1 ? 'chave' : 'chaves' }}@if ($counts['open'] > 0): <b class="text-white">{{ $counts['open'] }} para decidir</b>@endif{{ $counts['leak'] > 0 ? ', '.$counts['leak'].($counts['leak'] === 1 ? ' que não deveria estar exposta' : ' que não deveriam estar expostas') : '' }}.
@@ -65,6 +76,15 @@
                                 @endif
                                 @if ($site || $counts['total'] > 0)
                                     <a href="{{ route('alerts.keys.domain', ['dominio' => $owned->domain]) }}" class="inline-flex min-h-11 items-center px-2 text-sm text-accent hover:underline">Ver as chaves</a>
+                                @endif
+                                @if ($row['manageable'])
+                                    <form method="POST" action="{{ route('alerts.keys.destroy', ['dominio' => $owned->domain]) }}"
+                                          data-confirm="Remover {{ $owned->domain }} de Chaves expostas? A varredura para e as chaves achadas nela são apagadas.{{ $owned->keys_listing === \App\Models\OwnedDomain::KEYS_ADDED ? '' : ' O domínio continua onde foi cadastrado (Radar, Notícias, webhook ou testes).' }}"
+                                          data-confirm-ok="Remover" data-confirm-tone="danger">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button @disabled($site?->scan_status === 'running') class="inline-flex min-h-11 items-center rounded-lg px-3 text-sm text-ink-400 hover:text-red-300 disabled:opacity-50">Remover</button>
+                                    </form>
                                 @endif
                             </div>
                         </div>

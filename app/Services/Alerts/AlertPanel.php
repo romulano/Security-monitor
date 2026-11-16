@@ -113,18 +113,10 @@ class AlertPanel
         ];
     }
 
-    /** O "Novo alerta" aparece enquanto a conta está abaixo do limite dela. */
+    /** O "Novo alerta" sempre aparece: a instalação local não tem cota de alertas por conta. */
     public function canCreate(User $user): bool
     {
-        return $user->alertProfilesCreated() < AlertProfile::MAX_PER_USER;
-    }
-
-    /** Alerta novo só enquanto a conta não chegou ao limite; a trava confere de novo no cadastro. */
-    public function ensureRoomFor(User $user): void
-    {
-        if ($user->alertProfilesCreated() >= AlertProfile::MAX_PER_USER) {
-            throw new ActionRefused('Você chegou ao limite de '.AlertProfile::MAX_PER_USER.' alertas. Exclua um para criar outro.');
-        }
+        return true;
     }
 
     /** Pausa ou retoma o alerta (e tira ou devolve a query ao percolator); devolve se ficou pausado. */
@@ -154,6 +146,8 @@ class AlertPanel
                 ->whereIn('match_id', AlertMatch::query()->where('profile_id', $profile->id)->select('id'))
                 ->delete();
 
+            // Um a um (não pela cascata do banco): o domínio que só este alerta usava sai também de Chaves.
+            $profile->domains()->get()->each->delete();
             $profile->delete();
         });
     }

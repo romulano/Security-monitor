@@ -59,7 +59,7 @@
         @elseif (! $watch->isCompleted())
             <section class="max-w-2xl space-y-3 rounded-xl border border-amber-800 bg-amber-950/30 p-6">
                 <h2 class="font-semibold text-white">A entrevista de <span class="font-mono">{{ $domain->domain }}</span> não terminou</h2>
-                <p class="text-sm text-amber-100">O Radar só começa depois do passo 3, com a posse do domínio e a ativação.</p>
+                <p class="text-sm text-amber-100">O Radar só começa depois do passo 3, com a ativação.</p>
                 @if ($canManage)
                 <div class="flex flex-wrap items-center gap-2">
                     <a href="{{ route('alerts.lookalikes.interview', ['passo' => $watch->step_reached, 'radar' => $watch->id]) }}"
@@ -73,31 +73,6 @@
                 </div>
                 @endif
             </section>
-        @elseif ($watch->isWaiting())
-            <div class="max-w-3xl space-y-3">
-                <section class="space-y-1 rounded-xl border border-ink-800 bg-ink-900 px-5 py-4">
-                    <h2 class="font-semibold text-white">Comprove que <span class="font-mono">{{ $domain->domain }}</span> é seu</h2>
-                    <p class="text-sm text-ink-200">
-                        O Radar está ativado e só vigia imitações de um domínio cuja posse foi comprovada pelo registro TXT. Assim ninguém usa o Security Monitor para vigiar a marca dos outros.
-                    </p>
-                </section>
-                {{-- O TXT da empresa só para quem configura o Radar (P10; G1 do Red Team da E3a3a): quem só vê fica com o estado. --}}
-                @if ($canManage)
-                    <x-domain-ownership :state="$ownership" :action="route('alerts.lookalikes.interview.verify', ['radar' => $watch->id])" :waiting="true" effect="o Radar pausa">
-                        O Radar começa sozinho assim que o registro aparecer.
-                    </x-domain-ownership>
-                @else
-                    <p class="text-sm text-ink-400">Aguardando o registro TXT. Quem configura este Radar vê o registro e comprova; o Radar começa sozinho assim que ele aparecer.</p>
-                @endif
-                @if ($canManage)
-                    <form method="POST" action="{{ route('alerts.lookalikes.destroy', $watch->urlParams()) }}"
-                          data-confirm="Excluir o Radar de {{ $domain->domain }}? As respostas da entrevista serão apagadas.">
-                        @csrf
-                        @method('DELETE')
-                        <button class="{{ $button }} text-red-300 hover:text-red-200">Excluir este Radar</button>
-                    </form>
-                @endif
-            </div>
         @else
             @php
                 $stats = $watch->stats ?? [];
@@ -111,17 +86,6 @@
                 $threats = $counts['critical'] + $counts['high'];
                 $pages = $watch->referencePages();
             @endphp
-
-            {{-- O TXT sumiu do DNS: a posse cai no prazo, e o Radar pausa junto. --}}
-            @if ($ownership && $ownership['state'] === 'unseen' && ! $ownership['legacy'])
-                @if ($canManage)
-                    <x-domain-ownership :state="$ownership" :action="route('alerts.lookalikes.interview.verify', ['radar' => $watch->id])" effect="o Radar pausa" class="max-w-3xl" />
-                @else
-                    <p class="max-w-3xl rounded-xl border border-red-900 bg-red-950/40 px-5 py-4 text-sm text-red-200">
-                        O registro TXT de {{ $domain->domain }} sumiu do DNS{{ $ownership['fallsAt'] ? ': se não voltar até '.$ownership['fallsAt']->timezone('America/Sao_Paulo')->format('d/m/Y').', o Radar pausa' : '' }}. Quem configura este Radar precisa publicar o registro de novo.
-                    </p>
-                @endif
-            @endif
 
             {{-- Situação do Radar --}}
             <section class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-ink-800 bg-ink-900 px-5 py-4">

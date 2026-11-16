@@ -323,7 +323,6 @@ class AlertInbox
             $watches->isEmpty() => ['não integrado', 'off', 'Domínios parecidos com o seu, registrados para golpe.', route('alerts.integrations')],
             $ready->isEmpty() => ['rascunho', 'warn', 'Entrevista no passo '.$watches->first()->step_reached.'.', route('alerts.lookalikes')],
             $ready->contains->isActive() => ['ativo', 'on', $where.' · '.$this->count($threats, 'ameaça aberta', 'ameaças abertas'), route('alerts.lookalikes')],
-            $ready->contains->isWaiting() => ['esperando o TXT', 'warn', $where.' · falta comprovar a posse', route('alerts.lookalikes')],
             default => ['pausado', 'off', $where, route('alerts.lookalikes')],
         };
 

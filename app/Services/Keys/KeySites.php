@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\DB;
  * Os domínios comprovados ativados para a varredura de chaves: ativar (que já pede a 1ª), pedir de
  * novo ("Varrer agora", no máximo uma a cada 30 minutos), pausar, voltar, e a semanal.
  *
- * Só domínio com a posse em dia (comprovado e sem a reconferência ter perdido o TXT): é a única
- * autorização que a varredura pede, e ela é conferida de novo quando o job começa.
+ * Só domínio com a posse comprovada: é a única autorização que a varredura pede. Instalação de um
+ * dono só: todo domínio nasce comprovado, sem prova por registro TXT no DNS.
  */
 final class KeySites
 {
@@ -40,7 +40,7 @@ final class KeySites
     public function activate(OwnedDomain $owned, User $user, ?Carbon $now = null): KeySite
     {
         $now ??= now();
-        self::refuseUnless(self::provable($owned), "A posse de {$owned->domain} não está comprovada: comprove pelo registro TXT antes de varrer.");
+        self::refuseUnless(self::provable($owned), "A posse de {$owned->domain} não está comprovada.");
 
         $site = DB::transaction(function () use ($owned, $user) {
             $site = KeySite::query()->where('owned_domain_id', $owned->id)->lockForUpdate()->first()
@@ -63,7 +63,7 @@ final class KeySites
 
         return DB::transaction(function () use ($site, $now, $manual) {
             $site = KeySite::query()->with('ownedDomain')->whereKey($site->id)->lockForUpdate()->firstOrFail();
-            self::refuseUnless(self::provable($site->ownedDomain), 'A posse deste domínio não está mais comprovada: publique o registro TXT de novo.');
+            self::refuseUnless(self::provable($site->ownedDomain), 'A posse deste domínio não está mais comprovada.');
             self::refuseUnless($site->isActive(), 'A varredura deste domínio está pausada.');
             self::refuseUnless(! $site->isBusy(), 'Já tem uma varredura deste domínio na fila ou rodando.');
             self::refuseUnless(! $manual || $site->requested_at === null || $site->requested_at->lte($now->copy()->subMinutes(self::MANUAL_MINUTES)),

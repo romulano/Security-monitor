@@ -15,8 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * O CSS aceita style="" (as views usam em larguras e cores calculadas); as
  * imagens, qualquer https (favicons e prints dos domínios do Radar). O site só
- * entra em <iframe> nele mesmo, e um formulário só sai para o site ou para o
- * login do GitHub (POST /cadastro/github e a reautenticação).
+ * entra em <iframe> nele mesmo, e um formulário só sai para o próprio site.
  */
 class ContentSecurityPolicy
 {
@@ -49,7 +48,7 @@ class ContentSecurityPolicy
             ['connect-src', "'self'", self::CAPTCHA, $dev, $devSocket],
             ['frame-src', self::CAPTCHA],
             ['frame-ancestors', "'self'"],
-            ['form-action', "'self'", 'https://github.com'],
+            ['form-action', "'self'"],
             ['base-uri', "'self'"],
             ['object-src', "'none'"],
         ]));

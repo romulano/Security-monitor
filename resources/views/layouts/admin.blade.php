@@ -23,15 +23,9 @@
                 ['admin.collections', 'Coletas', 'admin.collections'],
                 ['admin.sources', 'Fontes & bots', 'admin.sources'],
                 ['admin.settings', 'Configurações', 'admin.settings'],
-                ['admin.users', 'Usuários', 'admin.users'],
-                // O plano empresarial só aparece com ENTERPRISE_ENABLED.
-                ...(config('secmon.enterprise.enabled') ? [['admin.companies.index', 'Empresas', 'admin.companies.*']] : []),
                 ['admin.runs', 'Execuções', 'admin.runs'],
                 ['admin.alerts.overview', 'Alertas', 'admin.alerts.*'],
                 ['admin.prompts.index', 'Prompts', 'admin.prompts.*'],
-                ['admin.logbook', 'Diário de bordo', 'admin.logbook*'],
-                ['admin.accesses', 'Acessos', 'admin.accesses*'],
-                ['admin.emails', 'E-mails', 'admin.emails*'],
                 ['admin.security', 'Segurança', 'admin.security*'],
                 ['admin.pentest.overview', 'Testes ativos', 'admin.pentest.*'],
             ] as [$route, $label, $active])

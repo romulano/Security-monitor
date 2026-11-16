@@ -20,9 +20,6 @@ class AlertProfile extends Model implements VisibilityRoot
     /** Do mais grave para o menos grave. */
     public const LEVELS = ['critical', 'high', 'medium', 'low'];
 
-    /** Alertas por cliente (um por produto ou site). */
-    public const MAX_PER_USER = 5;
-
     private ?bool $hasSiblings = null;
 
     protected function casts(): array

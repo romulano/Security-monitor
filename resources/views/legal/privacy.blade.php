@@ -35,7 +35,7 @@
         <p class="mb-2 text-[11px] tracking-widest text-accent uppercase">Em resumo</p>
         <ul class="mb-0">
             <li>Pedimos só o necessário para criar a conta e montar os alertas.</li>
-            <li>Não vendemos dados, não exibimos anúncios e não usamos cookies de rastreamento; o código de aparelho da seção 2 serve só à segurança.</li>
+            <li>Não vendemos dados, não exibimos anúncios e não usamos cookies de rastreamento.</li>
             <li>O seu site só é consultado com a sua autorização, e de forma passiva. O DNS público do domínio, que qualquer pessoa
                 consulta, é lido quando você o informa, para sugerir tecnologias.</li>
             <li>Senhas, webhooks, tokens e segredos ficam protegidos: senha só como hash; webhooks, tokens e o segredo dos seus
@@ -56,16 +56,9 @@
 
     <h2 id="dados">2. Quais dados tratamos</h2>
     <p><strong>Quem visita o site</strong> (com ou sem conta): endereço IP, o país de onde ele vem (informado pela Cloudflare),
-        navegador, páginas acessadas, o endereço de onde veio (quando o navegador o informa), data, hora e quanto tempo cada página ficou aberta, nos registros técnicos do servidor e
-        da Cloudflare. Das requisições que o site recusa ou que parecem tentativa de invasão, guardamos também o método e o
-        código da resposta. O endereço é guardado sem senhas, códigos ou assinaturas. Sob ataque em grande volume, além de um
-        limite por minuto guardamos só a contagem. Se você estiver logado, o registro fica ligado à sua conta. Também guardamos num cookie o idioma escolhido para os relatórios.</p>
-    <p><strong>Código do aparelho (só para segurança):</strong> quando você navega sem estar logado, o seu navegador calcula, a
-        partir de características técnicas do aparelho (placa de vídeo, tela, fuso horário, idiomas, número de núcleos, memória e
-        fontes instaladas), um código que não revela essas características. Guardamos esse código com o IP, o país, o navegador e
-        o dia. Ele serve só para reconhecer o mesmo aparelho quando ele troca de IP numa tentativa de invasão: não é ligado à sua
-        conta, não é usado para marketing, anúncio ou estatística de audiência e não é compartilhado. Se o seu navegador enviar o
-        sinal Global Privacy Control, ou estiver com o JavaScript desligado, o código não é calculado.</p>
+        navegador, páginas acessadas, o endereço de onde veio (quando o navegador o informa), data e hora, nos registros técnicos
+        do servidor e da Cloudflare. O endereço é guardado sem senhas, códigos ou assinaturas. Se você estiver logado, o registro
+        fica ligado à sua conta. Também guardamos num cookie o idioma escolhido para os relatórios.</p>
     <p><strong>Conta:</strong> nome, e-mail, senha (guardada só como hash, nunca em texto), a data de criação e a data em
         que o e-mail foi confirmado. As contas criadas quando o cadastro era só por convite guardam também o código usado
         (só como hash). De cada sessão aberta guardamos o IP e o navegador.</p>
@@ -81,10 +74,9 @@
         registro de cada envio.</p>
     <p><strong>Domínio monitorado</strong>, só se você informar um: o domínio e as tecnologias que o DNS público dele sugere
         (MX, SPF e outros TXT, NS e o CNAME do www), com a sua decisão sobre cada uma. Se você autorizar a consulta ao site,
-        também o registro TXT de verificação, a data, a hora, o IP e a versão do termo de aceite, e as tecnologias encontradas,
+        também a data, a hora, o IP e a versão do termo de aceite, e as tecnologias encontradas,
         com a evidência de cada uma. São informações sobre a infraestrutura do site, não sobre pessoas.</p>
-    <p><strong>Radar de domínios</strong>, só se você responder a entrevista dele: o domínio, o nome da empresa e as marcas, com o
-        registro TXT de verificação. Para cada domínio com a posse comprovada: os domínios parecidos com o seu que existem
+    <p><strong>Radar de domínios</strong>, só se você responder a entrevista dele: o domínio, o nome da empresa e as marcas. Para cada domínio com a posse comprovada: os domínios parecidos com o seu que existem
         (dados públicos de DNS, de registro e de certificados), os prints das páginas desses domínios em computador, Android e
         iPhone, o texto delas, o parecer da IA e as suas respostas (“é golpe”, “é nosso”, “não é ameaça”), com o motivo, se
         você escrever um, e as denúncias que você marcar como enviadas. Com a autorização dos prints (o termo do Radar, no passo 3
@@ -103,8 +95,8 @@
             de usuário no Discord; ou o endereço do webhook, se você colar um (criptografado);</li>
         <li>no Telegram, o identificador da conversa, o nome do grupo (quando é um grupo) e o nome de usuário de quem conectou
             (ou o nome, se a conta não tiver usuário);</li>
-        <li>no webhook, o nome que você der a ele, a URL (criptografada), o domínio dela, o registro TXT de verificação desse
-            domínio (como no Radar) e o segredo que autentica e assina as notificações (criptografado);</li>
+        <li>no webhook, o nome que você der a ele, a URL (criptografada), o domínio dela e o segredo que autentica e assina
+            as notificações (criptografado);</li>
         <li>em todos, as suas preferências (tempo real, horário silencioso, resumo diário, fuso horário) e o histórico de
             envios, com data, resultado e código de resposta; no webhook, também quanto tempo o seu servidor levou para responder.</li>
     </ul>
@@ -137,8 +129,8 @@
         <li><strong>Sugerir tecnologias pelo DNS público</strong> do domínio que você informar, uma leitura de registros que
             qualquer pessoa consulta e que não acessa o site. Nada entra no perfil sem a sua confirmação. Base legal: execução de
             contrato (art. 7º, V).</li>
-        <li><strong>Proteger o serviço</strong> contra robôs, abuso e tentativas de invasão, com captcha, limite de tentativas
-            e registros de acesso, inclusive reconhecer o mesmo aparelho quando ele troca de IP. Bases legais: legítimo interesse (art. 7º, IX) e cumprimento de obrigação legal (art. 7º, II),
+        <li><strong>Proteger o serviço</strong> contra robôs, abuso e tentativas de invasão, com captcha e limite de
+            tentativas. Bases legais: legítimo interesse (art. 7º, IX) e cumprimento de obrigação legal (art. 7º, II),
             já que o Marco Civil da Internet manda guardar registros de acesso.</li>
         <li><strong>Calibrar os alertas</strong> com as avaliações de relevância que você der: a IA as usa para decidir se um
             alerta sai na hora (seção 4). Base legal: legítimo interesse (art. 7º, IX).</li>
@@ -148,9 +140,6 @@
             seu consentimento, no termo do Radar ou no v3 (art. 7º, I).</li>
         <li><strong>Procurar no GitHub público</strong> o que você informou na entrevista do GitHub, uma vez por dia, pela API
             oficial do GitHub, e avisar quando algo seu aparecer. Base legal: execução de contrato (art. 7º, V).</li>
-        <li><strong>Medir a nossa divulgação</strong>: pelos registros de acesso, saber de quais sites vêm as visitas, por qual
-            página elas entram e quais levam ao cadastro, para decidir onde divulgar. Base legal: legítimo interesse
-            (art. 7º, IX).</li>
     </ul>
     <p>
         Não vendemos dados, não os usamos para direcionar publicidade e não montamos perfis para marketing.
@@ -231,9 +220,8 @@
         <li>Cookies técnicos da Cloudflare, como <code>__cf_bm</code> e <code>cf_clearance</code>, usados para separar pessoas
             de robôs.</li>
     </ul>
-    <p>Não usamos cookies de análise de audiência nem de anúncios, nossos ou de terceiros: a medição da divulgação usa só os
-        registros de acesso (seção 2). Também não usamos técnicas parecidas para medir audiência: o código do aparelho (seção 2) é
-        só para segurança.</p>
+    <p>Não usamos cookies de análise de audiência nem de anúncios, nossos ou de terceiros, nem técnicas parecidas para medir
+        audiência.</p>
 
     <h2 id="retencao">8. Por quanto tempo guardamos</h2>
     <ul>
@@ -249,9 +237,8 @@
             identificadores, a URL e o segredo do webhook, a prova de posse feita para ele e o histórico de envios daquele canal.</li>
         <li><strong>Sessões</strong>: expiram depois de 4 horas sem uso.</li>
         <li><strong>Registro dos e-mails enviados</strong> (destinatário, assunto, data e resultado): 90 dias.</li>
-        <li><strong>Registros de acesso</strong> (IP, país, navegador, data, hora, endereço acessado, endereço de onde veio, tempo na página e, nas requisições recusadas, método e resposta) e tentativas recusadas: 6 meses, prazo do Marco Civil da Internet,
-            salvo ordem judicial que exija mais tempo.</li>
-        <li><strong>Código do aparelho</strong> (com o IP, o país, o navegador e o dia): 6 meses.</li>
+        <li><strong>Registros de acesso</strong> (IP, país, navegador, data, hora e página acessada), nos registros técnicos do
+            servidor e da Cloudflare: 6 meses, prazo do Marco Civil da Internet, salvo ordem judicial que exija mais tempo.</li>
         <li><strong>Backups do banco</strong>: no servidor e numa cópia externa, na Cloudflare, por até 35 dias. O que você
             apagar some dos backups nesse prazo.</li>
         <li><strong>Exclusão da conta</strong>: a pedido, pelo contato. Em até 15 dias apagamos tudo o que está ligado a ela,

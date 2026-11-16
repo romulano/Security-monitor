@@ -10,7 +10,7 @@
 @endphp
 
 @section('content')
-    @include('admin.alerts._nav', ['subtitle' => "{$counts['total']} domínios · {$counts['verified']} verificados · {$counts['waiting']} aguardando o TXT · {$counts['blocked']} bloqueado(s)"])
+    @include('admin.alerts._nav', ['subtitle' => "{$counts['total']} domínios · {$counts['verified']} verificados · {$counts['blocked']} bloqueado(s)"])
 
     <div class="overflow-x-auto rounded-lg border border-ink-800">
         <table class="w-full min-w-[62rem] text-left text-sm">
@@ -34,10 +34,10 @@
                     <tr class="{{ $log?->id === $domain->id ? 'bg-accent/5' : '' }}">
                         <td class="px-3 py-2.5">
                             <span class="block font-mono text-white">{{ $domain->domain }}</span>
-                            <a href="{{ route('admin.alerts.client', $user) }}" class="text-xs text-ink-400 hover:text-ink-200">{{ $domain->profile->company_name ?: $user->name }}</a>
+                            <span class="text-xs text-ink-400">{{ $domain->profile->company_name ?: $user->name }}</span>
                         </td>
                         <td class="px-3 py-2.5 {{ $domain->verified_at ? 'text-emerald-300' : 'text-amber-200' }}">
-                            {{ $domain->verified_at ? 'verificado '.$domain->verified_at->timezone($tz)->format('d/m') : ($domain->consent_at ? 'aguardando TXT desde '.$domain->consent_at->timezone($tz)->format('d/m H:i') : 'sem aceite') }}
+                            {{ $domain->verified_at ? 'verificado '.$domain->verified_at->timezone($tz)->format('d/m') : 'sem aceite' }}
                         </td>
                         <td class="px-3 py-2.5 text-ink-400">{{ $domain->consent_at ? $domain->consent_version.' · '.$domain->consent_at->timezone($tz)->format('d/m') : '—' }}</td>
                         <td class="px-3 py-2.5 whitespace-nowrap text-ink-400">

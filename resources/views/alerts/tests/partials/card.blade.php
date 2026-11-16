@@ -27,7 +27,7 @@
             levanta hipóteses, testa, confirma cada achado e entrega o relatório com a correção.
         </p>
         <ul class="list-disc space-y-0.5 pl-5 text-sm text-ink-400">
-            <li>Só no domínio comprovado pelo TXT, o mesmo do Radar, conferido de novo durante o teste</li>
+            <li>Só no seu domínio: você confirma a responsabilidade antes de autorizar</li>
             <li>Você escolhe quando; parar é um clique, a qualquer momento, e tudo para em segundos</li>
             <li>Nada destrutivo: sem login, sem formulário, sem força bruta, sem sobrecarga</li>
         </ul>

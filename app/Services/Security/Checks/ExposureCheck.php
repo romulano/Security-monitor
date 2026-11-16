@@ -9,8 +9,6 @@ use App\Services\Security\SiteProbe;
  * Arquivos que nunca deveriam ser públicos. Um GET por caminho, no máximo 4 KB, e só vale quando o
  * conteúdo tem a ASSINATURA do arquivo (um site que responde 200 com a página inicial para qualquer
  * endereço não é um vazamento). Guarda só "exposto" e o caminho: nunca o conteúdo.
- *
- * Só roda em site com posse comprovada: são requisições a caminhos específicos do site de alguém.
  */
 class ExposureCheck implements SiteCheck
 {
@@ -33,10 +31,6 @@ class ExposureCheck implements SiteCheck
 
     public function run(SiteProbe $probe): array
     {
-        if (! $probe->owned) {
-            return [CheckResult::untested('file.exposed', 'só em site com posse comprovada (TXT ou servidor do Security Monitor)')];
-        }
-
         $results = [];
         $reached = 0;
 

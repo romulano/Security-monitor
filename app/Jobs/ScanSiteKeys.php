@@ -43,9 +43,9 @@ class ScanSiteKeys implements ShouldQueue
         $owned = $site->ownedDomain;
         $finish = fn (array $values) => $site->forceFill($values + ['scan_status' => 'idle', 'scan_state' => null, 'next_scan_at' => now()->addDays(KeySites::EVERY_DAYS)])->save();
 
-        // A posse é a autorização: conferida de novo agora (o TXT pode ter sumido desde o pedido).
+        // A posse é a autorização: conferida de novo agora.
         if (! $site->isActive() || ! KeySites::provable($owned)) {
-            $finish(['last_result' => 'failed', 'last_error' => 'A posse do domínio não está mais comprovada: publique o registro TXT de novo.']);
+            $finish(['last_result' => 'failed', 'last_error' => 'A posse do domínio não está mais comprovada.']);
 
             return;
         }

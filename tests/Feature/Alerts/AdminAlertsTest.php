@@ -8,7 +8,6 @@ use App\Models\NotificationDelivery;
 use App\Models\TechCatalog;
 use App\Services\Alerts\InterviewService;
 use App\Services\Alerts\ProfileIndex;
-use App\Services\Alerts\ProfilePreview;
 use App\Support\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -91,64 +90,6 @@ class AdminAlertsTest extends TestCase
 
         $this->post(route('admin.alerts.send-digests'))->assertSessionHas('status');
         $this->assertSame(1, NotificationDelivery::query()->where('kind', 'digest')->count());
-    }
-
-    public function test_clients_list_and_filters(): void
-    {
-        $active = $this->client(['name' => 'Ana']);
-        $this->profile($active, ['company_name' => 'Acme Pagamentos'], ['nginx']);
-        $this->slackChannel($active, ['status' => 'broken']);
-        $draft = $this->client(['name' => 'Bruno']);
-        $this->profile($draft, ['company_name' => 'Beta Saúde', 'status' => 'draft', 'completed_at' => null, 'step_reached' => 3]);
-        $this->client(['name' => 'Carla']);
-        $this->actingAs($this->adminUser());
-
-        $this->get(route('admin.alerts.clients'))->assertOk()
-            ->assertSee('Acme Pagamentos')->assertSee('rascunho · passo 3')->assertSee('sem perfil')->assertSee('com problema');
-
-        $this->get(route('admin.alerts.clients', ['perfil' => 'draft']))->assertSee('Beta Saúde')->assertDontSee('Acme Pagamentos');
-        $this->get(route('admin.alerts.clients', ['perfil' => 'none']))->assertSee('Carla')->assertDontSee('Beta Saúde');
-        $this->get(route('admin.alerts.clients', ['canal' => 'broken']))->assertSee('Acme Pagamentos')->assertDontSee('Carla');
-        $this->get(route('admin.alerts.clients', ['q' => 'acme']))->assertSee('Acme Pagamentos')->assertDontSee('Beta Saúde');
-    }
-
-    public function test_client_detail_and_admin_actions(): void
-    {
-        $user = $this->client();
-        $profile = app(InterviewService::class)->profileFor($user);
-        app(InterviewService::class)->save($profile, 1, ['company_name' => 'Acme Pagamentos', 'sectors' => ['financeiro']]);
-        app(InterviewService::class)->save($profile, 3, ['web_servers' => ['nginx']]);
-        app(InterviewService::class)->finish($profile->refresh());
-        $this->slackChannel($user);
-        $redis = TechCatalog::query()->where('slug', 'redis')->value('id');
-        $this->mock(ProfilePreview::class)->shouldReceive('run')->andReturn(['total' => 4, 'by_level' => [], 'examples' => [], 'per_week' => 1.0, 'error' => null]);
-
-        $this->actingAs($this->adminUser());
-
-        $this->get(route('admin.alerts.client', $user))->assertOk()
-            ->assertSee('Acme Pagamentos')
-            ->assertSee('Financeiro')
-            ->assertSee('"nginx"')
-            ->assertSee('Rodar prévia de 30 dias');
-        $this->get(route('admin.alerts.client', [$user, 'previa' => 1]))->assertSee('4 alertas nos últimos 30 dias');
-
-        $this->post(route('admin.alerts.client.tech', $user), ['tech_id' => $redis, 'action' => 'add'])->assertSessionHas('status');
-        $this->assertSame('admin', $profile->techs()->where('tech_catalog.id', $redis)->first()->pivot->source);
-        $this->assertStringContainsString('"redis"', $profile->refresh()->match_query);
-
-        // Refazer a entrevista não apaga o que o admin acrescentou.
-        app(InterviewService::class)->save($profile, 3, ['web_servers' => ['apache']]);
-        $this->assertTrue($profile->techs()->where('tech_catalog.id', $redis)->exists());
-
-        $this->post(route('admin.alerts.client.tech', $user), ['tech_id' => $redis, 'action' => 'remove']);
-        $this->assertStringNotContainsString('"redis"', $profile->refresh()->match_query);
-
-        $this->post(route('admin.alerts.client.pause', $user));
-        $this->assertTrue($profile->refresh()->isPaused());
-        $this->assertArrayNotHasKey($profile->id, $this->index->stored);
-
-        $this->post(route('admin.alerts.client.test', $user))->assertSessionHas('status');
-        $this->assertSame('sent', NotificationDelivery::query()->where('kind', 'test')->value('status'));
     }
 
     public function test_deliveries_list_payload_and_retry(): void

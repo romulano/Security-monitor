@@ -1,11 +1,11 @@
 {{--
-    O cartão "Chaves expostas" da Integração: para toda conta. Só roda em domínio com a posse comprovada pelo TXT;
-    sem nenhum, a pílula diz isso e o botão leva à página, que explica como comprovar.
+    O cartão "Chaves expostas" da Integração: para toda conta. Sem nenhum domínio, a pílula diz isso e o botão
+    leva à página, onde dá para adicionar um.
     Espera $card (KeysPanel::card()), $pills e $primary da página.
 --}}
 @php
     $pill = match (true) {
-        $card['proven'] === 0 => ['sem domínio comprovado', 'off'],
+        $card['proven'] === 0 => ['sem domínio', 'off'],
         $card['active'] > 0 => [$card['active'] === 1 ? 'ativa em 1 domínio' : 'ativa em '.$card['active'].' domínios', 'on'],
         default => ['não ativada', 'off'],
     };
@@ -39,8 +39,8 @@
             <p class="text-xs text-ink-400">Última varredura: {{ $card['last'] ? $card['last']->timezone('America/Sao_Paulo')->format('d/m H:i') : 'ainda não' }}.</p>
         @else
             <ul class="list-disc space-y-0.5 pl-5 text-sm text-ink-400">
-                <li>Só em domínio com a posse comprovada pelo TXT</li>
-                <li>Só leitura e devagar, com a posse como autorização; repete toda semana</li>
+                <li>Nos domínios que você cadastrar</li>
+                <li>Só leitura e devagar; repete toda semana</li>
                 <li>Nunca guarda nem usa a chave: só o começo, o fim e o tamanho</li>
             </ul>
         @endif

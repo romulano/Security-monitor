@@ -10,10 +10,10 @@
     $last = count($steps);
     $button = 'inline-flex min-h-11 items-center rounded-lg px-4 text-sm';
     $at = fn (int $n) => array_filter(['passo' => $n, 'dominio' => $domain?->host]);
-    // Sem vaga para outro domínio (passo 1), com o rascunho que a regra recusa (passos 5 e 6) ou sem tudo o que o
+    // Com o rascunho que a regra recusa (passos 5 e 6) ou sem tudo o que o
     // aceite pede (passo 7), não há o que gravar.
     $canContinue = match ($step) {
-        1 => $canAdd,
+        1 => true,
         5 => $rule !== null,
         6 => $preview !== null,
         7 => $canAuthorize ?? false,

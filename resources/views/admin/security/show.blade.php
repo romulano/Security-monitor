@@ -50,21 +50,6 @@
         </div>
     @endif
 
-    @unless ($site->ownership)
-        <section class="mb-5 space-y-3">
-            <div>
-                <h2 class="text-sm font-semibold text-amber-200">Comprove que o domínio é seu</h2>
-                <p class="mt-1 max-w-3xl text-xs leading-relaxed text-ink-400">
-                    Sem a prova, só rodam as verificações passivas (certificado, DNS e cabeçalhos da página inicial). Os arquivos expostos
-                    (<code class="font-mono">/.env</code>, <code class="font-mono">/.git</code>…) são requisições a caminhos do site e só rodam depois da prova.
-                </p>
-            </div>
-            <x-domain-ownership :state="$ownership" :action="route('admin.security.ownership', $site)" button="Conferir agora" class="max-w-3xl">
-                O monitor confere o registro a cada varredura.
-            </x-domain-ownership>
-        </section>
-    @endunless
-
     @if (! $last)
         <p class="rounded-lg border border-ink-800 bg-ink-900 p-4 text-sm text-ink-400">Ainda não houve verificação. A primeira sai nos próximos minutos (o agendador olha a cada 10).</p>
     @elseif ($failed)

@@ -64,28 +64,6 @@ class TlsProbeTest extends TestCase
         $this->assertStringContainsString('não resolve no DNS', $report->error);
     }
 
-    public function test_a_host_that_points_inside_is_blocked_before_any_connection(): void
-    {
-        foreach (['127.0.0.1' => 'loopback', '10.0.0.5' => 'rede privada', '169.254.169.254' => 'metadata', '172.16.9.3' => 'rede privada', '::1' => 'loopback'] as $ip => $reason) {
-            $this->dns->set('interno.com.br', 'ips', [$ip]);
-
-            $report = (new TlsProbe($this->dns))->inspect('interno.com.br');
-
-            $this->assertNotNull($report->blocked, $ip);
-            $this->assertFalse($report->reachable);
-            $this->assertStringContainsString($ip, $report->error);
-            $this->assertStringContainsString($reason, $report->error, $ip);
-        }
-    }
-
-    public function test_one_private_address_among_public_ones_blocks_the_whole_host(): void
-    {
-        // Rebinding por DNS de resposta múltipla: basta um endereço interno.
-        $this->dns->set('misto.com.br', 'ips', ['104.21.1.1', '10.0.0.7']);
-
-        $this->assertNotNull((new TlsProbe($this->dns))->inspect('misto.com.br')->blocked);
-    }
-
     public function test_the_probe_resolves_names_through_the_dns_resolver_of_the_container(): void
     {
         $this->assertSame($this->dns, app(DnsResolver::class));

@@ -339,32 +339,28 @@ class LookalikeScanTest extends TestCase
         $this->assertNotContains($content->id, $queued, 'site no ar sem mudança: 1 vez por semana');
     }
 
-    public function test_activated_radar_waits_for_the_txt_and_starts_when_the_domain_is_verified(): void
+    public function test_proving_a_domain_in_news_does_not_create_a_radar_by_itself(): void
     {
-        // Domínio comprovado na entrevista de notícias não cria Radar sozinho: o Radar nasce na entrevista dele.
+        // Instalação de um dono só: o domínio comprovado na entrevista de notícias (já nasce comprovado)
+        // não cria Radar sozinho — o Radar nasce só na entrevista dele.
         $profile = $this->profile();
-        $news = $profile->domains()->create(['domain' => 'acmepay.com.br', 'verify_token' => 'x', 'consent_at' => now(), 'consent_version' => 'v3']);
-        $news->update(['verified_at' => now()]);
+        $news = $profile->domains()->create(['domain' => 'acmepay.com.br', 'consent_at' => now(), 'consent_version' => 'v3']);
+
+        $this->assertTrue($news->isVerified());
         $this->assertSame(0, LookalikeWatch::query()->count());
         $this->assertSame($profile->user_id, $news->refresh()->user_id, 'o domínio do alerta é do dono do alerta');
+    }
 
-        $domain = MonitoredDomain::query()->create(['user_id' => $profile->user_id, 'domain' => 'acmepay.com.br', 'verify_token' => 'y']);
-        $watch = $this->watch($domain, ['status' => 'waiting', 'next_scan_at' => null, 'last_scan_at' => null, 'scan_status' => 'pending']);
+    public function test_an_activated_radar_is_born_active_and_scans_right_away(): void
+    {
+        $domain = MonitoredDomain::query()->create(['user_id' => $this->client()->id, 'domain' => 'acmepay.com.br']);
+        $watch = $this->watch($domain, ['status' => 'active', 'next_scan_at' => now(), 'last_scan_at' => null, 'scan_status' => 'pending']);
+
+        $this->assertTrue($domain->isVerified(), 'instalação de um dono só: nasce comprovado, sem registro TXT no DNS');
 
         Queue::fake();
         $this->artisan('secmon:lookalikes-scan --due')->assertSuccessful();
-        Queue::assertNothingPushed();
-
-        $domain->update(['verified_at' => now()]);
-        $watch->refresh();
-        $this->assertSame('active', $watch->status);
-        $this->assertTrue($watch->next_scan_at->lte(now()), 'a primeira varredura fica para a próxima rodada do agendador');
-
-        $this->artisan('secmon:lookalikes-scan --due')->assertSuccessful();
         Queue::assertPushed(ScanLookalikes::class, fn (ScanLookalikes $job) => $job->watchId === $watch->id && $job->full);
-
-        $domain->update(['verified_at' => null]);
-        $this->assertSame('waiting', $watch->refresh()->status, 'sem a posse, volta a esperar o TXT');
     }
 
     public function test_unverified_domain_is_never_scanned(): void

@@ -34,63 +34,48 @@
             @endif
         </div>
 
-        @if ($left === 0)
-            <p class="rounded-xl border border-amber-800/70 bg-amber-950/20 px-4 py-3 text-sm text-amber-100">
-                @if ($scope)
-                    Não cabe outro canal {{ $scope['sector'] === null ? 'nos canais gerais' : 'no setor '.$scope['sector'] }}: o limite é de 5 canais em cada lugar e 10 webhooks na empresa. Remova um em
-                    <a href="{{ route('alerts.notifiers') }}" class="underline">Notificadores</a> para cadastrar outro.
-                @else
-                    Você chegou ao limite de {{ \App\Services\Alerts\Webhook\WebhookConnector::max() }} webhooks. Exclua um em
-                    <a href="{{ route('alerts.notifiers') }}" class="underline">Notificadores</a> para cadastrar outro.
-                @endif
+        <section class="space-y-3 rounded-xl border border-ink-800 bg-ink-900 p-5">
+            <h2 class="font-semibold text-white">O domínio é seu</h2>
+            <p class="text-sm text-ink-200">
+                Instalação própria, de um dono só: o domínio da URL já fica comprovado na hora, sem prova por registro
+                TXT no DNS. A prova vale para o domínio e para os subdomínios dele.
             </p>
-        @else
-            <section class="space-y-3 rounded-xl border border-ink-800 bg-ink-900 p-5">
-                <h2 class="font-semibold text-white">O domínio precisa ser seu</h2>
+            @if ($proven->isNotEmpty())
                 <p class="text-sm text-ink-200">
-                        O Security Monitor só chama endereços de um domínio que a sua conta comprovou, pelo registro TXT
-                        <span class="font-mono">secmon-verify=…</span> no DNS: é o que impede alguém de usar o Security Monitor contra o site de outra pessoa.
-                    A prova vale para o domínio e para os subdomínios dele.
+                    {{ $scope ? 'Comprovados pela empresa que valem aqui:' : 'Já comprovados na sua conta, valem na hora:' }}
+                    @foreach ($proven as $domain)
+                        <span class="font-mono text-white">{{ $domain }}</span>{{ $loop->remaining > 1 ? ', ' : ($loop->remaining === 1 ? ' e ' : '.') }}
+                    @endforeach
                 </p>
-                @if ($proven->isNotEmpty())
-                    <p class="text-sm text-ink-200">
-                        {{ $scope ? 'Comprovados pela empresa que valem aqui:' : 'Já comprovados na sua conta, valem na hora:' }}
-                        @foreach ($proven as $domain)
-                            <span class="font-mono text-white">{{ $domain }}</span>{{ $loop->remaining > 1 ? ', ' : ($loop->remaining === 1 ? ' e ' : '.') }}
-                        @endforeach
-                    </p>
-                @elseif ($scope)
-                    <p class="text-sm text-ink-400">Nenhum domínio comprovado pela empresa vale aqui ainda. Cadastre o domínio em Domínios da empresa antes.</p>
-                @else
-                    <p class="text-sm text-ink-400">Se o domínio ainda não foi comprovado, a próxima página mostra o registro para criar.</p>
-                @endif
-            </section>
+            @elseif ($scope)
+                <p class="text-sm text-ink-400">Nenhum domínio comprovado pela empresa vale aqui ainda. Cadastre o domínio em Domínios da empresa antes.</p>
+            @endif
+        </section>
 
-            <form method="POST" action="{{ route('alerts.webhooks.store') }}" class="space-y-4 rounded-xl border border-accent/60 bg-ink-900 p-5">
-                @csrf
-                @if ($scope)
-                    <input type="hidden" name="setor" value="{{ $scope['setor'] }}">
-                @endif
-                <div class="grid gap-3 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
-                    <div class="flex flex-col gap-1.5">
-                        <label for="nome" class="text-sm text-ink-400">Nome</label>
-                        <input id="nome" name="nome" required maxlength="60" value="{{ old('nome') }}" placeholder="Produção" class="{{ $field }}">
-                        @error('nome') <p class="text-sm text-red-400">{{ $message }}</p> @enderror
-                    </div>
-                    <div class="flex min-w-0 flex-col gap-1.5">
-                        <label for="url" class="text-sm text-ink-400">URL</label>
-                        <input id="url" name="url" type="url" inputmode="url" required autocomplete="off" spellcheck="false" maxlength="{{ \App\Services\Alerts\Webhook\WebhookUrl::MAX }}"
-                               value="{{ old('url') }}" placeholder="https://api.empresa.com.br/secmon" class="{{ $field }} w-full font-mono text-xs">
-                        @error('url') <p class="text-sm text-red-400">{{ $message }}</p> @enderror
-                        <p class="text-xs text-ink-400">Só https, na porta 443, sem usuário e senha na URL. O Security Monitor não segue redirecionamentos.</p>
-                    </div>
+        <form method="POST" action="{{ route('alerts.webhooks.store') }}" class="space-y-4 rounded-xl border border-accent/60 bg-ink-900 p-5">
+            @csrf
+            @if ($scope)
+                <input type="hidden" name="setor" value="{{ $scope['setor'] }}">
+            @endif
+            <div class="grid gap-3 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+                <div class="flex flex-col gap-1.5">
+                    <label for="nome" class="text-sm text-ink-400">Nome</label>
+                    <input id="nome" name="nome" required maxlength="60" value="{{ old('nome') }}" placeholder="Produção" class="{{ $field }}">
+                    @error('nome') <p class="text-sm text-red-400">{{ $message }}</p> @enderror
                 </div>
+                <div class="flex min-w-0 flex-col gap-1.5">
+                    <label for="url" class="text-sm text-ink-400">URL</label>
+                    <input id="url" name="url" type="url" inputmode="url" required autocomplete="off" spellcheck="false" maxlength="{{ \App\Services\Alerts\Webhook\WebhookUrl::MAX }}"
+                           value="{{ old('url') }}" placeholder="https://api.empresa.com.br/secmon" class="{{ $field }} w-full font-mono text-xs">
+                    @error('url') <p class="text-sm text-red-400">{{ $message }}</p> @enderror
+                    <p class="text-xs text-ink-400">Só https, na porta 443, sem usuário e senha na URL. O Security Monitor não segue redirecionamentos.</p>
+                </div>
+            </div>
 
-                @include('alerts.webhooks.partials.auth-fields', ['current' => 'gerar'])
+            @include('alerts.webhooks.partials.auth-fields', ['current' => 'gerar'])
 
-                <button class="inline-flex min-h-11 items-center rounded-lg bg-accent px-5 text-sm font-semibold text-ink-950 hover:brightness-110">Cadastrar o webhook</button>
-            </form>
-        @endif
+            <button class="inline-flex min-h-11 items-center rounded-lg bg-accent px-5 text-sm font-semibold text-ink-950 hover:brightness-110">Cadastrar o webhook</button>
+        </form>
 
         @include('alerts.webhooks.partials.docs')
 

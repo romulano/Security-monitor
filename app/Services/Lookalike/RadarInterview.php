@@ -20,12 +20,12 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * A entrevista do Radar de domínios, separada da de notícias: o domínio
- * (passo 1), a marca (passo 2) e a posse com a ativação (passo 3).
+ * (passo 1), a marca (passo 2) e a ativação (passo 3).
  *
  * O domínio do Radar é uma linha própria, sem alerta. A posse é da conta
- * (DomainOwnership): o domínio já comprovado em qualquer serviço chega
- * comprovado, e o passo 3 não pede o TXT de novo. Escolhido na lista do passo
- * 1, o aceite do termo v3 de Notícias (que cobre os prints do site) vem junto.
+ * (DomainOwnership): instalação self-hosted, de um dono só, o domínio nasce
+ * já comprovado e a primeira varredura começa assim que o passo 3 ativa o
+ * Radar, sem esperar nenhuma prova por TXT no DNS.
  */
 class RadarInterview
 {
@@ -35,7 +35,7 @@ class RadarInterview
     public const STEPS = [
         1 => ['Domínio', 'O domínio do site que os seus clientes acessam. Cada domínio é um Radar; dá para adicionar outros depois.', 'o que vigiar'],
         2 => ['Marca', 'Com estes nomes geramos variações além do domínio, e a IA usa para reconhecer quem imita vocês.', 'nomes para as variações'],
-        3 => ['Posse e ativação', 'Assim ninguém usa o Security Monitor para vigiar a marca dos outros.', 'registro TXT'],
+        3 => ['Ativação', 'Compare com o seu site e ative: a primeira varredura começa na hora.', 'ativar'],
     ];
 
     public function __construct(private DomainOwnership $ownership, private VariantGenerator $variants, private Visibility $visibility) {}
@@ -86,7 +86,6 @@ class RadarInterview
             'steps' => self::STEPS,
             'text' => self::STEPS[$step],
             'proven' => $step === 1 && ! $watch?->isCompleted() ? $this->provenDomains($user, $watch) : collect(),
-            'ownership' => $step === 3 && $watch?->domain ? $this->ownership->screenFor($watch->domain) : null,
             'samples' => $step === 2 && $watch ? $this->samples($watch) : ['hosts' => [], 'total' => 0],
         ];
     }
@@ -107,10 +106,6 @@ class RadarInterview
     {
         if ($watch?->isCompleted()) {
             throw new ActionRefused('O domínio de um Radar ativado não muda. Para vigiar outro domínio, adicione outro Radar em Integração.');
-        }
-
-        if (! $watch && $user->reachedRadarLimit()) {
-            throw new ActionRefused('Você chegou ao limite de '.LookalikeWatch::MAX_PER_USER.' Radares. Exclua um para adicionar outro.');
         }
 
         $stamp = $watch ? null : $this->visibility->stampFor($user);
@@ -148,14 +143,13 @@ class RadarInterview
             $domain = MonitoredDomain::query()->create([
                 'user_id' => $creator,
                 'domain' => $name,
-                'verify_token' => $this->ownership->txtToken($owner, $name),
                 ...($news ? [
                     'consent_at' => $news->consent_at,
                     'consent_ip' => $news->consent_ip,
                     'consent_version' => $news->consent_version,
                 ] : []),
             ]);
-            $this->ownership->claim($owner, $name, 'radar', $domain->verify_token);
+            $this->ownership->claim($owner, $name, 'radar');
             $this->ownership->apply($domain, $watch ?? (new LookalikeWatch)->forceFill($stamp));
 
             if ($watch) {
@@ -194,18 +188,12 @@ class RadarInterview
         ])->save();
     }
 
-    /** Botão "Verificar agora" do passo 3: a posse da conta ou o TXT; sem eles, recusa dizendo o que falta. */
-    public function verify(LookalikeWatch $watch): void
-    {
-        $this->ownership->confirmRow($watch->domain, 'radar');
-    }
-
     /**
      * "Ativar o Radar" (ou "Salvar", depois de ativado): grava o aceite dos
-     * prints do site e, na primeira vez, liga o Radar. Com a posse comprovada a
-     * primeira varredura começa já; sem ela, o Radar espera o TXT e começa
-     * sozinho quando ele aparecer. Devolve `started` (varredura já na fila),
-     * `waiting` (esperando o TXT) ou `saved` (Radar já ativado antes).
+     * prints do site e, na primeira vez, liga o Radar. O domínio já nasce
+     * comprovado (instalação de um dono só), então a primeira varredura
+     * começa na hora. Devolve `started` (varredura já na fila) ou `saved`
+     * (Radar já ativado antes).
      */
     public function activate(LookalikeWatch $watch, bool $consent, ?string $ip): string
     {
@@ -217,20 +205,17 @@ class RadarInterview
         }
 
         $this->ownership->apply($domain);
-        $verified = $domain->isVerified();
         $watch->forceFill([
             'completed_at' => now(),
             'step_reached' => self::LAST_STEP,
-            'status' => $verified ? 'active' : 'waiting',
-            'next_scan_at' => $verified ? now() : null,
-            'manual_scan_at' => $verified ? now() : null,
+            'status' => 'active',
+            'next_scan_at' => now(),
+            'manual_scan_at' => now(),
         ])->save();
 
-        if ($verified) {
-            ScanLookalikes::dispatch($watch->id);
-        }
+        ScanLookalikes::dispatch($watch->id);
 
-        return $verified ? 'started' : 'waiting';
+        return 'started';
     }
 
     /** Exclui o Radar: o domínio dele, os achados e os prints (do disco também). */

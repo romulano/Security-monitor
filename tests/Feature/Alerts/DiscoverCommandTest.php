@@ -44,7 +44,9 @@ class DiscoverCommandTest extends TestCase
 
     public function test_a_domain_that_is_not_registered_or_lacks_consent_or_proof_is_refused(): void
     {
-        $this->domain(['domain' => 'sem-posse.com.br', 'verified_at' => null]);
+        // Instalação de um dono só: todo MonitoredDomain nasce comprovado (booted()); para simular um
+        // dado antigo sem posse, zera o campo depois de criado.
+        $this->domain(['domain' => 'sem-posse.com.br'])->forceFill(['verified_at' => null])->save();
         $this->domain(['domain' => 'sem-aceite.com.br', 'consent_at' => null]);
         $this->mock(DiscoveryService::class)->shouldNotReceive('run');
 
@@ -98,7 +100,9 @@ class DiscoverCommandTest extends TestCase
         $due = $this->domain(['domain' => 'vence.com.br', 'last_scan_at' => now()->subDays(45)]);
         $never = $this->domain(['domain' => 'nunca.com.br']);
         $this->domain(['domain' => 'recente.com.br', 'last_scan_at' => now()->subDays(5)]);
-        $this->domain(['domain' => 'sem-posse.com.br', 'verified_at' => null]);
+        // Instalação de um dono só: todo MonitoredDomain nasce comprovado (booted()); para simular um
+        // dado antigo sem posse, zera o campo depois de criado.
+        $this->domain(['domain' => 'sem-posse.com.br'])->forceFill(['verified_at' => null])->save();
         $this->domain(['domain' => 'sem-aceite.com.br', 'consent_at' => null]);
         $this->domain(['domain' => 'agendado.com.br', 'next_run_at' => now()->addDay()]);
 

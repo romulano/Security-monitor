@@ -11,14 +11,15 @@ use Throwable;
  * Um GET como o de um navegador, com as travas da descoberta:
  *
  * - só http/https, portas 80 e 443, sem usuário:senha na URL;
- * - o host é resolvido aqui e todo IP passa pelo IpGuard antes do request;
- * - o request vai para o IP já validado (CURLOPT_RESOLVE), então um DNS que
- *   muda de resposta no meio do caminho (rebinding) não leva para dentro;
+ * - o host é resolvido aqui e todo IP passa pelo IpGuard antes do request (que, numa
+ *   instalação local, de um dono só, só recusa endereço mal formado, não a faixa);
+ * - o request vai para o IP já resolvido (CURLOPT_RESOLVE), então um DNS que
+ *   muda de resposta no meio do caminho (rebinding) não troca de endereço depois da checagem;
  * - redirects são seguidos à mão, um a um, com a mesma checagem, até 3;
  * - o corpo é lido inteiro, com um teto de segurança (10 MB por padrão);
  * - com escopo (`startScan(..., $allow)`), cada salto só segue para o host e o
  *   IP que o escopo aceita, e URL com IP direto é recusada. Sem escopo (a
- *   descoberta, a monitoria e as imagens do admin), vale qualquer IP público.
+ *   descoberta, a monitoria e as imagens do admin), vale qualquer IP.
  */
 class SafeFetcher
 {
@@ -29,7 +30,7 @@ class SafeFetcher
 
     private array $visited = [];
 
-    /** Escopo da varredura em curso; nulo: qualquer IP público (ver startScan). */
+    /** Escopo da varredura em curso; nulo: qualquer IP, o IpGuard só confere o formato (ver startScan). */
     private ?Closure $allow = null;
 
     public function __construct(private DnsResolver $dns) {}
@@ -134,7 +135,7 @@ class SafeFetcher
                 return $fail("{$host} fora do escopo da varredura", blocked: true);
             }
 
-            $log("{$host} → {$ip} (público)", 'ok');
+            $log("{$host} → {$ip} (resolvido)", 'ok');
 
             $this->spent++;
             $this->visited[] = $url;

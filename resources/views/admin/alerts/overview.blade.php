@@ -46,7 +46,7 @@
 
     <section class="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         @foreach ([
-            ['Perfis ativos', $stats['active'], 'de '.$stats['clients'].' clientes · '.$stats['paused'].' pausado(s)'],
+            ['Perfis ativos', $stats['active'], $stats['paused'].' pausado(s)'],
             ['Entrevistas em rascunho', $stats['drafts'], $stats['stale_drafts'].' parada(s) há mais de 7 dias'],
             ['Canais ativos', $stats['channels'], ($stats['channels'] - $stats['channels_discord'] - $stats['channels_telegram'] - $stats['channels_webhook']).' Slack ('.$stats['channels_oauth'].' pelo app) · '.$stats['channels_discord'].' Discord · '.$stats['channels_telegram'].' Telegram · '.$stats['channels_webhook'].' webhook'],
             ['Canais com problema', $stats['broken'], 'precisam reconectar'],
@@ -77,7 +77,7 @@
                         <p class="text-sm font-semibold text-white">{{ $channel->user->alertProfile?->company_name ?: $channel->user->name }} · {{ $channel->appName() }}</p>
                         <p class="text-xs text-ink-400">{{ $channel->last_error }} · {{ $channel->broken_at?->timezone('America/Sao_Paulo')->format('d/m H:i') }}</p>
                     </div>
-                    <a href="{{ route('admin.alerts.client', $channel->user) }}" class="text-xs text-accent hover:underline">Abrir cliente</a>
+                    <a href="{{ route('alerts.notifiers') }}" class="text-xs text-accent hover:underline">Abrir notificadores</a>
                 </div>
             @endforeach
             @foreach ($issues['domains'] as $domain)
@@ -99,7 +99,7 @@
                         <p class="text-sm font-semibold text-white">{{ $draft->company_name ?: $draft->user->name }}</p>
                         <p class="text-xs text-ink-400">parada no passo {{ $draft->step_reached }} desde {{ $draft->updated_at->timezone('America/Sao_Paulo')->format('d/m') }}</p>
                     </div>
-                    <a href="{{ route('admin.alerts.client', $draft->user) }}" class="text-xs text-accent hover:underline">Abrir cliente</a>
+                    <a href="{{ route('alerts.interview', ['passo' => $draft->step_reached, 'alerta' => $draft->id]) }}" class="text-xs text-accent hover:underline">Continuar entrevista</a>
                 </div>
             @endforeach
         </section>

@@ -5,11 +5,6 @@
         <p class="font-mono text-[15px] text-white">{{ $domain->host }}</p>
         <p class="text-sm text-ink-400">O domínio de uma autorização não muda. Para testar outro, comece uma autorização nova na <a href="{{ route('alerts.tests') }}" class="text-accent hover:underline">página dos testes</a>.</p>
     </section>
-@elseif (! $canAdd)
-    <h2 class="text-lg font-semibold text-white">Qual domínio testar?</h2>
-    <p class="rounded-xl border border-amber-800 bg-amber-950/30 px-5 py-4 text-sm text-amber-100">
-        Você chegou ao limite de {{ $max }} domínios nos testes de segurança. Exclua um na <a href="{{ route('alerts.tests') }}" class="underline">página dos testes</a> para inscrever outro.
-    </p>
 @else
     <div class="rounded-xl border border-accent/40 bg-accent/5 px-5 py-4">
         <p class="font-semibold text-white">Teste ativo, só com autorização.</p>
@@ -26,7 +21,7 @@
 
     @php
         $choice = old('origem', $proven->isNotEmpty() ? (string) $proven->first()->id : 'outro');
-        $hint = 'Sem “www” nem “https://”. Um domínio interno ou um IP não servem. O passo 2 pede o registro TXT.';
+        $hint = 'Sem “www” nem “https://”. Um domínio interno ou um IP não servem. O passo 2 pede para confirmar que o domínio é seu.';
     @endphp
     <form id="step-form" method="POST" action="{{ route('alerts.tests.domains.store') }}" class="space-y-4">
         @csrf
@@ -67,5 +62,5 @@
         @error('outro')<p class="text-sm text-red-300">{{ $message }}</p>@enderror
     </form>
 
-    <p class="text-xs text-ink-400">Você pode autorizar até {{ $max }} domínios. Um domínio bloqueado por denúncia não aparece aqui; fale com {{ config('secmon.contact_email') }}.</p>
+    <p class="text-xs text-ink-400">Um domínio bloqueado por denúncia não aparece aqui; fale com {{ config('secmon.contact_email') }}.</p>
 @endif

@@ -21,7 +21,6 @@ use Throwable;
 class SiteScanner
 {
     public function __construct(
-        private SiteOwnership $ownership,
         private TlsProbe $tls,
     ) {}
 
@@ -30,17 +29,14 @@ class SiteScanner
         $started = microtime(true);
 
         // Defesa em profundidade: o cadastro já passa pelo SiteHost, mas uma linha que entrou por outro
-        // caminho (banco, seed, import) com IP, porta ou nome interno nunca vira requisição.
+        // caminho (banco, seed, import) com formato inválido nunca vira requisição.
         if (SiteHost::normalize($site->host) !== $site->host) {
-            return new ScanReport([], 'erro', 0, null, null, 0, 'endereço do site inválido: só nome DNS é aceito');
+            return new ScanReport([], 'erro', 0, null, null, 0, 'endereço do site inválido');
         }
-
-        // A posse é conferida a cada varredura: um site que saiu do servidor perde as verificações de caminho.
-        $owned = $this->ownership->refresh($site) !== null;
 
         $fetcher = app(SafeFetcher::class);
         $fetcher->startScan((int) config('secmon.security.request_budget', 25));
-        $probe = new SiteProbe($site, $fetcher, $this->tls, $owned);
+        $probe = new SiteProbe($site, $fetcher, $this->tls);
 
         $results = [];
 

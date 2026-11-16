@@ -13,9 +13,9 @@
         <h1 class="text-sm font-semibold text-white">Segurança dos sites</h1>
         <p class="max-w-3xl text-xs leading-relaxed text-ink-700">
             Vigia os sites que você cadastrar: certificado e validade, HTTPS e cabeçalhos de segurança, cookies, e-mail do domínio
-            (SPF e DMARC), vencimento do domínio e, nos sites com posse comprovada, arquivos que não deveriam ser públicos
+            (SPF e DMARC), vencimento do domínio e arquivos que não deveriam ser públicos
             (<code class="font-mono">/.env</code>, <code class="font-mono">/.git</code>). É <strong class="font-medium text-ink-400">só leitura</strong>:
-            GET, DNS e um handshake TLS, nunca em endereço interno, e o Security Monitor não guarda o conteúdo das páginas.
+            GET, DNS e um handshake TLS, e o Security Monitor não guarda o conteúdo das páginas.
             Uma varredura por site a cada {{ intdiv(config('secmon.security.interval_minutes'), 60) }} h.
         </p>
     </div>
@@ -36,7 +36,6 @@
                     <th class="px-4 py-2 font-medium">Nota</th>
                     <th class="hidden px-4 py-2 font-medium sm:table-cell">Problemas</th>
                     <th class="hidden px-4 py-2 font-medium md:table-cell">Última</th>
-                    <th class="hidden px-4 py-2 font-medium md:table-cell">Posse</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-ink-800">
@@ -61,17 +60,10 @@
                             @endif
                         </td>
                         <td class="hidden px-4 py-3 text-xs text-ink-400 md:table-cell">{{ $when($site->last_check_at) }}</td>
-                        <td class="hidden px-4 py-3 text-xs md:table-cell">
-                            @if ($site->ownership)
-                                <span class="text-emerald-300">comprovada</span>
-                            @else
-                                <span class="text-amber-300">pendente</span>
-                            @endif
-                        </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-4 py-6 text-sm text-ink-400">Nenhum site ainda. Cadastre o primeiro abaixo.</td>
+                        <td colspan="5" class="px-4 py-6 text-sm text-ink-400">Nenhum site ainda. Cadastre o primeiro abaixo.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -79,18 +71,18 @@
     </div>
 
     <details class="rounded-lg border border-ink-800 bg-ink-900 p-4" @if ($errors->any() || $sites->isEmpty()) open @endif>
-        <summary class="cursor-pointer text-sm font-medium text-ink-200">Cadastrar um site ({{ $sites->count() }}/{{ $max }})</summary>
+        <summary class="cursor-pointer text-sm font-medium text-ink-200">Cadastrar um site</summary>
 
         <form method="POST" action="{{ route('admin.security.store') }}" class="mt-4 grid max-w-2xl gap-3">
             @csrf
             <label class="block">
                 <span class="{{ $label }}">Site</span>
                 <input name="host" required maxlength="253" placeholder="exemplo.com.br" value="{{ old('host') }}" class="{{ $input }}">
-                <span class="mt-1 block text-[11px] text-ink-700">Só o nome do site (com <code class="font-mono">www.</code> se for ele que você quer vigiar). IP, porta e endereço interno são recusados.</span>
+                <span class="mt-1 block text-[11px] text-ink-700">O nome do site (com <code class="font-mono">www.</code> se for ele que você quer vigiar) ou um IP. Porta e usuário:senha não entram.</span>
             </label>
             <label class="flex items-start gap-2 text-sm text-ink-400">
                 <input type="checkbox" name="consent" value="1" required @checked(old('consent')) class="mt-1">
-                <span>Sou o responsável por este site e autorizo o Security Monitor a verificá-lo (certificado, cabeçalhos, DNS e, com posse comprovada, arquivos expostos).</span>
+                <span>Sou o responsável por este site e autorizo o Security Monitor a verificá-lo (certificado, cabeçalhos, DNS e arquivos expostos).</span>
             </label>
             <div>
                 <button class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-ink-950 hover:brightness-110">Cadastrar</button>

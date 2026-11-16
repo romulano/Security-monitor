@@ -7,7 +7,6 @@ use App\Models\AlertProfile;
 use App\Models\MonitoredDomain;
 use App\Models\NotificationChannel;
 use App\Models\NotificationDelivery;
-use App\Models\User;
 use App\Services\Alerts\Discord\DiscordClient;
 use App\Services\Alerts\Telegram\TelegramClient;
 use App\Support\Settings;
@@ -39,7 +38,6 @@ class AlertsOverview
                 'telegram' => TelegramClient::configured(),
             ],
             'stats' => [
-                'clients' => User::query()->where('is_admin', false)->count(),
                 'active' => AlertProfile::query()->where('status', 'active')->count(),
                 'paused' => AlertProfile::query()->where('status', 'paused')->count(),
                 'drafts' => AlertProfile::query()->whereNull('completed_at')->count(),

@@ -7,7 +7,6 @@ use App\Models\GithubMonitor;
 use App\Models\LookalikeWatch;
 use App\Models\NotificationChannel;
 use App\Models\User;
-use App\Services\Alerts\Webhook\WebhookConnector;
 
 /**
  * /alertas/notificadores: os apps (Slack, Discord, Telegram, webhook), o que cada
@@ -28,9 +27,9 @@ class AlertCenter
         $webhooks = $channels->where('type', 'webhook')->count();
 
         return [
-            // Os apps a oferecer em "Conectar outro app": os que faltam e o webhook, até o limite (a conta pode ter vários).
+            // Os apps a oferecer em "Conectar outro app": os que faltam e o webhook, sempre (a conta pode ter vários).
             'missing' => collect(array_keys(NotificationChannel::APPS))
-                ->filter(fn (string $type) => $type === 'webhook' ? $webhooks < WebhookConnector::max() : ! $channels->contains('type', $type))
+                ->filter(fn (string $type) => $type === 'webhook' || ! $channels->contains('type', $type))
                 ->values(),
             'webhooks' => $webhooks,
             'channels' => $channels,

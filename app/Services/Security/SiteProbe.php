@@ -27,7 +27,6 @@ class SiteProbe
         public readonly SecuritySite $site,
         private SafeFetcher $fetcher,
         private TlsProbe $tlsProbe,
-        public readonly bool $owned,
     ) {}
 
     public function host(): string

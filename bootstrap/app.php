@@ -6,7 +6,6 @@ use App\Http\Middleware\EnsurePentestDomain;
 use App\Http\Middleware\EnsureSignedLinkActive;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\KeepSessionIdle;
-use App\Http\Middleware\RecordPageView;
 use App\Http\Middleware\RefuseRobots;
 use App\Http\Middleware\RejectOutOfRangeIds;
 use Illuminate\Foundation\Application;
@@ -50,9 +49,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: RejectOutOfRangeIds::class);
         $middleware->prependToPriorityList(before: ThrottleRequests::class, prepend: EnsurePentestDomain::class);
 
-        // Globais, para valer também no 404 de rota que não existe: a CSP e o registro de cada
-        // página aberta em Admin → Acessos.
-        $middleware->append([ContentSecurityPolicy::class, RecordPageView::class]);
+        // Global, para valer também no 404 de rota que não existe.
+        $middleware->append([ContentSecurityPolicy::class]);
 
         // A conta de empresa só entra com a empresa ativa e sem estar desativada (a sessão aberta também cai).
         // A versão local não tem login: toda requisição já começa com a conta do dono (AuthenticateLocalOwner).

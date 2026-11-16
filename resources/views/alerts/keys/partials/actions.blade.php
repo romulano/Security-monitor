@@ -8,10 +8,10 @@
 @endphp
 <div class="flex flex-wrap items-center gap-2">
     @if (! $provable)
-        <span class="text-sm text-red-300">O TXT de {{ $owned->domain }} sumiu do DNS: publique de novo para varrer.</span>
+        <span class="text-sm text-red-300">A posse de {{ $owned->domain }} não está mais comprovada.</span>
     @elseif ($site === null || $site->isActive())
         <form method="POST" action="{{ route('alerts.keys.scan', ['dominio' => $owned->domain]) }}"
-              @if ($site === null) data-confirm="Ativar a varredura de chaves em {{ $owned->domain }}? Com a posse comprovada como autorização, o Security Monitor navega o site inteiro (só leitura, devagar, inclusive o que o robots.txt esconde dos buscadores) agora e depois uma vez por semana." data-confirm-ok="Ativar e varrer" @endif>
+              @if ($site === null) data-confirm="Ativar a varredura de chaves em {{ $owned->domain }}? O Security Monitor navega o site inteiro (só leitura, devagar, inclusive o que o robots.txt esconde dos buscadores) agora e depois uma vez por semana." data-confirm-ok="Ativar e varrer" @endif>
             @csrf
             <button @disabled($site?->isBusy()) class="{{ $button }} bg-accent font-semibold text-ink-950 hover:brightness-110 disabled:opacity-50">{{ $site === null ? 'Ativar e varrer' : ($site->isBusy() ? 'Varrendo…' : 'Varrer agora') }}</button>
         </form>

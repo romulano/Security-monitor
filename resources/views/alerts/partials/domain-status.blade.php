@@ -9,30 +9,15 @@
     ];
 @endphp
 
-@if (! $domain->verified_at)
-    <section class="space-y-3">
-        <div>
-            <h3 class="text-[15px] font-semibold text-white">Comprove que o domínio é seu</h3>
-            <p class="text-sm text-ink-400">Sem essa prova, nada é consultado no domínio.</p>
-        </div>
-        <x-domain-ownership :state="$ownership" :action="Route::has('alerts.domain.verify') ? route('alerts.domain.verify', $profile->urlParams()) : null"
-                            :waiting="true" field="txt-value">
-            Pode seguir a entrevista.
-        </x-domain-ownership>
-    </section>
-@else
-    @php
-        // Origem de cada tecnologia no perfil: o que veio da entrevista não se remove por aqui.
-        $sources = $profileTechSources ?? [];
-        $findings = $domain->findings->sortBy(fn ($f) => [$f->status === 'ignored', -$f->confidence]);
-        $kept = $findings->where('status', '!=', 'ignored')->count();
-        $cloudflare = $domain->usesCloudflare();
-    @endphp
-    @if ($ownership['state'] === 'unseen' && ! $ownership['legacy'])
-        <x-domain-ownership :state="$ownership" :action="route('alerts.domain.verify', $profile->urlParams())" effect="a descoberta para" field="txt-value" />
-    @endif
+@php
+    // Origem de cada tecnologia no perfil: o que veio da entrevista não se remove por aqui.
+    $sources = $profileTechSources ?? [];
+    $findings = $domain->findings->sortBy(fn ($f) => [$f->status === 'ignored', -$f->confidence]);
+    $kept = $findings->where('status', '!=', 'ignored')->count();
+    $cloudflare = $domain->usesCloudflare();
+@endphp
 
-    <section id="descoberta" class="space-y-4 rounded-xl border border-ink-800 bg-ink-900 p-5">
+<section id="descoberta" class="space-y-4 rounded-xl border border-ink-800 bg-ink-900 p-5">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <h3 class="text-[15px] font-semibold text-white">
                 @if ($findings->isEmpty())
@@ -141,4 +126,3 @@
             </div>
         @endforeach
     </section>
-@endif

@@ -63,27 +63,25 @@ class LookalikePageTest extends TestCase
             ->assertSee(route('alerts.lookalikes.interview', ['passo' => 1]), false);
 
         // Domínio comprovado num alerta de notícias não entra sozinho no Radar.
-        $this->profile($user)->domains()->create(['domain' => 'acmepay.com.br', 'verify_token' => 'x', 'consent_at' => now(), 'verified_at' => now()]);
+        $this->profile($user)->domains()->create(['domain' => 'acmepay.com.br', 'consent_at' => now()]);
         $this->actingAs($user)->get(route('alerts.lookalikes'))->assertOk()->assertSee('Integre o Radar para começar');
 
-        $domain = MonitoredDomain::query()->create(['user_id' => $user->id, 'domain' => 'acmepay.com.br', 'verify_token' => 'y']);
+        // Instalação de um dono só: o domínio já nasce comprovado, sem registro TXT no DNS.
+        $domain = MonitoredDomain::query()->create(['user_id' => $user->id, 'domain' => 'acmepay.com.br']);
+        $this->assertTrue($domain->isVerified());
         $watch = $this->watch($domain, ['status' => 'draft', 'completed_at' => null, 'step_reached' => 2, 'last_scan_at' => null]);
         $this->actingAs($user)->get(route('alerts.lookalikes'))
             ->assertOk()
             ->assertSee('não terminou')
             ->assertSee('Continuar a entrevista (passo 2)');
 
-        $watch->update(['status' => 'waiting', 'completed_at' => now(), 'step_reached' => 3]);
-        $this->actingAs($user)->get(route('alerts.lookalikes'))
-            ->assertOk()
-            ->assertSee('Comprove que')
-            ->assertSee($domain->txtValue());
-
-        $domain->update(['verified_at' => now()]);
+        // Ativado, o Radar já entra na hora: sem tela de posse, sem espera por registro TXT.
+        $watch->update(['status' => 'active', 'completed_at' => now(), 'step_reached' => 3, 'next_scan_at' => now()]);
         $this->actingAs($user)->get(route('alerts.lookalikes'))
             ->assertOk()
             ->assertSee('O domínio entrou no Radar')
-            ->assertSee('Adicionar domínio');
+            ->assertSee('Adicionar domínio')
+            ->assertDontSee('Comprove que')->assertDontSee('registro TXT');
     }
 
     public function test_list_shows_threats_first_with_the_report_button_and_hides_what_the_client_marked_as_theirs(): void

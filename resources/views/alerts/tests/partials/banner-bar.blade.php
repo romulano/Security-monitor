@@ -1,6 +1,6 @@
 {{--
     O conteúdo da faixa do teste: uma situação por vez, com o estado sempre escrito. "Parando" é anunciado na
-    hora (assertive) e "o TXT sumiu" como alerta; as outras, como status. No celular, a frase inteira é o link
+    hora (assertive); as outras, como status. No celular, a frase inteira é o link
     "Acompanhar", em duas linhas, e o botão diz só "Parar" (situação 11). Espera $banner (PentestBanner::for()).
 --}}
 @php

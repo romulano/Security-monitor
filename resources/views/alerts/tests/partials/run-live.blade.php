@@ -1,6 +1,6 @@
 {{--
     O pedaço da página da execução que muda sozinho: o cabeçalho com a pílula e as ações, a faixa do estado e,
-    depois de começar, as 7 fases, o "Agora", o orçamento, a posse e a atividade. Espera $run e $live
+    depois de começar, as 7 fases, o "Agora", o orçamento e a atividade. Espera $run e $live
     (PentestRunView::live()); opcional $confirmed (a confirmação recente vale para o domínio, e o Retomar não pede a
     senha). A consulta periódica troca este pedaço inteiro.
 --}}
@@ -109,18 +109,10 @@
         @if (! empty($banner['checks']))
             <p class="flex flex-wrap items-center gap-2 text-xs text-ink-400">
                 Antes de começar conferimos de novo:
-                @foreach (['TXT no ar', 'termo aceito', 'janela', 'testes ligados no Security Monitor'] as $check)
+                @foreach (['termo aceito', 'janela', 'testes ligados no Security Monitor'] as $check)
                     <span class="rounded-full border border-ink-700 px-2 py-0.5 text-ink-200">{{ $check }}</span>
                 @endforeach
             </p>
-        @endif
-        @if (! empty($banner['txt']) && $run->pentestDomain)
-            <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                <dt class="text-red-200">Tipo</dt><dd class="font-mono text-white">TXT</dd>
-                <dt class="text-red-200">Nome</dt><dd class="font-mono text-white">@</dd>
-                <dt class="text-red-200">Valor</dt><dd class="font-mono break-all text-white">{{ $run->pentestDomain->domain?->txtValue() }}</dd>
-            </dl>
-            <a href="{{ route('alerts.tests.domains.show', ['dominio' => $run->pentestDomain->host]) }}" class="inline-flex min-h-11 items-center font-semibold text-red-200 underline">Conferir o TXT</a>
         @endif
         @if (! empty($banner['renew']) && $run->pentestDomain)
             <a href="{{ route('alerts.tests.authorize', ['passo' => 4, 'dominio' => $run->pentestDomain->host]) }}" class="inline-flex min-h-11 items-center font-semibold text-accent hover:underline">Escolher nova janela</a>
@@ -177,16 +169,6 @@
             </div>
             <p class="text-sm text-ink-200">{{ $live['budget']['activity'] }}</p>
             <p class="text-xs text-ink-400">{{ $live['budget']['rhythm'] }}</p>
-        </section>
-
-        {{-- Nas duas colunas até a "Saúde do site" (P10) ocupar o lado dela. --}}
-        <section aria-labelledby="posse" class="{{ $box }} lg:col-span-2">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-                <h2 id="posse" class="text-[11px] tracking-[0.1em] text-ink-400 uppercase">Posse</h2>
-                @include('alerts.tests.partials.pill', ['pill' => [$live['ownership']['label'], $live['ownership']['tone']]])
-            </div>
-            <p class="text-sm text-ink-200">{{ $live['ownership']['text'] }}</p>
-            <p class="text-xs text-ink-400">Conferimos no início, em cada fase e a cada 15 minutos. Se o TXT sumir, o teste para.</p>
         </section>
 
         {{-- Na largura toda, embaixo da grade (canvas); no celular, o rótulo vai na linha do texto. --}}

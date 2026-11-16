@@ -6,7 +6,6 @@ use App\Jobs\SendEmail;
 use App\Mail\TestEmail;
 use App\Models\EmailMessage;
 use App\Models\User;
-use App\Services\Alerts\Discovery\DnsResolver;
 use App\Services\Mail\DeliveryLog;
 use App\Services\Mail\Outbox;
 use App\Services\Maintenance\RetentionPruner;
@@ -22,13 +21,11 @@ use Symfony\Component\Mailer\Exception\TransportException;
 use Symfony\Component\Mailer\SentMessage as SymfonySentMessage;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
-use Tests\Feature\Alerts\FakeDnsResolver;
 use Tests\TestCase;
 
 /**
- * Admin → E-mails: todo e-mail passa pelo Outbox (registro + fila), o job entrega ao
- * servidor de envio e anota o id da fila, o log do Postfix diz o que o servidor do
- * destinatário fez, e a página mostra a saúde do envio e o que deu erro.
+ * Todo e-mail passa pelo Outbox (registro + fila), o job entrega ao servidor de envio
+ * e anota o id da fila, e o log do Postfix diz o que o servidor do destinatário fez.
  */
 class EmailDeliveryTest extends TestCase
 {
@@ -59,11 +56,6 @@ LOG;
         @unlink($this->logPath);
 
         parent::tearDown();
-    }
-
-    private function admin(): User
-    {
-        return User::factory()->create(['is_admin' => true]);
     }
 
     private function message(array $attributes = []): EmailMessage
@@ -211,93 +203,6 @@ LOG;
 
         $this->assertNotNull($event);
         $this->assertSame('* * * * *', $event->expression);
-    }
-
-    public function test_the_page_shows_the_health_of_the_sending(): void
-    {
-        config([
-            'mail.default' => 'smtp',
-            'mail.mailers.smtp.host' => '127.0.0.1',
-            'mail.mailers.smtp.port' => 1,
-            'secmon.mail.helo' => 'srv.exemplo.test',
-            'secmon.mail.dkim_path' => $dkim = tempnam(sys_get_temp_dir(), 'dkim'),
-            'secmon.mail.dkim_name_path' => $name = tempnam(sys_get_temp_dir(), 'dkimname'),
-        ]);
-        file_put_contents($dkim, 'v=DKIM1; h=sha256; k=rsa; p=CHAVEATUAL123');
-        file_put_contents($name, 'secmon1._domainkey.example.com');
-        $dns = (new FakeDnsResolver)
-            ->set('example.com', 'txt', ['v=spf1 ip4:203.0.113.10 include:_spf.mx.cloudflare.net ~all'])
-            ->set('srv.exemplo.test', 'ips', ['203.0.113.10'])
-            ->set('_dmarc.example.com', 'txt', ['v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s']);
-        $this->app->instance(DnsResolver::class, $dns);
-
-        $this->actingAs($this->admin())->get(route('admin.emails'))
-            ->assertOk()
-            ->assertSee('não publicado')
-            ->assertSee('secmon1._domainkey.example.com')
-            ->assertSee('v=DKIM1; h=sha256; k=rsa; p=CHAVEATUAL123')
-            ->assertSee('autoriza o servidor')
-            ->assertSee('p=reject')
-            ->assertSee('fora do ar');
-
-        $dns->set('secmon1._domainkey.example.com', 'txt', ['v=DKIM1; k=rsa; p=CHAVEVELHA']);
-        $this->actingAs($this->admin())->get(route('admin.emails'))->assertSee('chave diferente');
-
-        $dns->set('secmon1._domainkey.example.com', 'txt', ['v=DKIM1; h=sha256; k=rsa; p=CHAVEATUAL123']);
-        $this->actingAs($this->admin())->get(route('admin.emails'))
-            ->assertSee('publicado')
-            ->assertDontSee('Registro DKIM para cadastrar');
-
-        // Dentro do container o nome do servidor resolve para o loopback (o /etc/hosts do host): vale o MAIL_PUBLIC_IP.
-        config(['secmon.mail.public_ip' => '203.0.113.10']);
-        $dns->set('srv.exemplo.test', 'ips', ['127.0.1.1']);
-        $this->actingAs($this->admin())->get(route('admin.emails'))->assertSee('autoriza o servidor')->assertDontSee('127.0.1.1');
-
-        $dns->set('example.com', 'txt', ['v=spf1 include:_spf.mx.cloudflare.net ~all']);
-        $this->actingAs($this->admin())->get(route('admin.emails'))->assertSee('falta ip4:203.0.113.10');
-
-        @unlink($dkim);
-        @unlink($name);
-    }
-
-    public function test_the_page_lists_the_messages_and_filters_the_errors(): void
-    {
-        $this->message(['to_address' => 'chegou@exemplo.test', 'status' => 'entregue', 'last_response' => '2.0.0 250 OK']);
-        $this->message(['to_address' => 'voltou@exemplo.test', 'status' => 'devolvido', 'last_response' => '5.1.1 User unknown']);
-
-        $this->actingAs($this->admin())->get(route('admin.emails'))
-            ->assertOk()
-            ->assertSee('chegou@exemplo.test')
-            ->assertSee('voltou@exemplo.test')
-            ->assertSee('5.1.1 User unknown')
-            ->assertSee('o e-mail não sai do servidor');
-
-        $this->actingAs($this->admin())->get(route('admin.emails', ['erros' => 1]))
-            ->assertOk()
-            ->assertSee('voltou@exemplo.test')
-            ->assertDontSee('chegou@exemplo.test');
-    }
-
-    public function test_the_admin_sends_a_test_email(): void
-    {
-        Queue::fake();
-        $admin = $this->admin();
-
-        $this->actingAs($admin)->from(route('admin.emails'))
-            ->post(route('admin.emails.test'), ['to' => 'ok@exemplo.test'])
-            ->assertRedirect(route('admin.emails'))
-            ->assertSessionHas('status');
-
-        $this->assertDatabaseHas('email_messages', ['to_address' => 'ok@exemplo.test', 'kind' => 'teste', 'status' => 'na_fila', 'user_id' => $admin->id]);
-        Queue::assertPushed(SendEmail::class);
-
-        $this->actingAs($admin)->post(route('admin.emails.test'), ['to' => 'isso não é e-mail'])->assertSessionHasErrors('to');
-    }
-
-    public function test_the_admin_menu_has_the_emails_and_regular_users_are_refused(): void
-    {
-        $this->actingAs($this->admin())->get(route('admin.dashboard'))->assertSee(route('admin.emails'), false);
-        $this->actingAs(User::factory()->create())->get(route('admin.emails'))->assertForbidden();
     }
 
     public function test_old_messages_are_pruned(): void

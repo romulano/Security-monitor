@@ -19,10 +19,11 @@ use Throwable;
  *
  * - só sai para URL https:443 de domínio que a conta comprovou (WebhookOwnership),
  *   conferido de novo aqui, e nunca para o próprio Security Monitor (WebhookUrl);
- * - o host é resolvido aqui e todo IP passa pelo IpGuard (rede interna, loopback,
- *   link-local e metadata da nuvem, IPv6 local) e pela lista dos endereços do
- *   próprio Security Monitor (secmon.own_addresses); a conexão vai para o IP já conferido
- *   (CURLOPT_RESOLVE), então um DNS que muda no meio (rebinding) não leva para dentro;
+ * - o host é resolvido aqui e todo IP passa pelo IpGuard (que, numa instalação local, de
+ *   um dono só, não recusa faixa privada: só endereço mal formado) e pela lista dos
+ *   endereços do próprio Security Monitor (secmon.own_addresses), que é quem ainda bloqueia de
+ *   verdade; a conexão vai para o IP já conferido (CURLOPT_RESOLVE), então um DNS que muda
+ *   no meio (rebinding) não leva para dentro;
  * - não segue redirecionamento (um 3xx é falha), espera no máximo 3 s pela conexão e
  *   10 s pela resposta, e lê só os primeiros 4 KB do corpo, que descarta: vale o código.
  *

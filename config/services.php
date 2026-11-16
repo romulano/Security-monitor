@@ -28,16 +28,6 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
-    // Captcha da Cloudflare no login e no cadastro. Sem site key = desligado (dev).
-    // "Entrar com o GitHub" no login e no cadastro (OAuth App da organização secmon-dev).
-    // Callback do app: ${APP_URL}/login/github/callback. A reautenticação volta em
-    // .../callback/reautenticar, que o GitHub aceita sem mudar o app (é um subcaminho do
-    // callback). Sem client id e secret = botão desligado.
-    'github' => [
-        'client_id' => env('GITHUB_CLIENT_ID'),
-        'client_secret' => env('GITHUB_CLIENT_SECRET'),
-    ],
-
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

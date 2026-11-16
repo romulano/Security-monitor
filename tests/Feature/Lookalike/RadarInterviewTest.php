@@ -60,7 +60,7 @@ class RadarInterviewTest extends TestCase
         $this->assertNull($domain->profile_id, 'o domínio do Radar não pertence ao alerta');
         $this->assertNotSame($news->id, $domain->id);
         $this->assertTrue($domain->isVerified(), 'a prova de posse vem junto');
-        $this->assertSame(['v3', 'tok123'], [$domain->consent_version, $domain->verify_token], 'o aceite v3 já cobre os prints do site');
+        $this->assertSame('v3', $domain->consent_version, 'o aceite v3 já cobre os prints do site');
 
         $this->actingAs($user)->get(route('alerts.lookalikes.interview', ['passo' => 2, 'radar' => $watch->id]))
             ->assertOk()->assertSee('Exemplos do que vamos conferir')
@@ -74,7 +74,7 @@ class RadarInterviewTest extends TestCase
         $this->assertSame(['Acme Pagamentos S.A.', ['AcmePay', 'Acme Pix']], [$watch->company_name, $watch->brands]);
 
         $this->actingAs($user)->get(route('alerts.lookalikes.interview', ['passo' => 3, 'radar' => $watch->id]))
-            ->assertOk()->assertSee('posse comprovada')->assertSee('Ativar o Radar');
+            ->assertOk()->assertSee('Ativar o Radar');
 
         $this->actingAs($user)->post(route('alerts.lookalikes.interview.activate', ['radar' => $watch->id]), ['consent' => '1'])
             ->assertRedirect(route('alerts.lookalikes'))
@@ -91,7 +91,7 @@ class RadarInterviewTest extends TestCase
         $this->assertSame('active', $watch->refresh()->status);
     }
 
-    public function test_typed_domain_waits_for_the_txt_and_starts_when_it_appears(): void
+    public function test_typed_domain_is_born_verified_and_the_radar_starts_right_away(): void
     {
         $user = $this->client();
 
@@ -102,58 +102,25 @@ class RadarInterviewTest extends TestCase
         $watch = LookalikeWatch::query()->sole();
         $domain = $watch->domain;
         $this->assertSame('acmeconta.com.br', $domain->domain);
-        $this->assertFalse($domain->isVerified());
+        // Instalação de um dono só: o domínio digitado já nasce comprovado, sem registro TXT no DNS.
+        $this->assertTrue($domain->isVerified());
 
         $this->actingAs($user)->put(route('alerts.lookalikes.interview.update', ['passo' => 2, 'radar' => $watch->id]), ['empresa' => 'Acme Conta', 'marcas' => ['AcmeConta']]);
         $this->actingAs($user)->get(route('alerts.lookalikes.interview', ['passo' => 3, 'radar' => $watch->id]))
-            ->assertOk()->assertSee($domain->txtValue());
+            ->assertOk()->assertSee('Ativar o Radar')
+            ->assertDontSee('registro TXT')->assertDontSee('secmon-verify');
 
         $this->actingAs($user)->post(route('alerts.lookalikes.interview.activate', ['radar' => $watch->id]), ['consent' => '1'])
-            ->assertSessionHas('status', 'Radar ativado. Ele começa sozinho assim que o registro TXT aparecer.');
+            ->assertSessionHas('status', fn ($s) => str_contains($s, 'Radar ativado'));
         $watch->refresh();
-        $this->assertSame('waiting', $watch->status);
+        $this->assertSame('active', $watch->status, 'comprovado na hora, o Radar já ativa e varre');
         $this->assertSame(MonitoredDomain::RADAR_CONSENT, $domain->refresh()->consent_version);
-        $this->assertTrue($domain->allowsReferenceCapture() === false, 'sem a posse, nada de prints');
-        Queue::assertNotPushed(ScanLookalikes::class);
-
-        // A página do Radar mostra o TXT e o "Verificar agora".
-        $this->actingAs($user)->get(route('alerts.lookalikes'))->assertOk()->assertSee('Comprove que')->assertSee($domain->txtValue());
-
-        $this->actingAs($user)->post(route('alerts.lookalikes.interview.verify', ['radar' => $watch->id]))->assertSessionHas('error');
-        $this->dns->set('acmeconta.com.br', 'txt', [$domain->txtValue()]);
-        $this->actingAs($user)->post(route('alerts.lookalikes.interview.verify', ['radar' => $watch->id]))->assertSessionHas('status');
-
-        $watch->refresh();
-        $this->assertSame('active', $watch->status, 'comprovado, o Radar ativado começa');
-        $this->assertTrue($domain->refresh()->allowsReferenceCapture());
+        $this->assertTrue($domain->allowsReferenceCapture());
         $this->assertFalse($domain->canDiscover(), 'domínio do Radar nunca passa pela descoberta de tecnologias');
+        Queue::assertPushed(ScanLookalikes::class, fn (ScanLookalikes $job) => $job->watchId === $watch->id);
 
-        // O agendador confere sozinho o TXT dos Radares que esperam.
-        $other = $this->client();
-        $this->actingAs($other)->put(route('alerts.lookalikes.interview.update', ['passo' => 1]), ['origem' => 'outro', 'outro' => 'outra.com.br']);
-        $pending = LookalikeWatch::query()->where('user_id', $other->id)->sole();
-        $pending->forceFill(['status' => 'waiting', 'completed_at' => now(), 'step_reached' => 3])->save();
-        $this->dns->set('outra.com.br', 'txt', [$pending->domain->txtValue()]);
-        $this->artisan('secmon:alerts-verify-domains')->assertSuccessful();
-        $this->assertSame('active', $pending->refresh()->status);
-    }
-
-    public function test_saving_the_interview_does_not_use_up_the_verify_limit(): void
-    {
-        $user = $this->client();
-        $this->actingAs($user)->put(route('alerts.lookalikes.interview.update', ['passo' => 1]), ['origem' => 'outro', 'outro' => 'acmeconta.com.br']);
-        $watch = LookalikeWatch::query()->sole();
-
-        foreach (range(1, 7) as $i) {
-            $this->put(route('alerts.lookalikes.interview.update', ['passo' => 2, 'radar' => $watch->id]), ['empresa' => 'Acme Conta', 'marcas' => ['AcmeConta']])
-                ->assertRedirect(route('alerts.lookalikes.interview', ['passo' => 3, 'radar' => $watch->id]));
-        }
-
-        // Os 8 pedidos acima eram 8 tentativas no mesmo contador da conta, e o "Verificar agora" (6 por minuto)
-        // respondia 429 sem ter sido usado. Com o contador próprio, ele confere o TXT e diz que ainda não está lá.
-        $this->post(route('alerts.lookalikes.interview.verify', ['radar' => $watch->id]))
-            ->assertRedirect()
-            ->assertSessionHas('error', "Ainda não encontramos o TXT {$watch->domain->txtValue()} em acmeconta.com.br. Registros novos podem levar alguns minutos para propagar.");
+        // A página do Radar não mostra mais nenhum quadro de posse.
+        $this->actingAs($user)->get(route('alerts.lookalikes'))->assertOk()->assertDontSee('Comprove que')->assertDontSee('registro TXT');
     }
 
     public function test_rules_of_the_interview(): void

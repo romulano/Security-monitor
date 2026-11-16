@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\DB;
 
 /**
  * A conta do Security Monitor. Na versão local e aberta existe uma só, a do dono da instalação: ela nasce no primeiro
@@ -38,7 +37,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
-        // O token do TXT de posse: só as telas de posse o mostram (Red Team da E1a).
+        // Legado: o token do TXT de posse não é mais gerado nem exibido (instalação de um dono só).
         'domain_token',
     ];
 
@@ -76,32 +75,10 @@ class User extends Authenticatable
         return $owner;
     }
 
-    /**
-     * Derruba as sessões abertas da conta (as sessões ficam no banco). `$except`
-     * poupa a de quem está pedindo, quando o admin troca a própria senha.
-     */
-    public function endSessions(?string $except = null): void
-    {
-        if (config('session.driver') !== 'database') {
-            return;
-        }
-
-        DB::table(config('session.table', 'sessions'))
-            ->where('user_id', $this->id)
-            ->when($except, fn ($query) => $query->where('id', '!=', $except))
-            ->delete();
-    }
-
     /** Alertas do cliente: um por produto ou site. */
     public function alertProfiles(): HasMany
     {
         return $this->hasMany(AlertProfile::class);
-    }
-
-    /** Quantos alertas de Notícias a conta criou: o limite (MAX_PER_USER) da conta pessoal; na empresa vale o da empresa (E5d). */
-    public function alertProfilesCreated(): int
-    {
-        return $this->alertProfiles()->count();
     }
 
     /** O primeiro alerta: o que vale quando a URL não diz qual (e o nome da empresa nas listas). */
@@ -132,21 +109,6 @@ class User extends Authenticatable
         return $this->hasMany(LookalikeWatch::class);
     }
 
-    /** Quantos Radares a conta criou: o limite (MAX_PER_USER) é por quem cria até a E5d (§4.8). */
-    public function lookalikeWatchesCreated(): int
-    {
-        return $this->lookalikeWatches()->count();
-    }
-
-    /**
-     * A conta pessoal chegou aos 5 Radares dela? Na empresa não há limite por quem cria (E5d, P7): quem limita é o domínio
-     * (um Radar por domínio comprovado da empresa, até o limite de domínios).
-     */
-    public function reachedRadarLimit(): bool
-    {
-        return $this->lookalikeWatchesCreated() >= LookalikeWatch::MAX_PER_USER;
-    }
-
     public function githubMonitor(): HasOne
     {
         return $this->hasOne(GithubMonitor::class);
@@ -154,14 +116,14 @@ class User extends Authenticatable
 
     /**
      * Os domínios da conta, com a posse (DomainOwnership): comprovada num serviço, vale em todos.
-     * O TXT de todo nome novo leva o token da conta (`domain_token`).
+     * Instalação de um dono só: todo domínio nasce comprovado, sem prova por TXT no DNS.
      */
     public function ownedDomains(): HasMany
     {
         return $this->hasMany(OwnedDomain::class);
     }
 
-    /** Domínios inscritos na stack de testes de segurança (no máximo 3). */
+    /** Domínios inscritos na stack de testes de segurança. */
     public function pentestDomains(): HasMany
     {
         return $this->hasMany(PentestDomain::class);
@@ -183,7 +145,7 @@ class User extends Authenticatable
         return $this->hasMany(NotificationChannel::class)->orderByRaw("type = 'webhook'")->orderBy('type', 'desc')->orderBy('id');
     }
 
-    /** Os webhooks pessoais da conta (até 5), do mais antigo. */
+    /** Os webhooks pessoais da conta, do mais antigo. */
     public function webhooks(): HasMany
     {
         return $this->hasMany(NotificationChannel::class)->where('type', 'webhook')->orderBy('id');

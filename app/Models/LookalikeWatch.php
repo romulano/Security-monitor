@@ -12,11 +12,12 @@ use Illuminate\Support\Facades\File;
 
 /**
  * Radar de domínios de um domínio do cliente: o monitoramento dos nomes
- * parecidos com ele. Nasce na entrevista do Radar (domínio, marca, posse),
- * separada da de notícias, e só varre com a posse comprovada.
+ * parecidos com ele. Nasce na entrevista do Radar (domínio, marca, ativação),
+ * separada da de notícias. Instalação de um dono só: o domínio já nasce
+ * comprovado, então a primeira varredura começa na ativação, sem espera.
  *
- * `status`: draft (entrevista em andamento), waiting (ativado, esperando o
- * registro TXT), active ou paused.
+ * `status`: draft (entrevista em andamento), waiting (legado; não é mais
+ * produzido), active ou paused.
  */
 class LookalikeWatch extends Model implements VisibilityRoot
 {
@@ -24,9 +25,6 @@ class LookalikeWatch extends Model implements VisibilityRoot
 
     /** Empresa e setor só pelo serviço (Visibility::stampFor + forceFill), nunca de um array da tela. */
     protected $guarded = [];
-
-    /** Um Radar por domínio; até este número por cliente. */
-    public const MAX_PER_USER = 5;
 
     /** Até quantos nomes de marca o cliente informa no passo 2. */
     public const MAX_BRANDS = 5;
@@ -111,12 +109,6 @@ class LookalikeWatch extends Model implements VisibilityRoot
     public function isCompleted(): bool
     {
         return $this->completed_at !== null;
-    }
-
-    /** Ativado, mas esperando a posse comprovada para a primeira varredura. */
-    public function isWaiting(): bool
-    {
-        return $this->status === 'waiting';
     }
 
     /** O nome da empresa, para o kit de denúncia e para a IA. */

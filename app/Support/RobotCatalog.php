@@ -5,19 +5,15 @@ namespace App\Support;
 /**
  * De quem é o robô e para que ele lê o site, pelo nome que ele declara no
  * navegador (o User-Agent). É o que ele diz ser: qualquer um escreve
- * "Googlebot" no navegador. Na Cloudflare, os robôs verificados passam pelas
- * regras da borda e os outros vindos de nuvem recebem desafio, então o falso
- * quase nunca chega aqui; mesmo assim, a tela de acessos avisa.
+ * "Googlebot" no navegador. Usado por UserAgents::robot() (RefuseRobots, o
+ * `robots.none` dos links de voto do alerta): declarado como bot, 404.
  *
  * Para ampliar, ponha o nome em ROBOTS (vale o primeiro da lista que aparece
- * no User-Agent, sem diferenciar maiúsculas; o mais específico vem antes) e
- * rode o preenchimento dos acessos antigos, se quiser que eles acompanhem
- * (a migration 2026_11_22_000200 mostra como). O Security Monitor não entra aqui: "nosso"
- * é pelo IP (OwnAddresses), porque qualquer um escreve SecurityMonitorBot no navegador.
+ * no User-Agent, sem diferenciar maiúsculas; o mais específico vem antes).
  */
 final class RobotCatalog
 {
-    /** Os tipos, na ordem do filtro de Admin → Acessos. */
+    /** Os tipos de robô. */
     public const KINDS = [
         'ai_user' => 'IA a pedido de alguém',
         'ai_search' => 'índice de busca de IA',

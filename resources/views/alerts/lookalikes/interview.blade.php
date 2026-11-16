@@ -67,13 +67,13 @@
                     <p class="font-semibold text-white">Nomes parecidos com o seu domínio, vigiados todo dia.</p>
                     <p class="mt-1 text-sm text-ink-200">
                         O Radar confere milhares de variações no DNS e nos certificados públicos, abre as que existem no computador, no Android e
-                        no iPhone, e a IA dá o parecer antes de avisar. Só vigiamos um domínio que é seu: a posse é comprovada no passo 3.
+                        no iPhone, e a IA dá o parecer antes de avisar.
                     </p>
                 </div>
             @endif
 
             <div>
-                <h2 class="text-lg font-semibold text-white">{{ $step === 1 ? 'Qual domínio vigiar?' : ($step === 2 ? 'Como a marca aparece' : 'Comprove que o domínio é seu e ative') }}</h2>
+                <h2 class="text-lg font-semibold text-white">{{ $step === 1 ? 'Qual domínio vigiar?' : ($step === 2 ? 'Como a marca aparece' : 'Compare com o seu site e ative') }}</h2>
                 <p class="text-sm text-ink-400">{{ $text[1] }}</p>
             </div>
 
@@ -184,11 +184,6 @@
                     @endif
                 </form>
             @else
-                <x-domain-ownership :state="$ownership" :action="route('alerts.lookalikes.interview.verify', ['radar' => $watch->id])"
-                                    :waiting="$watch->isCompleted()" effect="o Radar pausa">
-                    {{ $watch->isCompleted() ? 'O Radar começa sozinho assim que o registro aparecer.' : '' }}
-                </x-domain-ownership>
-
                 @php
                     $hasValidConsent = $domain->consent_at && ! in_array($domain->consent_version, MonitoredDomain::NO_BROWSER_CONSENTS, true);
                 @endphp
@@ -220,8 +215,7 @@
                         <section class="rounded-xl border border-ink-800 px-5 py-4">
                             <p class="text-[11px] tracking-widest text-ink-400 uppercase">Ao ativar</p>
                             <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-200">
-                                <li>Com o TXT no ar, a primeira varredura confere milhares de variações no DNS (leva alguns minutos).</li>
-                                <li>Sem o TXT ainda, o Radar fica esperando a comprovação e começa sozinho quando ela aparecer.</li>
+                                <li>A primeira varredura começa na hora e confere milhares de variações no DNS (leva alguns minutos).</li>
                                 <li>Avisos de Crítico e Alto passam pelo parecer da IA e chegam nos apps que recebem Radar em <a href="{{ route('alerts.notifiers') }}" class="text-accent hover:underline">Notificadores</a>.</li>
                             </ul>
                         </section>

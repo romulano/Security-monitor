@@ -8,7 +8,7 @@ use Illuminate\Support\Sleep;
 
 /**
  * O recon da varredura de chaves num domínio comprovado: só leitura, no domínio e nos subdomínios dele,
- * indo além da home para achar o máximo de páginas e de scripts. A posse comprovada pelo TXT é a
+ * indo além da home para achar o máximo de páginas e de scripts. A posse comprovada é a
  * autorização do dono: o robots.txt (um pedido aos buscadores) não barra nada, e os caminhos que ele
  * pede para esconder viram pistas.
  *

@@ -34,7 +34,7 @@ class WebhookRegistrationTest extends TestCase
         return $this->post(route('alerts.webhooks.store'), $form + ['nome' => 'Produção', 'url' => self::HOOK, 'autenticacao' => 'gerar']);
     }
 
-    public function test_an_unproven_domain_waits_for_the_txt_and_nothing_is_sent(): void
+    public function test_a_new_domain_is_born_verified_and_the_webhook_can_send_right_away(): void
     {
         $user = $this->client();
         $this->actingAs($user);
@@ -42,72 +42,38 @@ class WebhookRegistrationTest extends TestCase
         $this->store([])->assertRedirect();
         $webhook = $user->webhooks()->sole();
 
-        // A cópia da prova nasce no domínio principal, pendente: nada sai, nem o teste.
-        $this->assertSame(['pending', 'cliente.com.br', null], [$webhook->status, $webhook->domain->domain, $webhook->domain->verified_at]);
-        $this->get(route('alerts.webhooks.show', $webhook))
-            ->assertOk()
-            ->assertSee('Comprove que o domínio é seu')
-            ->assertSee($webhook->domain->txtValue())
-            ->assertDontSee(route('alerts.webhooks.test', $webhook));
+        // Instalação de um dono só: a cópia da prova nasce no domínio principal, já comprovada.
+        $this->assertSame('active', $webhook->status);
+        $this->assertSame('cliente.com.br', $webhook->domain->domain);
+        $this->assertTrue($webhook->domain->isVerified());
+        $this->get(route('alerts.webhooks.show', $webhook))->assertOk()->assertSee(route('alerts.webhooks.test', $webhook));
 
-        $this->post(route('alerts.webhooks.test', $webhook))->assertSessionHas('error', 'Comprove o domínio antes de enviar o teste: até lá, o Security Monitor não chama o endereço.');
+        $this->post(route('alerts.webhooks.test', $webhook))->assertSessionHas('status');
+        Http::assertSent(fn ($request) => $request->url() === self::HOOK && $request->header('Security-Monitor-Event')[0] === 'test');
 
-        // Um alerta que casa não vai para ele (o webhook não conta como canal que recebe).
+        // Um alerta que casa vai para ele.
+        Http::fake(['https://hooks.cliente.com.br/*' => Http::response('', 204)]);
         $this->profile($user, [], ['nginx']);
         $case = $this->newsCase('Nginx RCE', 'critical', ['affected_products' => ['nginx 1.24']]);
         MatchCaseToProfiles::dispatchSync($case->id, $case->articles()->value('id'));
 
-        Http::assertNothingSent();
-        $this->assertSame(0, NotificationDelivery::query()->count());
+        $this->assertSame(1, NotificationDelivery::query()->where('kind', '!=', 'test')->count());
         $match = AlertMatch::query()->sole();
-        $this->assertSame(['skipped', 'no_channel'], [$match->delivery_status, $match->delivery_note]);
+        $this->assertNotSame('no_channel', $match->delivery_note);
     }
 
-    public function test_the_verify_button_finds_the_txt_and_turns_the_webhook_on(): void
-    {
-        $user = $this->client();
-        $this->actingAs($user)->store([]);
-        $webhook = $user->webhooks()->sole();
-
-        // Sem o TXT: recusa dizendo o que falta.
-        $this->post(route('alerts.webhooks.verify', $webhook))->assertSessionHas('error');
-        $this->assertSame('pending', $webhook->refresh()->status);
-
-        $this->dns->set('cliente.com.br', 'txt', [$webhook->domain->txtValue()]);
-        $this->post(route('alerts.webhooks.verify', $webhook))->assertSessionHas('status');
-
-        $this->assertSame('active', $webhook->refresh()->status);
-        $this->assertNotNull($webhook->domain->verified_at);
-
-        $this->post(route('alerts.webhooks.test', $webhook))->assertSessionHas('status');
-        Http::assertSent(fn ($request) => $request->url() === self::HOOK && $request->header('Security-Monitor-Event')[0] === 'test');
-    }
-
-    public function test_a_txt_reached_through_a_cname_does_not_prove_the_domain(): void
-    {
-        $user = $this->client();
-        $this->actingAs($user)->store([]);
-        $webhook = $user->webhooks()->sole();
-
-        $this->dns->set('cliente.com.br', 'cname', ['atacante.example']);
-        $this->dns->set('atacante.example', 'txt', [$webhook->domain->txtValue()]);
-
-        $this->post(route('alerts.webhooks.verify', $webhook))->assertSessionHas('error');
-        $this->assertSame('pending', $webhook->refresh()->status);
-    }
-
-    public function test_a_domain_proven_in_another_service_is_reused_with_the_same_token(): void
+    public function test_a_domain_proven_in_another_service_is_reused_without_asking_the_dns(): void
     {
         $user = $this->client();
         $radar = $this->proven($user, 'cliente.com.br', 'tokdoradar');
 
-        $this->actingAs($user)->store([])->assertSessionHas('status', 'Webhook cadastrado com o domínio que você já comprovou. Mande um teste para conferir o seu servidor.');
+        $this->actingAs($user)->store([])->assertSessionHas('status', 'Webhook cadastrado. Mande um teste para conferir o seu servidor.');
         $webhook = $user->webhooks()->sole();
 
-        // Ativo na hora, com a cópia própria da prova (o mesmo token e a mesma data), sem perguntar ao DNS.
+        // Ativo na hora, com a cópia própria da prova (a mesma data), sem perguntar ao DNS.
         $this->assertSame('active', $webhook->status);
         $this->assertNotSame($radar->id, $webhook->domain_id);
-        $this->assertSame(['cliente.com.br', 'tokdoradar'], [$webhook->domain->domain, $webhook->domain->verify_token]);
+        $this->assertSame('cliente.com.br', $webhook->domain->domain);
         $this->assertTrue($webhook->domain->verified_at->equalTo($radar->verified_at));
         $this->assertSame([], array_filter($this->dns->asked, fn ($q) => str_starts_with($q, 'txt')));
 
@@ -123,27 +89,34 @@ class WebhookRegistrationTest extends TestCase
     public function test_the_proof_covers_the_domain_and_its_subdomains_only(): void
     {
         $user = $this->client();
-        $this->proven($user, 'loja.cliente.com.br', 'tokdaloja');
+        $loja = $this->proven($user, 'loja.cliente.com.br', 'tokdaloja');
         $this->actingAs($user);
 
-        foreach (['https://loja.cliente.com.br/hook' => 'active', 'https://api.loja.cliente.com.br/hook' => 'active', 'https://api.cliente.com.br/hook' => 'pending'] as $url => $status) {
+        foreach (['https://loja.cliente.com.br/hook' => 'loja.cliente.com.br', 'https://api.loja.cliente.com.br/hook' => 'loja.cliente.com.br', 'https://api.cliente.com.br/hook' => 'cliente.com.br'] as $url => $domain) {
             $this->store(['nome' => $url, 'url' => $url])->assertSessionHasNoErrors();
-            $this->assertSame($status, NotificationChannel::query()->where('name', $url)->sole()->status, $url);
+            $channel = NotificationChannel::query()->where('name', $url)->sole();
+            // Todos ativos na hora (instalação de um dono só); só o domínio da cópia muda.
+            $this->assertSame('active', $channel->status, $url);
+            $this->assertSame($domain, $channel->domain->domain, $url);
         }
 
-        // O de cima pede o TXT no domínio principal, com o token que a conta já usa (um registro serve aos dois serviços).
-        $pending = NotificationChannel::query()->where('name', 'https://api.cliente.com.br/hook')->sole();
-        $this->assertSame(['cliente.com.br', 'tokdaloja'], [$pending->domain->domain, $pending->domain->verify_token]);
+        // "api.cliente.com.br" não é subdomínio de "loja.cliente.com.br": não reaproveita a prova dela,
+        // ganha uma cópia própria no domínio principal (que nasce comprovada do mesmo jeito).
+        $own = NotificationChannel::query()->where('name', 'https://api.cliente.com.br/hook')->sole();
+        $this->assertNotSame($loja->id, $own->domain_id);
     }
 
-    public function test_another_accounts_proof_does_not_count(): void
+    public function test_another_accounts_proof_does_not_count_but_the_webhook_is_active_anyway(): void
     {
-        $this->proven($this->client(), 'cliente.com.br');
+        $other = $this->proven($this->client(), 'cliente.com.br');
         $user = $this->client();
 
         $this->actingAs($user)->store([]);
+        $webhook = $user->webhooks()->sole();
 
-        $this->assertSame('pending', $user->webhooks()->sole()->status);
+        // Instalação de um dono só: a cópia nasce comprovada por conta própria, nunca pela prova de outra conta.
+        $this->assertSame('active', $webhook->status);
+        $this->assertNotSame($other->id, $webhook->domain_id);
     }
 
     public function test_unsafe_urls_are_refused_before_anything_is_saved(): void
@@ -164,18 +137,18 @@ class WebhookRegistrationTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_five_webhooks_at_most_with_names_urls_and_secrets_of_their_own(): void
+    public function test_webhooks_have_names_urls_and_secrets_of_their_own(): void
     {
         $user = $this->client();
         $this->proven($user);
         $this->actingAs($user);
 
-        foreach (range(1, 5) as $i) {
+        // Sem limite de webhooks por conta: a conta cadastra quantos quiser.
+        foreach (range(1, 6) as $i) {
             $this->store(['nome' => "Hook {$i}", 'url' => self::HOOK."/{$i}"])->assertSessionHasNoErrors();
         }
 
-        $this->store(['nome' => 'Hook 6', 'url' => self::HOOK.'/6'])->assertSessionHas('error', 'Você chegou ao limite de 5 webhooks. Exclua um para cadastrar outro.');
-        $this->assertSame(5, $user->webhooks()->count());
+        $this->assertSame(6, $user->webhooks()->count());
 
         $user->webhooks()->where('name', 'Hook 5')->sole()->delete();
         $this->store(['nome' => 'hook 1', 'url' => self::HOOK.'/9'])->assertSessionHasErrors(['nome' => 'Você já tem um webhook com esse nome.']);
@@ -186,7 +159,7 @@ class WebhookRegistrationTest extends TestCase
             ->assertSessionHasErrors(['segredo' => 'Esse valor já é o segredo de outro webhook seu: cada webhook tem o próprio.']);
     }
 
-    public function test_a_new_url_on_an_unproven_host_goes_back_to_pending(): void
+    public function test_a_new_url_on_a_new_host_gets_its_own_copy_active_right_away(): void
     {
         $user = $this->client();
         $this->proven($user);
@@ -201,7 +174,8 @@ class WebhookRegistrationTest extends TestCase
         $this->put(route('alerts.webhooks.endpoint', $webhook), ['nome' => 'SIEM', 'url' => 'https://siem.outra.com.br/in'])->assertSessionHasNoErrors();
         $webhook->refresh();
 
-        $this->assertSame(['pending', 'siem.outra.com.br', 'outra.com.br'], [$webhook->status, $webhook->webhook_host, $webhook->domain->domain]);
+        // Instalação de um dono só: a cópia antiga some, e a nova já nasce comprovada.
+        $this->assertSame(['active', 'siem.outra.com.br', 'outra.com.br'], [$webhook->status, $webhook->webhook_host, $webhook->domain->domain]);
         $this->assertNull(MonitoredDomain::query()->find($copy));
     }
 

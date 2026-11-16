@@ -55,7 +55,7 @@
                     <tr>
                         <td class="px-3 py-2.5 font-mono text-xs whitespace-nowrap text-ink-400">{{ $d->created_at->timezone('America/Sao_Paulo')->format('d/m H:i:s') }}</td>
                         <td class="px-3 py-2.5">
-                            <a href="{{ route('admin.alerts.client', $d->user) }}" class="block text-white hover:text-accent">{{ $d->user->alertProfile?->company_name ?: $d->user->name }}</a>
+                            <span class="block text-white">{{ $d->user->alertProfile?->company_name ?: $d->user->name }}</span>
                             <span class="text-xs text-ink-400">{{ $d->channel->appName() }} · {{ $d->channel->label() }} · {{ $d->channel->methodLabel() }}</span>
                         </td>
                         <td class="px-3 py-2.5 whitespace-nowrap">{{ $d->kindLabel() }}</td>

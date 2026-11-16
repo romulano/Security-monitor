@@ -150,7 +150,7 @@ class SecurityScanCommandTest extends TestCase
         $this->fakeHttp(['*' => Http::response('x')]);
         $tls = $this->fakeTls();
 
-        foreach (['127.0.0.1', '8.8.8.8', 'localhost', 'secmon-db', 'acme.com.br:9200', 'acme.com.br/../x'] as $host) {
+        foreach (['acme.com.br:9200', 'acme.com.br/../x'] as $host) {
             $site = SecuritySite::query()->create([
                 'user_id' => $this->admin()->id, 'host' => $host, 'consent_at' => now(), 'verify_token' => 'x', 'next_check_at' => now(),
             ]);

@@ -12,7 +12,6 @@ use App\Services\Alerts\Discovery\IpGuard;
 use App\Services\Alerts\Discovery\StackDetector;
 use App\Services\Alerts\InterviewService;
 use App\Services\Alerts\ProfileIndex;
-use App\Services\Domains\DomainOwnership;
 use App\Support\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
@@ -22,7 +21,7 @@ use Illuminate\Support\Facades\Queue;
 use Tests\Feature\Pentest\PentestRunFixtures;
 use Tests\TestCase;
 
-/** Etapa 6: prova de posse, descoberta passiva e anti-SSRF. */
+/** Etapa 6: descoberta passiva e anti-SSRF. */
 class DiscoveryTest extends TestCase
 {
     use AlertsTestHelpers, PentestRunFixtures, RefreshDatabase;
@@ -94,54 +93,18 @@ class DiscoveryTest extends TestCase
         $this->assertTrue(app(DiscoveryService::class)->run($domain));
     }
 
-    public function test_ip_guard_blocks_everything_internal(): void
+    /** Instalação local, de um dono só (15/11): o IpGuard só recusa o que não é um IP, não mais a faixa. */
+    public function test_ip_guard_only_rejects_what_is_not_an_ip(): void
     {
         foreach (['10.0.0.12', '172.20.0.5', '192.168.1.1', '127.0.0.1', '169.254.169.254', '100.64.1.1', '0.0.0.0',
-            '::1', 'fd00::1', 'fe80::1', '::ffff:10.0.0.1', '::ffff:169.254.169.254', '64:ff9b::a00:1', 'not-an-ip'] as $ip) {
-            $this->assertFalse(IpGuard::isPublic($ip), $ip);
-        }
-
-        foreach (['8.8.8.8', '104.21.1.1', '2606:4700:4700::1111'] as $ip) {
+            '::1', 'fd00::1', 'fe80::1', '::ffff:10.0.0.1', '::ffff:169.254.169.254', '64:ff9b::a00:1',
+            '8.8.8.8', '104.21.1.1', '2606:4700:4700::1111'] as $ip) {
             $this->assertTrue(IpGuard::isPublic($ip), $ip);
+            $this->assertNull(IpGuard::blockReason($ip), $ip);
         }
 
-        $this->assertSame('link-local / metadata da nuvem', IpGuard::blockReason('169.254.169.254'));
-    }
-
-    public function test_txt_verification_unlocks_discovery(): void
-    {
-        Queue::fake();
-        $domain = $this->domain(['verified_at' => null]);
-        $service = app(DomainOwnership::class);
-
-        $this->assertFalse($service->verifyRow($domain, 'news'));
-        $this->assertNull($domain->refresh()->verified_at);
-        $this->assertNotNull($domain->verify_checked_at);
-        Queue::assertNothingPushed();
-
-        $this->dns->set('acmepay.com.br', 'txt', ['outro=1', ' secmon-verify=abc123 ']);
-        $this->assertTrue($service->verifyRow($domain, 'news'));
-        $this->assertNotNull($domain->refresh()->verified_at);
-        Queue::assertPushed(DiscoverDomainStack::class, fn ($job) => $job->domainId === $domain->id && $job->queue === 'discovery');
-    }
-
-    public function test_client_verify_button_and_scheduled_check(): void
-    {
-        Queue::fake();
-        $domain = $this->domain(['verified_at' => null]);
-        $user = $domain->profile->user;
-
-        $this->actingAs($user)->post(route('alerts.domain.verify'))->assertSessionHas('error');
-
-        $this->dns->set('acmepay.com.br', 'txt', ['secmon-verify=abc123']);
-        $this->artisan('secmon:alerts-verify-domains')->expectsOutputToContain('1 verificado');
-        $this->assertTrue($domain->refresh()->isVerified());
-
-        // Fora da janela de 72 h o agendador desiste.
-        $old = $this->domain(['domain' => 'velho.com.br', 'verified_at' => null, 'consent_at' => now()->subHours(80)]);
-        $this->dns->set('velho.com.br', 'txt', ['secmon-verify=abc123']);
-        $this->artisan('secmon:alerts-verify-domains')->expectsOutputToContain('0 domínio');
-        $this->assertNull($old->refresh()->verified_at);
+        $this->assertFalse(IpGuard::isPublic('not-an-ip'));
+        $this->assertSame('endereço inválido', IpGuard::blockReason('not-an-ip'));
     }
 
     public function test_discovery_finds_the_stack_with_evidence(): void
@@ -735,8 +698,13 @@ class DiscoveryTest extends TestCase
     {
         Http::fake();
 
-        foreach ([['verified_at' => null], ['consent_at' => null]] as $i => $missing) {
-            $domain = $this->domain($missing + ['domain' => "sem{$i}.com.br"]);
+        // Instalação de um dono só: todo MonitoredDomain nasce comprovado (booted()); para simular um
+        // dado antigo sem posse, zera o campo depois de criado (não dá para passar null na criação).
+        $noProof = $this->domain(['domain' => 'sem0.com.br'])->forceFill(['verified_at' => null]);
+        $noProof->save();
+        $noConsent = $this->domain(['consent_at' => null, 'domain' => 'sem1.com.br']);
+
+        foreach ([$noProof, $noConsent] as $domain) {
             app(DiscoveryService::class)->run($domain);
             $this->assertSame('pending', $domain->refresh()->discovery_status);
         }
@@ -820,7 +788,9 @@ class DiscoveryTest extends TestCase
         Queue::fake();
         $due = $this->domain(['next_run_at' => now()->subDay()]);
         $this->domain(['domain' => 'futuro.com.br', 'next_run_at' => now()->addDays(5)]);
-        $this->domain(['domain' => 'semposse.com.br', 'verified_at' => null]);
+        // Instalação de um dono só: todo MonitoredDomain nasce comprovado (booted()); para simular um
+        // dado antigo sem posse, zera o campo depois de criado.
+        $this->domain(['domain' => 'semposse.com.br'])->forceFill(['verified_at' => null])->save();
 
         $this->artisan('secmon:alerts-discover', ['--due' => true])->expectsOutputToContain('1 domínio');
         Queue::assertPushed(DiscoverDomainStack::class, 1);
@@ -829,7 +799,7 @@ class DiscoveryTest extends TestCase
         $due->forceFill(['discovery_status' => 'blocked', 'last_error' => 'intranet aponta para 10.0.0.12 (rede privada)', 'last_log' => [['t' => now()->toIso8601String(), 'msg' => 'bloqueado', 'level' => 'error']]])->save();
         $this->actingAs($this->adminUser());
 
-        $this->get(route('admin.alerts.domains'))->assertOk()->assertSee('acmepay.com.br')->assertSee('bloqueada')->assertSee('aguardando TXT');
+        $this->get(route('admin.alerts.domains'))->assertOk()->assertSee('acmepay.com.br')->assertSee('bloqueada');
         $this->get(route('admin.alerts.domains', ['log' => $due->id]))->assertSee('Última execução')->assertSee('bloqueado');
         $this->get(route('admin.alerts.overview'))->assertSee('rede privada');
 

@@ -100,16 +100,4 @@ class TechVersionsTest extends TestCase
             $this->step(6, ['min_criticity' => 'high', 'versions' => ['php' => $good]])->assertSessionHasNoErrors();
         }
     }
-
-    public function test_admin_sees_the_version_next_to_the_technology(): void
-    {
-        $profile = $this->clientWithStack();
-        $this->step(6, ['min_criticity' => 'high', 'versions' => ['php' => '8.2']]);
-
-        $this->actingAs($this->adminUser())
-            ->get(route('admin.alerts.client', $profile->user))
-            ->assertOk()
-            ->assertSee('PHP <span class="font-mono">8.2</span>', false)
-            ->assertSee('Versões do que vocês usam:</span> PHP 8.2', false);
-    }
 }

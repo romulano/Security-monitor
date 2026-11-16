@@ -224,7 +224,7 @@ class DiscoveryService
             'walls_retry_at' => null,
             'hints' => $sibling->hints,
             'last_log' => [
-                ['t' => now()->toIso8601String(), 'msg' => 'posse: TXT '.$domain->txtValue().' confirmado em '.$at($domain->verified_at), 'level' => 'ok'],
+                ['t' => now()->toIso8601String(), 'msg' => 'posse: domínio comprovado em '.$at($domain->verified_at), 'level' => 'ok'],
                 ['t' => now()->toIso8601String(), 'msg' => "o site foi varrido em {$at($sibling->last_scan_at)} para outro perfil com o mesmo domínio: resultado reaproveitado, nenhuma requisição ao site", 'level' => 'info'],
                 ['t' => now()->toIso8601String(), 'msg' => count($detected).' tecnologia(s) reaproveitada(s), '.$added.' adicionada(s) ao perfil', 'level' => 'ok'],
             ],
@@ -239,7 +239,7 @@ class DiscoveryService
         };
 
         $domain->forceFill(['discovery_status' => 'running'])->save();
-        $add('posse: TXT '.$domain->txtValue().' confirmado em '.$domain->verified_at->timezone('America/Sao_Paulo')->format('d/m H:i'), 'ok');
+        $add('posse: domínio comprovado em '.$domain->verified_at->timezone('America/Sao_Paulo')->format('d/m H:i'), 'ok');
 
         if (! $domain->allowsMorePages()) {
             $add("termo {$domain->consent_version}: só a página inicial (o termo atual também lê a página de erro e o blog)");

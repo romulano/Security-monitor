@@ -11,7 +11,7 @@
     $edit = fn (int $n, string $label = 'Editar', ?string $aria = null, string $class = 'inline-flex min-h-11 items-center') => '<a href="'.e(route('alerts.tests.authorize', ['passo' => $n, 'dominio' => $domain->host])).'"'
         .($aria ? ' aria-label="'.e($aria).'"' : '').' class="'.$class.' text-accent hover:underline">'.$label.'</a>';
     // Num leitor de tela, cada "Editar" diz o que edita.
-    $labels = ['Posse' => 'Editar a posse', 'Escopo' => 'Editar o escopo', 'Janela' => 'Editar a janela', 'Intensidade' => 'Editar a intensidade',
+    $labels = ['Responsabilidade' => 'Editar a confirmação de responsabilidade', 'Escopo' => 'Editar o escopo', 'Janela' => 'Editar a janela', 'Intensidade' => 'Editar a intensidade',
         'Firewall' => 'Editar como o teste vê o site', 'Aviso ao time' => 'Editar o aviso ao time', 'Termo' => 'Ver o termo'];
     $time = fn ($date) => $date?->timezone('America/Sao_Paulo')->format('d/m \à\s H:i');
 @endphp
@@ -37,9 +37,9 @@
         $hash = $preview['rendered_sha256'];
         $rows = [
             ['Domínio', PentestRunView::name($domain->host)->toHtml(), null],
-            ['Posse', $domain->ownershipHolds()
-                ? 'comprovada · TXT <span class="font-mono">'.e(substr($copy->txtValue(), 0, 17)).'…'.e(substr($copy->txtValue(), -4)).'</span> no ar desde '.e($copy->verified_at->timezone('America/Sao_Paulo')->format('d/m'))
-                : 'falta o registro TXT', 2],
+            ['Responsabilidade', $domain->responsibilityConfirmed()
+                ? 'você confirmou, em '.e(\Illuminate\Support\Carbon::parse($domain->draft['responsibility_ack']['at'])->timezone('America/Sao_Paulo')->format('d/m \à\s H:i')).', que o domínio é seu'
+                : 'falta confirmar que o domínio é seu', 2],
             ['Escopo', PentestRunView::name($domain->host)->toHtml().' e '.PentestRunView::name('*.'.$domain->host)->toHtml()
                 .($rule['exclusions'] ? ', menos '.collect($rule['exclusions'])->map(fn ($name) => PentestRunView::name($name)->toHtml())->join(', ') : '')
                 .'. Serviços de outras empresas: só o DNS é lido. A lista de alvos fecha no início do teste.', 3],

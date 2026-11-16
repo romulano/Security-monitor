@@ -6,7 +6,6 @@
     <nav aria-label="Seções de alertas" class="flex flex-wrap gap-1 border-b border-ink-800 text-sm">
         @foreach ([
             ['admin.alerts.overview', 'Visão geral', 'admin.alerts.overview'],
-            ['admin.alerts.clients', 'Clientes', 'admin.alerts.client*'],
             ['admin.alerts.deliveries', 'Entregas', 'admin.alerts.deliveries'],
             ['admin.alerts.catalog', 'Catálogo', 'admin.alerts.catalog'],
             ['admin.alerts.questions', 'Perguntas', 'admin.alerts.questions'],

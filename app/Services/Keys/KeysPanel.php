@@ -11,8 +11,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
- * A área "Chaves expostas": os domínios comprovados que a conta vê (só eles podem ser varridos), a
- * varredura de cada um e o resumo das chaves; e o card da Integração.
+ * A área "Chaves expostas": os domínios da conta (os dos outros serviços e os cadastrados aqui, menos os tirados
+ * daqui), a varredura de cada um e o resumo das chaves; e o card da Integração.
  */
 final class KeysPanel
 {
@@ -23,7 +23,7 @@ final class KeysPanel
      */
     public function page(User $user): array
     {
-        $proven = $this->ownership->proven($user);
+        $proven = $this->listed($user);
         $manageable = OwnedDomain::query()->manageableBy($user)->whereIn('id', $proven->pluck('id'))->pluck('id')->flip();
         $sites = KeySite::query()->whereIn('owned_domain_id', $proven->pluck('id'))->get()->keyBy('owned_domain_id');
         $counts = $this->counts($proven->pluck('id'));
@@ -56,7 +56,7 @@ final class KeysPanel
     /** @return array{proven: int, active: int, open: int, leak: int, last: ?Carbon} */
     public function card(User $user): array
     {
-        $ids = $this->ownership->proven($user)->pluck('id');
+        $ids = $this->listed($user)->pluck('id');
         $sites = KeySite::query()->whereIn('owned_domain_id', $ids)->get();
         $counts = collect($this->counts($ids));
 
@@ -64,11 +64,17 @@ final class KeysPanel
             'leak' => $counts->sum('leak'), 'last' => $sites->max('last_scan_at')];
     }
 
+    /** @return Collection<int, OwnedDomain> os domínios da conta que aparecem em Chaves (todos menos os tirados de lá) */
+    private function listed(User $user): Collection
+    {
+        return $this->ownership->proven($user)->reject(fn (OwnedDomain $owned) => $owned->keys_listing === OwnedDomain::KEYS_REMOVED)->values();
+    }
+
     /** [o que a tela diz, o tom da pílula] */
     public static function state(OwnedDomain $owned, ?KeySite $site): array
     {
         return match (true) {
-            ! KeySites::provable($owned) => ['TXT sumiu', 'erro'],
+            ! KeySites::provable($owned) => ['posse não comprovada', 'erro'],
             $site === null => ['não ativada', 'neutro'],
             $site->scan_status === 'running' => ['varrendo agora', 'ativo'],
             $site->scan_status === 'queued' => ['na fila', 'ativo'],

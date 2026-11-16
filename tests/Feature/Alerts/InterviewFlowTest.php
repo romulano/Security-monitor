@@ -215,9 +215,10 @@ class InterviewFlowTest extends TestCase
         $this->assertNotNull($domain->consent_at);
         $this->assertSame('v3', $domain->consent_version);
         $this->assertSame('127.0.0.1', $domain->consent_ip);
-        $this->assertMatchesRegularExpression('/^[0-9a-f]{16}$/', $domain->verify_token);
+        // Instalação de um dono só: nasce já comprovado, sem registro TXT no DNS.
+        $this->assertTrue($domain->isVerified());
 
-        $this->get(route('alerts.interview', 5))->assertOk()->assertSee('secmon-verify='.$domain->verify_token);
+        $this->get(route('alerts.interview', 5))->assertOk()->assertSee('acmepay.com.br');
 
         // O domínio vira marca: notícia que o citar alerta sempre.
         $this->assertStringContainsString('"acmepay.com.br"', $user->alertProfile->refresh()->compiled_query);

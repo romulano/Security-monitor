@@ -25,7 +25,7 @@
                     @include('alerts.tests.partials.pill', ['pill' => $state, 'pulse' => $site?->isBusy() ?? false])
                 </div>
                 <p class="max-w-3xl text-sm text-ink-300">
-                    Com a posse comprovada como autorização, a varredura navega o site inteiro (só leitura e devagar, inclusive o que o robots.txt esconde dos buscadores) e procura chaves de API, tokens e senhas
+                    A varredura navega o site inteiro (só leitura e devagar, inclusive o que o robots.txt esconde dos buscadores) e procura chaves de API, tokens e senhas
                     nas páginas e nos scripts. Algumas são feitas para ficar no navegador; outras nunca deveriam estar lá. Diga o que cada uma é: a decisão
                     fica para as próximas varreduras. O Security Monitor nunca guarda nem usa a chave: só o começo, o fim e o tamanho.
                 </p>
