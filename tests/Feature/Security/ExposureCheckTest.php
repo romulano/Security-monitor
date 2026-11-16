@@ -100,5 +100,4 @@ class ExposureCheckTest extends TestCase
         $this->assertSame(array_unique($urls), $urls, 'nenhum endereço é pedido duas vezes na varredura');
         $this->assertContains('https://acme.com.br/.env', $urls);
     }
-
 }

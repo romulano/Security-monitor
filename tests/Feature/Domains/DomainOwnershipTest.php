@@ -8,9 +8,11 @@ use App\Models\LookalikeWatch;
 use App\Models\MonitoredDomain;
 use App\Models\OwnedDomain;
 use App\Models\User;
+use App\Services\Domains\DomainOwner;
 use App\Services\Domains\DomainOwnership;
 use App\Services\Pentest\PentestEnrollment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Tests\Feature\Lookalike\LookalikeTestHelpers;
 use Tests\TestCase;
@@ -88,7 +90,7 @@ class DomainOwnershipTest extends TestCase
 
         $copy = app(PentestEnrollment::class)->add($user, null, 'acme.com.br', null)->domain;
         $this->assertTrue($copy->isVerified(), 'o nome digitado nos testes também chega comprovado');
-        $this->assertSame(['proof' => 'news', 'verified' => true], json_decode(\Illuminate\Support\Facades\DB::table('pentest_audit')->value('data'), true));
+        $this->assertSame(['proof' => 'news', 'verified' => true], json_decode(DB::table('pentest_audit')->value('data'), true));
         // Uma linha só em owned_domains para o nome: News e Radar reaproveitam, não duplicam.
         $this->assertSame(1, OwnedDomain::query()->where('user_id', $user->id)->where('domain', 'acme.com.br')->count());
     }
@@ -115,7 +117,7 @@ class DomainOwnershipTest extends TestCase
 
         // A prova "de cima" (selfAndParents) cobre um subdomínio nunca cadastrado por si; exactProof, não
         // (nenhuma linha própria existe ainda para o subdomínio).
-        $owner = \App\Services\Domains\DomainOwner::of($user->id);
+        $owner = DomainOwner::of($user->id);
         $this->assertNotNull($this->ownership()->proof($owner, 'loja.empresa.com.br'));
         $this->assertNull($this->ownership()->exactProof($owner, 'loja.empresa.com.br'));
 
