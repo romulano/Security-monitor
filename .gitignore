@@ -37,3 +37,4 @@ Thumbs.db
 # Caches do Python (runner e scripts)
 __pycache__/
 *.pyc
+/docker-compose.override.yml

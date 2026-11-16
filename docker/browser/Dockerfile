@@ -12,7 +12,7 @@ RUN npm ci --omit=dev --no-audit --no-fund \
     && npx playwright-core install --with-deps --only-shell chromium \
     && rm -rf /root/.npm /var/lib/apt/lists/* /tmp/*
 
-COPY capture.mjs ./
+COPY capture.mjs loop.sh ./
 
 USER node
 

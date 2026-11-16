@@ -52,7 +52,36 @@ services:
     # Alertas: o matching (alerts), o Slack (notifications) e o parecer da IA
     # antes do envio (judge) não podem esperar a fila de análise esvaziar; a
     # descoberta de domínios (discovery) pode.
-    command: php artisan queue:work --queue=alerts,notifications,notifications-low,judge,pentest-ai,enrich,discovery,lookalikes,github,merge,subdomains,default --sleep=3 --tries=2 --timeout=300 --max-time=3600
+    command: php artisan queue:work --queue=alerts,notifications,notifications-low,judge,pentest-ai,enrich,discovery,github,merge,subdomains,default --sleep=3 --tries=2 --timeout=300 --max-time=3600
+
+  # Radar de domínios: a varredura vira centenas de lotes de DNS (I/O puro); dois processos próprios
+  # para não segurar os alertas nem a análise.
+  worker-radar:
+    <<: *app
+    environment:
+      SECMON_ROLE: worker
+      HOME: /tmp
+    deploy:
+      replicas: 2
+    command: php artisan queue:work --queue=lookalikes --sleep=3 --tries=3 --timeout=600 --max-time=3600
+
+  # Varredura de Chaves expostas: etapas de até ~10 min, em worker próprio para não segurar os alertas.
+  worker-chaves:
+    <<: *app
+    container_name: secmon-worker-chaves
+    environment:
+      SECMON_ROLE: worker
+      HOME: /tmp
+    command: php artisan queue:work --queue=keys --sleep=5 --tries=1 --timeout=600 --max-time=3600
+
+  # Testes de segurança (pentest) e Segurança dos sites: o passo do teste vem antes da varredura do site.
+  worker-testes:
+    <<: *app
+    container_name: secmon-worker-testes
+    environment:
+      SECMON_ROLE: worker
+      HOME: /tmp
+    command: php artisan queue:work --queue=pentest,security --sleep=3 --tries=1 --timeout=200 --max-time=3600
 
   scheduler:
     <<: *app
@@ -91,6 +120,33 @@ services:
     cpus: 1.0
     pids_limit: 256
     restart: "no"
+
+  # O mesmo navegador, sempre de pé dentro do projeto: confere a pasta de pedidos a cada 30 s e roda
+  # o capture.mjs quando chega lote (docker/browser/loop.sh). Mesmo isolamento do `browser`: rede
+  # própria, só a pasta de troca montada, sem .env, sem acesso ao Docker do host.
+  browser-loop:
+    build:
+      context: docker/browser
+    image: secmon/browser:latest
+    container_name: secmon-browser
+    entrypoint: ["sh", "/app/loop.sh"]
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      HOME: /tmp
+      WORK_DIR: /work
+    volumes:
+      - ./storage/app/lookalike:/work
+    networks: [browser]
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1536m
+    cpus: 1.0
+    pids_limit: 256
+    restart: unless-stopped
 
   db:
     image: postgres:16-alpine

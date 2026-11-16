@@ -19,7 +19,7 @@ setup: ## Primeira execução: .env, dependências, assets, containers, banco e 
 	$(MAKE) deps assets build up
 	@echo "Aguardando o app subir..."; until $(APP) php artisan --version >/dev/null 2>&1; do sleep 2; done
 	$(APP) php artisan db:seed --force
-	@echo "Pronto: http://localhost:1515 (admin em /admin/login)"
+	@echo "Pronto: http://localhost:1515 (admin em /admin, sem login)"
 
 deps: ## Instala as dependências PHP (via container do composer)
 	$(COMPOSER) install --no-interaction --prefer-dist
@@ -96,7 +96,7 @@ browser-build: ## Constrói a imagem do navegador do Radar de domínios (docker/
 browser-run: ## Sobe o navegador agora, se houver pedido na fila; ele sai ao terminar
 	./docker/browser/run.sh
 
-browser-watch: ## Instala o gatilho do systemd do usuário: o navegador sobe sozinho quando chega pedido
+browser-watch: ## Opcional: gatilho do systemd no lugar do serviço browser-loop do compose (que já sobe com `make up`)
 	@mkdir -p $$HOME/.config/systemd/user
 	@for unit in secmon-browser.path secmon-browser.service; do \
 		sed "s#@ROOT@#$$PWD#g; s#@DIR@#$$PWD/storage/app/lookalike#g" docker/browser/systemd/$$unit > $$HOME/.config/systemd/user/$$unit; done
