@@ -40,7 +40,7 @@
         @foreach ([
             'fila' => ['Fila', $counts['pending'], true],
             'resolvidas' => ['Resolvidas', $counts['resolved'], false],
-            'descartadas' => ['Descartadas', $counts['discarded'], false],
+            'credenciais' => ['Credenciais', null, false],
             'genericos' => ['E-mails genéricos', $freeCounts['domains'] + $freeCounts['brands'], false],
             'dumps' => ['Pasta e dumps', null, false],
         ] as $key => [$name, $total, $warn])
@@ -110,7 +110,7 @@
                             </form>
 
                             <form method="POST" action="{{ route('admin.leaks.discard', $line) }}" class="mt-2"
-                                  data-confirm="Descartar esta linha? Ela sai da fila e não gera credencial. Dá para ver depois em Descartadas.">
+                                  data-confirm="Descartar esta linha? Ela é APAGADA: sai da fila, não gera credencial e não fica guardada.">
                                 @csrf
                                 @method('DELETE')
                                 <button class="rounded-lg border border-ink-800 px-3 py-1.5 text-xs text-ink-400 hover:border-red-800 hover:text-red-300">
@@ -119,8 +119,8 @@
                             </form>
                         @else
                             <p class="mt-2 text-xs text-ink-700">
-                                {{ $line->status === 'resolved' ? 'gravada' : 'descartada' }} por
-                                {{ $line->resolver?->name ?? 'alguém que saiu' }} em {{ $when($line->resolved_at) }}
+                                gravada {{ $line->resolver ? 'por '.$line->resolver->name : '' }}
+                                em {{ $when($line->resolved_at) }}
                                 @if ($line->leaked_credential_id) · credencial #{{ $line->leaked_credential_id }} @endif
                             </p>
                         @endif
@@ -129,6 +129,76 @@
             </ul>
 
             <div class="mt-4">{{ $lines->links() }}</div>
+        @endif
+    @endif
+
+    {{-- ----------------------------------------------------------------------------------- Credenciais --}}
+    @if ($tab === 'credenciais')
+        <form method="GET" action="{{ route('admin.leaks') }}" class="mb-4 flex flex-wrap items-end gap-2">
+            <input type="hidden" name="ver" value="credenciais">
+            <label class="block text-xs text-ink-700">
+                buscar por domínio, @domínio, e-mail, site ou dump
+                <input type="search" name="q" value="{{ $term }}" placeholder="acme.com.br"
+                       class="mt-1 w-80 rounded-lg border border-ink-800 bg-ink-850 px-2.5 py-1.5 font-mono text-xs text-ink-200 focus:border-accent focus:outline-none">
+            </label>
+            <button class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-ink-950 hover:brightness-110">Buscar</button>
+            @if ($term !== '')
+                <a href="{{ route('admin.leaks', ['ver' => 'credenciais']) }}" class="px-2 py-2 text-xs text-ink-400 hover:text-ink-200">limpar</a>
+            @endif
+            <span class="ml-auto text-xs text-ink-700">
+                {{ number_format($credentials->total(), 0, ',', '.') }} credencial(is) ·
+                página {{ $credentials->currentPage() }} de {{ max($credentials->lastPage(), 1) }} · 100 por página
+            </span>
+        </form>
+
+        <p class="mb-3 max-w-3xl text-xs leading-relaxed text-ink-700">
+            Da mais nova para a mais velha. A busca é por <strong class="text-ink-400">começo</strong> do texto — assim ela
+            usa os índices; procurar por pedaço no meio varreria a tabela inteira. O
+            <span class="font-mono">@</span> escolhe o campo: <span class="font-mono">@acme.com.br</span> traz todo mundo
+            daquele domínio, <span class="font-mono">ana@acme</span> procura o e-mail inteiro, e sem
+            <span class="font-mono">@</span> procura domínio, site e nome do dump.
+        </p>
+
+        @if ($credentials->isEmpty())
+            <p class="rounded-lg border border-ink-800 bg-ink-900 p-5 text-sm text-ink-400">
+                {{ $term === '' ? 'Nenhuma credencial guardada ainda.' : 'Nada começa com “'.$term.'”.' }}
+            </p>
+        @else
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="text-left text-xs text-ink-700">
+                        <tr class="border-b border-ink-800">
+                            <th class="py-2 pr-3">e-mail</th>
+                            <th class="py-2 pr-3">senha</th>
+                            <th class="py-2 pr-3">site</th>
+                            <th class="py-2 pr-3">dump</th>
+                            <th class="py-2 text-right">entrou</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($credentials as $credential)
+                            <tr class="border-b border-ink-850 hover:bg-ink-900">
+                                <td class="max-w-xs truncate py-2 pr-3 font-mono text-xs text-ink-200">
+                                    {{ $credential->email }}
+                                    @if ($credential->country)<span class="ml-1 rounded bg-ink-850 px-1 text-[10px] text-ink-700">{{ $credential->country }}</span>@endif
+                                </td>
+                                <td class="max-w-[14rem] truncate py-2 pr-3 font-mono text-xs text-amber-300">{{ $credential->password }}</td>
+                                <td class="max-w-xs truncate py-2 pr-3 text-xs text-ink-400">
+                                    @if ($credential->url)
+                                        <span title="{{ $credential->url }}">{{ $credential->site_host ?? $credential->url }}</span>
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td class="max-w-[12rem] truncate py-2 pr-3 font-mono text-[11px] text-ink-700">{{ $credential->source }}</td>
+                                <td class="py-2 text-right text-[11px] whitespace-nowrap text-ink-700">{{ $when($credential->created_at) }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-4">{{ $credentials->links() }}</div>
         @endif
     @endif
 

@@ -11,14 +11,14 @@ use Illuminate\View\View;
 /** Admin → Vazamentos: a fila do humano, os dumps carregados e a lista de e-mail genérico. */
 class ShowLeaksController extends Controller
 {
-    private const TABS = ['fila', 'resolvidas', 'descartadas', 'genericos', 'dumps'];
+    private const TABS = ['fila', 'resolvidas', 'credenciais', 'genericos', 'dumps'];
 
     public function __construct(private LeakPanel $panel, private LeakScanner $scanner) {}
 
     public function __invoke(Request $request): View
     {
         $tab = in_array($request->query('ver'), self::TABS, true) ? $request->query('ver') : 'fila';
-        $status = ['fila' => 'pending', 'resolvidas' => 'resolved', 'descartadas' => 'discarded'][$tab] ?? null;
+        $status = ['fila' => 'pending', 'resolvidas' => 'resolved'][$tab] ?? null;
 
         return view('admin.leaks', [
             'tab' => $tab,
@@ -33,6 +33,8 @@ class ShowLeaksController extends Controller
             'folder' => $tab === 'dumps' ? $this->scanner->look() : null,
             'dumps' => $tab === 'dumps' ? $this->panel->dumps() : null,
             'deletes' => $this->scanner->deletesAfterImport(),
+            'credentials' => $tab === 'credenciais' ? $this->panel->credentials($request->query('q')) : null,
+            'term' => (string) $request->query('q', ''),
         ]);
     }
 }

@@ -177,6 +177,8 @@ tela tem de ser reescrito para a pasta.
 | `tests/Feature/AdminLeakFolderTest.php` | lá tem outro nome; o teste de leitura falha com a raiz apontando para um arquivo |
 | `tests/Feature/AdminLeaksTest.php` | sem os testes de visitante e de não-admin (não há login aqui) |
 | `.dockerignore` | `storage/app/private/vazamentos` nunca entra na imagem |
+| `composer.json` | sem o adaptador S3 do Flysystem: não há disco remoto aqui |
+| `tests/TestCase.php` | sem a trava que aponta o disco do bucket para uma porta fechada: o disco `leaks` é local e não sai para a rede |
 
 As linhas de exemplo dos testes e dos comentários (`LeakParserTest`,
 `LeakImportTest`, `AdminLeaksTest`, `CredentialLineParser`) foram trocadas por
