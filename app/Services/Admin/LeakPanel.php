@@ -17,7 +17,7 @@ class LeakPanel
 {
     public function __construct(private FreeMailList $free) {}
 
-    /** @return array{pending:int,resolved:int,discarded:int} */
+    /** @return array{pending:int,resolved:int} */
     public function counts(): array
     {
         $rows = LeakImportLine::query()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
@@ -25,7 +25,6 @@ class LeakPanel
         return [
             'pending' => (int) ($rows['pending'] ?? 0),
             'resolved' => (int) ($rows['resolved'] ?? 0),
-            'discarded' => (int) ($rows['discarded'] ?? 0),
         ];
     }
 
@@ -37,6 +36,50 @@ class LeakPanel
             ->where('status', $status)
             ->orderBy('id')
             ->paginate(25)
+            ->withQueryString();
+    }
+
+    /**
+     * As credenciais guardadas, 100 por página, da mais nova para a mais velha.
+     *
+     * A ordem é por `id` decrescente, e não por `created_at`: a tabela não tem `updated_at` (a linha
+     * é um fato imutável) e o `id` é monotônico, então dá exatamente a mesma ordem de chegada — só
+     * que pela chave primária, sem ordenar milhões de linhas por uma coluna sem índice.
+     *
+     * A busca é por COMEÇO do texto, de propósito: `like 'x%'` usa os índices, enquanto `%x%` faria
+     * varredura completa. O `@` escolhe o campo: começando com ele (`@acme.com.br`) procura o
+     * domínio do e-mail; no meio (`ana@acme`) procura o e-mail inteiro; sem ele, procura domínio,
+     * site e nome do dump.
+     */
+    public function credentials(?string $term): LengthAwarePaginator
+    {
+        $term = trim((string) $term);
+
+        return LeakedCredential::query()
+            ->when($term !== '', function ($query) use ($term): void {
+                $prefix = mb_strtolower($term).'%';
+
+                // `@acme.com.br` é como se escreve "todo mundo desse domínio". Sem isto o termo
+                // caía na busca por e-mail e não achava nada, porque e-mail nenhum começa com `@`.
+                if (str_starts_with($term, '@')) {
+                    $query->where('domain', 'like', mb_strtolower(ltrim($term, '@')).'%');
+
+                    return;
+                }
+
+                if (str_contains($term, '@')) {
+                    $query->where('email', 'like', $prefix);
+
+                    return;
+                }
+
+                $query->where(fn ($w) => $w
+                    ->where('domain', 'like', $prefix)
+                    ->orWhere('site_host', 'like', $prefix)
+                    ->orWhere('source', $term));
+            })
+            ->orderByDesc('id')
+            ->paginate(100)
             ->withQueryString();
     }
 
@@ -134,14 +177,20 @@ class LeakPanel
         return ['ok' => true, 'error' => null];
     }
 
-    /** Lixo, linha truncada, formato que não interessa: sai da fila sem gerar credencial. */
+    /**
+     * Lixo, banner do dump, linha truncada: APAGA.
+     *
+     * Não vira `discarded` guardado. O admin já disse que não é credencial, e manter a linha só
+     * encheria a tabela de coisa que ninguém vai reler. O que fica registrado é o contrário: a
+     * linha que VIROU credencial, em `resolved`, apontando para ela.
+     */
     public function discard(LeakImportLine $line, User $admin): bool
     {
         if ($line->status !== 'pending') {
             return false;
         }
 
-        $line->update(['status' => 'discarded', 'resolved_by' => $admin->id, 'resolved_at' => now()]);
+        $line->delete();
 
         return true;
     }

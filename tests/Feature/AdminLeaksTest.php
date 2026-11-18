@@ -10,7 +10,7 @@ use App\Services\Leaks\FreeMailList;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/** Admin → Vazamentos: a fila do humano e a lista de e-mail genérico. */
+/** Admin → Vazamentos: a fila do humano, as credenciais guardadas e a lista de e-mail genérico. */
 class AdminLeaksTest extends TestCase
 {
     use RefreshDatabase;
@@ -41,9 +41,10 @@ class AdminLeaksTest extends TestCase
         $line = $this->line();
 
         $this->get(route('admin.leaks'))->assertOk()->assertSee('Vazamentos');
+        $this->get(route('admin.leaks', ['ver' => 'credenciais']))->assertOk();
         $this->delete(route('admin.leaks.discard', $line))->assertRedirect();
 
-        $this->assertSame('discarded', $line->fresh()->status);
+        $this->assertDatabaseMissing('leak_import_lines', ['id' => $line->id]);
     }
 
     public function test_the_admin_menu_has_the_entry(): void
@@ -116,31 +117,127 @@ class AdminLeaksTest extends TestCase
         $this->assertSame('pending', $line->fresh()->status);
     }
 
-    public function test_the_admin_discards_a_line(): void
+    /** Descartar APAGA: o dono não quer guardar lixo que ele já disse que é lixo. */
+    public function test_discarding_deletes_the_line_instead_of_keeping_it(): void
     {
         $line = $this->line();
-        $admin = $this->admin();
 
-        $this->actingAs($admin)->delete(route('admin.leaks.discard', $line))->assertRedirect();
+        $this->actingAs($this->admin())->delete(route('admin.leaks.discard', $line))->assertRedirect();
 
-        $line->refresh();
-        $this->assertSame('discarded', $line->status);
-        $this->assertSame($admin->id, $line->resolved_by);
+        $this->assertDatabaseMissing('leak_import_lines', ['id' => $line->id]);
+        $this->assertSame(0, LeakImportLine::count());
         $this->assertSame(0, LeakedCredential::count());
     }
 
-    public function test_a_line_is_decided_only_once(): void
+    public function test_a_line_that_was_discarded_cannot_be_classified_afterwards(): void
     {
         $line = $this->line();
         $admin = $this->admin();
 
         $this->actingAs($admin)->delete(route('admin.leaks.discard', $line));
+
+        // A linha não existe mais: o vínculo da rota devolve 404, e nada é gravado.
         $this->actingAs($admin)->post(route('admin.leaks.classify', $line), [
             'login' => 'ana@exemplo88.net', 'password' => 'x',
-        ])->assertRedirect();
+        ])->assertNotFound();
 
         $this->assertSame(0, LeakedCredential::count());
-        $this->assertSame('discarded', $line->fresh()->status);
+    }
+
+    public function test_there_is_no_discarded_tab_anymore(): void
+    {
+        $this->actingAs($this->admin())->get(route('admin.leaks'))
+            ->assertOk()
+            ->assertDontSee('Descartadas');
+    }
+
+    // ------------------------------------------------------------------ as credenciais guardadas
+
+    private function credential(string $email, string $source = 'Amostra2026'): LeakedCredential
+    {
+        return LeakedCredential::create([
+            'domain' => substr($email, strrpos($email, '@') + 1),
+            'email' => $email,
+            'password' => 'Senha!'.strlen($email),
+            'url' => 'https://portal.acme.com.br/entrar',
+            'site_host' => 'portal.acme.com.br',
+            'source' => $source,
+            'fingerprint' => md5($email),
+        ]);
+    }
+
+    public function test_the_credentials_tab_lists_the_newest_first(): void
+    {
+        $velha = $this->credential('velha@acme.com.br');
+        $nova = $this->credential('nova@acme.com.br');
+
+        $this->actingAs($this->admin())->get(route('admin.leaks', ['ver' => 'credenciais']))
+            ->assertOk()
+            ->assertSeeInOrder([$nova->email, $velha->email])
+            ->assertSee('portal.acme.com.br')
+            ->assertSee('100 por página');
+    }
+
+    public function test_the_search_finds_by_domain_email_site_and_dump(): void
+    {
+        $this->credential('ana@acme.com.br');
+        $this->credential('ze@outra.com.br', 'Collection #1');
+        $admin = $this->admin();
+
+        foreach (['acme.com.br' => 'ana@acme.com.br', 'ana@' => 'ana@acme.com.br', 'Collection #1' => 'ze@outra.com.br'] as $termo => $esperado) {
+            $this->actingAs($admin)->get(route('admin.leaks', ['ver' => 'credenciais', 'q' => $termo]))
+                ->assertOk()
+                ->assertSee($esperado);
+        }
+
+        $this->actingAs($admin)->get(route('admin.leaks', ['ver' => 'credenciais', 'q' => 'naoexiste']))
+            ->assertOk()
+            ->assertSee('Nada começa com');
+    }
+
+    /** `@dominio` é como se escreve "todo mundo desse domínio" — e antes não achava nada. */
+    public function test_an_at_sign_searches_the_whole_domain(): void
+    {
+        $this->credential('ana@passarinho-exemplo.com');
+        $this->credential('bia@passarinho-exemplo.com');
+        $this->credential('ze@outra.com.br');
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->get(route('admin.leaks', ['ver' => 'credenciais', 'q' => '@passarinho-exemplo.com']))
+            ->assertOk()
+            ->assertSee('2 credencial(is)')
+            ->assertSee('ana@passarinho-exemplo.com')
+            ->assertSee('bia@passarinho-exemplo.com')
+            ->assertDontSee('ze@outra.com.br');
+    }
+
+    public function test_the_at_sign_in_the_middle_still_searches_the_email(): void
+    {
+        $this->credential('ana@passarinho-exemplo.com');
+        $this->credential('bia@passarinho-exemplo.com');
+
+        $this->actingAs($this->admin())->get(route('admin.leaks', ['ver' => 'credenciais', 'q' => 'ana@passarinho-exemplo.com']))
+            ->assertOk()
+            ->assertSee('1 credencial(is)')
+            ->assertSee('ana@passarinho-exemplo.com')
+            ->assertDontSee('bia@passarinho-exemplo.com');
+    }
+
+    public function test_the_list_breaks_into_pages_of_a_hundred(): void
+    {
+        for ($i = 0; $i < 101; $i++) {
+            $this->credential("p{$i}@acme.com.br");
+        }
+
+        // A mais nova é a última criada; a mais velha sobra para a segunda página.
+        $this->actingAs($this->admin())->get(route('admin.leaks', ['ver' => 'credenciais']))
+            ->assertOk()
+            ->assertSee('p100@acme.com.br')
+            ->assertDontSee('p0@acme.com.br');
+
+        $this->actingAs($this->admin())->get(route('admin.leaks', ['ver' => 'credenciais', 'page' => 2]))
+            ->assertOk()
+            ->assertSee('p0@acme.com.br');
     }
 
     // ------------------------------------------------------------------ a lista de genéricos

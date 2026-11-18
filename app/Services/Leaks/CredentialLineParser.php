@@ -44,7 +44,7 @@ final class CredentialLineParser
     /**
      * @return array{ok:bool,reason:?string,layout:?string,country:?string,url:?string,site_host:?string,
      *               username:?string,email:?string,domain:?string,password:?string,free_mail:bool,
-     *               corporate:bool,fields:array<int,string>}
+     *               corporate:bool,company_email:?string,fields:array<int,string>}
      */
     public function parse(string $raw): array
     {
@@ -135,6 +135,7 @@ final class CredentialLineParser
             'domain' => $domain,
             'password' => $pass,
             'free_mail' => $free,
+            'company_email' => $free ? null : $email,
             // O que vai para o banco: só credencial de empresa. Webmail grátis e login que nem
             // e-mail é (`usuario01`, `Usuaria999`) ficam de fora — a carga conta cada um.
             'corporate' => $domain !== null && ! $free,
@@ -220,13 +221,44 @@ final class CredentialLineParser
         return preg_match('/^[a-z0-9]([a-z0-9.\-]*[a-z0-9])?$/', $host) === 1 && mb_strlen($host) <= 253 ? $host : null;
     }
 
-    /** @param array<int,string> $fields */
+    /**
+     * Não deu para ler a linha — mas isso ainda não quer dizer que um humano resolva.
+     *
+     * Só vale chamar alguém se houver, entre os campos, um e-mail DE EMPRESA. A tabela exige e-mail
+     * (é o domínio que identifica a empresa a avisar) e webmail genérico é descartado por regra:
+     * sem um e-mail de empresa na linha, nenhuma decisão do humano geraria credencial. Mandar assim
+     * para a fila é pedir trabalho sem saída — ele abre, pensa e só pode descartar.
+     *
+     * `company_email` é esse campo quando existe. `free_mail` diz que havia e-mail, mas só genérico:
+     * serve para a carga contar essa linha como descartada por genérico, e não por falta de e-mail.
+     *
+     * @param  array<int,string>  $fields
+     */
     private function fail(string $reason, ?string $country, array $fields): array
     {
+        $company = null;
+        $viuEmail = false;
+
+        foreach ($fields as $field) {
+            if (! $this->isEmail($field)) {
+                continue;
+            }
+
+            $viuEmail = true;
+            $email = mb_strtolower($field);
+
+            if (! $this->free->has(substr($email, strrpos($email, '@') + 1))) {
+                $company = $email;
+                break;
+            }
+        }
+
         return [
             'ok' => false, 'reason' => $reason, 'layout' => null, 'country' => $country,
             'url' => null, 'site_host' => null, 'username' => null, 'email' => null,
-            'domain' => null, 'password' => null, 'free_mail' => false, 'corporate' => false,
+            'domain' => null, 'password' => null,
+            'free_mail' => $company === null && $viuEmail, 'corporate' => false,
+            'company_email' => $company,
             'fields' => $fields,
         ];
     }

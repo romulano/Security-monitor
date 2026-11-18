@@ -16,7 +16,9 @@ use RuntimeException;
  * - credencial de EMPRESA  → `leaked_credentials` (`insertOrIgnore`: recarregar o dump não duplica)
  * - webmail genérico       → descartada, só contada (a lista é de Admin → Vazamentos)
  * - login que não é e-mail → descartada, só contada (sem domínio não há empresa a avisar)
- * - ordem não comprovável  → `leak_import_lines`, para um humano decidir
+ * - ordem não comprovável  → `leak_import_lines`, para um humano decidir — mas SÓ se houver na
+ *                            linha um e-mail de empresa. Sem ele, nenhuma decisão geraria
+ *                            credencial, então a linha é descartada como as outras.
  *
  * A contagem volta inteira de propósito: descarte silencioso sem número é indistinguível de bug.
  */
@@ -61,6 +63,16 @@ final class LeakImporter
                 $tally['linhas']++;
 
                 if (! $parsed['ok']) {
+                    // A linha não foi lida, mas só vale a fila do humano se houver um e-mail de
+                    // empresa nela. Sem isso não há decisão que gere credencial: a tabela exige
+                    // e-mail e genérico é descartado. Mandar assim encheria a fila de linha que o
+                    // admin só poderia descartar.
+                    if ($parsed['company_email'] === null) {
+                        $parsed['free_mail'] ? $tally['genericas']++ : $tally['sem_email']++;
+
+                        continue;
+                    }
+
                     $tally['humano']++;
                     $quarantine[] = [
                         'source' => $source,
