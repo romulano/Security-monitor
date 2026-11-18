@@ -27,6 +27,7 @@
                 ['admin.alerts.overview', 'Alertas', 'admin.alerts.*'],
                 ['admin.prompts.index', 'Prompts', 'admin.prompts.*'],
                 ['admin.security', 'Segurança', 'admin.security*'],
+                ['admin.leaks', 'Vazamentos', 'admin.leaks*'],
                 ['admin.pentest.overview', 'Testes ativos', 'admin.pentest.*'],
             ] as [$route, $label, $active])
                 <a href="{{ route($route) }}"

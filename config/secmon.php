@@ -827,6 +827,27 @@ return [
         'domain' => env('MAIL_DOMAIN', 'example.com'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Vazamentos
+    |--------------------------------------------------------------------------
+    |
+    | A carga dos dumps de credencial. A raiz é sempre storage/app/private/vazamentos
+    | (o disco `leaks` em config/filesystems.php); o que o admin escolhe é a subpasta
+    | DENTRO dela e se o arquivo é apagado depois de entrar no banco.
+    |
+    | `delete_after_import` nasce desligado de propósito: apagar é irreversível e
+    | a pasta não tem backup. Quem liga é o admin, na tela.
+    */
+    'leaks' => [
+        // A subpasta dentro de storage/app/private/vazamentos. Vazio = a raiz.
+        'prefix' => env('LEAKS_PREFIX', ''),
+        // Apagar o .txt da pasta depois de carregar? O admin manda, na tela.
+        'delete_after_import' => (bool) env('LEAKS_DELETE_AFTER_IMPORT', false),
+        // Quantos arquivos uma varredura enfileira por vez.
+        'max_files_per_scan' => (int) env('LEAKS_MAX_FILES_PER_SCAN', 25),
+    ],
+
     // Contato público: pedidos de privacidade (LGPD), dúvidas sobre os termos
     // e relatos de segurança. O example.com recebe e-mail pelo Email Routing da Cloudflare.
     'contact_email' => env('SECMON_CONTACT_EMAIL', 'contato@example.com'),

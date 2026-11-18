@@ -47,6 +47,17 @@ return [
             'report' => false,
         ],
 
+        // A pasta dos dumps de vazamento. Disco próprio para a carga nunca ler nada fora dela:
+        // o admin escolhe só a subpasta, e a raiz fica aqui. `throw` ligado de propósito: se o
+        // dump não existir, a carga tem de falhar na cara, não seguir achando que estava vazio.
+        // Fica em private/: nada aqui é servido pela web.
+        'leaks' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/vazamentos'),
+            'throw' => true,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

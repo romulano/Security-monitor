@@ -38,3 +38,8 @@ Thumbs.db
 __pycache__/
 *.pyc
 /docker-compose.override.yml
+
+# Amostras de dump de vazamento: têm credencial real de gente real e nunca entram no repositório.
+# (Os dumps de verdade ficam em storage/app/private/vazamentos, que o storage/app/private/.gitignore já barra.)
+/Untitled-*.md
+/*.combo.txt

@@ -29,6 +29,14 @@ use App\Http\Controllers\Admin\Articles\UpdateArticleTextController;
 use App\Http\Controllers\Admin\Cases\DestroyCaseController;
 use App\Http\Controllers\Admin\Cases\ReindexCasesController;
 use App\Http\Controllers\Admin\Cases\ToggleCaseVisibilityController;
+use App\Http\Controllers\Admin\Leaks\ClassifyLineController;
+use App\Http\Controllers\Admin\Leaks\DestroyFreeMailController;
+use App\Http\Controllers\Admin\Leaks\DiscardLineController;
+use App\Http\Controllers\Admin\Leaks\ReloadDumpController;
+use App\Http\Controllers\Admin\Leaks\ScanLeakFolderController;
+use App\Http\Controllers\Admin\Leaks\ShowLeaksController;
+use App\Http\Controllers\Admin\Leaks\StoreFreeMailController;
+use App\Http\Controllers\Admin\Leaks\UpdateLeakSettingsController;
 use App\Http\Controllers\Admin\Pentest\ListAdminPentestRunsController;
 use App\Http\Controllers\Admin\Pentest\PauseAdminPentestRunController;
 use App\Http\Controllers\Admin\Pentest\ResumeAdminPentestRunController;
@@ -484,6 +492,17 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/seguranca/{site}/verificar', RunSecurityScanController::class)->whereNumber('site')->middleware('throttle:20,1,admin-seguranca-verificar')->name('security.run');
     Route::post('/seguranca/{site}/pausar', ToggleSecuritySiteController::class)->whereNumber('site')->name('security.toggle');
     Route::delete('/seguranca/{site}', DestroySecuritySiteController::class)->whereNumber('site')->name('security.destroy');
+
+    // Vazamentos: a fila do humano, a lista de webmail genérico e a pasta de dumps em
+    // storage/app/private/vazamentos (a subpasta, apagar-após-carregar e a varredura que enfileira os .txt).
+    Route::get('/vazamentos', ShowLeaksController::class)->name('leaks');
+    Route::post('/vazamentos/linha/{line}', ClassifyLineController::class)->whereNumber('line')->middleware('throttle:60,1,admin-vazamento-linha')->name('leaks.classify');
+    Route::delete('/vazamentos/linha/{line}', DiscardLineController::class)->whereNumber('line')->name('leaks.discard');
+    Route::post('/vazamentos/genericos', StoreFreeMailController::class)->middleware('throttle:60,1,admin-vazamento-generico')->name('leaks.free-mail.store');
+    Route::delete('/vazamentos/genericos/{domain}', DestroyFreeMailController::class)->whereNumber('domain')->name('leaks.free-mail.destroy');
+    Route::post('/vazamentos/pasta', UpdateLeakSettingsController::class)->middleware('throttle:30,1,admin-vazamento-pasta')->name('leaks.folder.update');
+    Route::post('/vazamentos/pasta/varrer', ScanLeakFolderController::class)->middleware('throttle:10,1,admin-vazamento-varrer')->name('leaks.folder.scan');
+    Route::post('/vazamentos/pasta/carregar', ReloadDumpController::class)->middleware('throttle:30,1,admin-vazamento-carregar')->name('leaks.folder.reload');
 
     // Testes ativos (P6b): a chave e o "Parar tudo", as aprovações e as execuções de todas as contas. Desligar, "Parar
     // tudo" e o Parar de uma execução não têm limite de requisições: parar nunca é recusado.
