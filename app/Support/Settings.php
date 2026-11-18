@@ -48,6 +48,8 @@ class Settings
         'github.ai_threshold' => 'secmon.github.ai_threshold',
         'monitoring.enabled' => 'secmon.monitoring.enabled',
         'indexnow.enabled' => 'secmon.indexnow.enabled',
+        'leaks.prefix' => 'secmon.leaks.prefix',
+        'leaks.delete_after_import' => 'secmon.leaks.delete_after_import',
     ];
 
     public static function all(): array

@@ -161,6 +161,29 @@ A lista saiu do `git diff main..dev --stat`, agrupada por área.
 | `.env.example` | sem as chaves dessas áreas |
 | `README.md` | descreve a instalação local, não o serviço |
 
+### Vazamentos (dumps de credencial)
+
+Lá os dumps vêm de um bucket S3 compatível; aqui vêm de uma pasta local. Um
+commit de lá que fale do disco do bucket, das variáveis dele ou do "bucket" na
+tela tem de ser reescrito para a pasta.
+
+| Arquivo | Por que divergiu |
+| --- | --- |
+| `config/filesystems.php` | disco `leaks` local em `storage/app/private/vazamentos`, no lugar do disco do bucket |
+| `app/Services/Leaks/LeakScanner.php` | `DISK = 'leaks'` (público, o job usa) e `config('secmon.leaks…')` |
+| `app/Jobs/ImportLeakDump.php` | lê e apaga pelo `LeakScanner::DISK` |
+| `app/Http/Controllers/Admin/Leaks/ScanLeakFolderController.php` | lá tem outro nome; rotas `admin.leaks.folder.*` em `/admin/vazamentos/pasta` |
+| `resources/views/admin/leaks.blade.php` | aba "Pasta e dumps", textos sem bucket nem credencial |
+| `tests/Feature/AdminLeakFolderTest.php` | lá tem outro nome; o teste de leitura falha com a raiz apontando para um arquivo |
+| `tests/Feature/AdminLeaksTest.php` | sem os testes de visitante e de não-admin (não há login aqui) |
+| `.dockerignore` | `storage/app/private/vazamentos` nunca entra na imagem |
+
+As linhas de exemplo dos testes e dos comentários (`LeakParserTest`,
+`LeakImportTest`, `AdminLeaksTest`, `CredentialLineParser`) foram trocadas por
+dados **sintéticos** do mesmo formato. Lá elas vinham de um dump real. Um
+commit de lá que traga linha nova de exemplo precisa ser anonimizado do mesmo
+jeito antes de entrar: este repositório é público.
+
 ### Esquema do banco
 
 As 14 migrations de empresa, setor, convite, auditoria, subdomínio e limite, as

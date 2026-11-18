@@ -4,6 +4,8 @@ vendor
 node_modules
 storage/logs/*
 storage/app/lookalike
+# Dumps de vazamento: credencial real de gente real, nunca dentro da imagem.
+storage/app/private/vazamentos
 storage/framework/cache/data/*
 storage/framework/sessions/*
 storage/framework/views/*

@@ -74,6 +74,18 @@ services:
       HOME: /tmp
     command: php artisan queue:work --queue=keys --sleep=5 --tries=1 --timeout=600 --max-time=3600
 
+  # Vazamentos: a carga dos dumps de storage/app/private/vazamentos. Um arquivo de gigabytes leva
+  # dezenas de minutos, então tem worker próprio para não segurar a análise atrás dele. Um processo
+  # só: dois lendo dumps ao mesmo tempo brigariam por banco e disco sem ganhar nada. O job morto no
+  # meio é retentado e recomeça o arquivo, o que é seguro porque a carga é idempotente.
+  worker-vazamentos:
+    <<: *app
+    container_name: secmon-worker-vazamentos
+    environment:
+      SECMON_ROLE: worker
+      HOME: /tmp
+    command: php artisan queue:work --queue=vazamentos --sleep=5 --tries=3 --timeout=5400 --max-time=3600
+
   # Testes de segurança (pentest) e Segurança dos sites: o passo do teste vem antes da varredura do site.
   worker-testes:
     <<: *app
