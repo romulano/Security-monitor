@@ -26,6 +26,7 @@ class ShowLeaksController extends Controller
             'lines' => $status === null ? null : $this->panel->lines($status),
             'domains' => $tab === 'genericos' ? $this->panel->freeMail('domain') : null,
             'brands' => $tab === 'genericos' ? $this->panel->freeMail('brand') : null,
+            'prefixes' => $tab === 'genericos' ? $this->panel->freeMail('prefix') : null,
             'freeCounts' => $this->panel->freeMailCounts(),
             'sources' => $tab === 'dumps' ? $this->panel->sources() : null,
             // A aba lista a pasta de vazamentos: se não der para ler, ela devolve o motivo, e a tela mostra
