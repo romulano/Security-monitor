@@ -258,13 +258,97 @@ class AdminLeaksTest extends TestCase
 
     public function test_the_admin_removes_a_domain_and_the_list_stops_refusing_it(): void
     {
-        $gmail = FreeMailDomain::where('value', 'gmail.com')->firstOrFail();
-        $this->assertTrue(app(FreeMailList::class)->has('gmail.com'));
+        // Não dá para usar gmail.com aqui: o prefixo `gmail.` também o pega, então tirar o
+        // domínio exato não o tornaria de empresa. `uol.com.br` não tem prefixo semeado.
+        $uol = FreeMailDomain::where('value', 'uol.com.br')->firstOrFail();
+        $this->assertTrue(app(FreeMailList::class)->has('uol.com.br'));
 
-        $this->actingAs($this->admin())->delete(route('admin.leaks.free-mail.destroy', $gmail))->assertRedirect();
+        $this->actingAs($this->admin())->delete(route('admin.leaks.free-mail.destroy', $uol))->assertRedirect();
 
-        $this->assertDatabaseMissing('free_mail_domains', ['value' => 'gmail.com']);
-        $this->assertFalse(app(FreeMailList::class)->has('gmail.com'));
+        $this->assertDatabaseMissing('free_mail_domains', ['value' => 'uol.com.br']);
+        $this->assertFalse(app(FreeMailList::class)->has('uol.com.br'));
+    }
+
+    // ------------------------------------------------------------------ prefixo
+
+    /** Prefixo casa pelo começo e ignora o sufixo — é o que pega o lixo que a marca recusa. */
+    public function test_a_prefix_catches_anything_after_it(): void
+    {
+        $list = app(FreeMailList::class);
+
+        // Semeados pela migration, conferidos contra os dados reais.
+        foreach (['gmail.comm', 'gmail.con', 'gmail.b', 'gmail.compassword', 'hotmail.ocm'] as $domain) {
+            $this->assertTrue($list->has($domain), "{$domain} é lixo de webmail");
+        }
+
+        // E o que NÃO foi semeado continua valendo como empresa: a medição mostrou universidade.
+        foreach (['mail.politecnico.it', 'live.universidade.ac.uk', 'outlook.universidade.ac.uk'] as $domain) {
+            $this->assertFalse($list->has($domain), "{$domain} é instituição, não webmail");
+        }
+    }
+
+    public function test_the_admin_registers_a_prefix_and_it_takes_effect(): void
+    {
+        $this->assertFalse(app(FreeMailList::class)->has('webmailnovo.qualquercoisa'));
+
+        $this->actingAs($this->admin())->post(route('admin.leaks.free-mail.store'), [
+            'kind' => 'prefix', 'value' => 'webmailnovo.',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertTrue(app(FreeMailList::class)->has('webmailnovo.qualquercoisa'));
+    }
+
+    public function test_a_prefix_must_end_with_a_dot(): void
+    {
+        // Sem o ponto, um prefixo `mail` pegaria mailchimp.com.
+        $this->actingAs($this->admin())->post(route('admin.leaks.free-mail.store'), [
+            'kind' => 'prefix', 'value' => 'mail',
+        ])->assertSessionHasErrors('value');
+
+        $this->assertFalse(app(FreeMailList::class)->has('mailchimp.com'));
+    }
+
+    /** O comando aplica a lista ao que já estava guardado — cadastrar prefixo não desfaz sozinho. */
+    public function test_the_clean_command_deletes_credentials_the_list_now_refuses(): void
+    {
+        $lixo = $this->credential('alguem@gmail.comm');
+        $empresa = $this->credential('ana@acme.com.br');
+
+        $this->artisan('leaks:limpar --so-credenciais')->assertSuccessful();
+        $this->assertSame(2, LeakedCredential::count(), 'sem --aplicar não apaga nada');
+
+        $this->artisan('leaks:limpar --so-credenciais --aplicar')->assertSuccessful();
+
+        $this->assertSame([$empresa->id], LeakedCredential::query()->pluck('id')->all());
+        $this->assertDatabaseMissing('leaked_credentials', ['id' => $lixo->id]);
+    }
+
+    /** Mesmo login, mesma senha e mesmo site é a mesma credencial, ainda que a URL mude. */
+    public function test_the_clean_command_removes_repeated_credentials(): void
+    {
+        $base = [
+            'domain' => 'acme.com.br', 'email' => 'ana@acme.com.br', 'password' => 'Senha!1',
+            'site_host' => 'portal.acme.com.br', 'source' => 'Amostra2026',
+        ];
+
+        // Mesma credencial, caminhos diferentes: a impressão digital inclui a URL, então entraram duas.
+        $fica = LeakedCredential::create(array_merge($base, ['url' => 'https://portal.acme.com.br/entrar', 'fingerprint' => md5('a')]));
+        $sai = LeakedCredential::create(array_merge($base, ['url' => 'https://portal.acme.com.br/senha', 'fingerprint' => md5('b')]));
+        // Mesmo par, SITE diferente: é outra credencial e fica.
+        $outroSite = LeakedCredential::create(array_merge($base, ['site_host' => 'vpn.acme.com.br', 'url' => 'https://vpn.acme.com.br/', 'fingerprint' => md5('c')]));
+        // Mesmo par e site, DUMP diferente: fica, porque saber em quantos vazamentos queimou importa.
+        $outroDump = LeakedCredential::create(array_merge($base, ['source' => 'Collection #1', 'url' => 'https://portal.acme.com.br/entrar', 'fingerprint' => md5('d')]));
+
+        $this->artisan('leaks:limpar --so-repetidos')->assertSuccessful();
+        $this->assertSame(4, LeakedCredential::count(), 'sem --aplicar não apaga nada');
+
+        $this->artisan('leaks:limpar --so-repetidos --aplicar')->assertSuccessful();
+
+        $this->assertSame(
+            [$fica->id, $outroSite->id, $outroDump->id],
+            LeakedCredential::query()->orderBy('id')->pluck('id')->all(),
+        );
+        $this->assertDatabaseMissing('leaked_credentials', ['id' => $sai->id]);
     }
 
     public function test_the_list_refuses_junk_and_duplicates(): void

@@ -17,7 +17,7 @@ class StoreFreeMailRequest extends Request
     public function rules(): array
     {
         return [
-            'kind' => ['required', 'in:domain,brand'],
+            'kind' => ['required', 'in:domain,brand,prefix'],
             'value' => [
                 'required', 'string', 'max:253',
                 function (string $attribute, mixed $value, Closure $fail): void {
@@ -29,6 +29,11 @@ class StoreFreeMailRequest extends Request
 
                     if ($this->input('kind') === 'brand' && preg_match('/^[a-z0-9][a-z0-9\-]*$/', $value) !== 1) {
                         $fail('A marca é um nome só, sem ponto: hotmail, e não hotmail.com.');
+                    }
+
+                    // O ponto no fim não é enfeite: sem ele, um prefixo `mail` pegaria mailchimp.com.
+                    if ($this->input('kind') === 'prefix' && preg_match('/^[a-z0-9][a-z0-9.\-]*\.$/', $value) !== 1) {
+                        $fail('O prefixo tem de terminar em ponto: gmail. — assim ele pega gmail.qualquercoisa sem pegar gmailxpto.com.');
                     }
                 },
                 Rule::unique('free_mail_domains', 'value')->where(fn ($query) => $query->where('kind', $this->input('kind'))),

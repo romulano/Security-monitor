@@ -184,7 +184,9 @@ As linhas de exemplo dos testes e dos comentários (`LeakParserTest`,
 `LeakImportTest`, `AdminLeaksTest`, `CredentialLineParser`) foram trocadas por
 dados **sintéticos** do mesmo formato. Lá elas vinham de um dump real. Um
 commit de lá que traga linha nova de exemplo precisa ser anonimizado do mesmo
-jeito antes de entrar: este repositório é público.
+jeito antes de entrar: este repositório é público. O mesmo vale para domínios
+de instituições tirados das medições de lá (como os exemplos da migration
+`2026_12_29_000100_free_mail_prefixes.php`): aqui eles viraram fictícios.
 
 ### Esquema do banco
 

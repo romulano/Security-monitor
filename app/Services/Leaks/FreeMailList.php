@@ -22,6 +22,9 @@ final class FreeMailList
     /** @var array<string,true>|null */
     private ?array $brands = null;
 
+    /** @var array<int,string>|null */
+    private ?array $prefixes = null;
+
     public function has(string $domain): bool
     {
         $domain = mb_strtolower(trim($domain, " \t."));
@@ -34,6 +37,14 @@ final class FreeMailList
 
         if (isset($this->domains[$domain])) {
             return true;
+        }
+
+        // Prefixo: casa pelo começo e ignora o resto. É o que pega `gmail.comm` e `gmail.b`, que a
+        // regra de marca recusa por o sufixo não ser TLD.
+        foreach ($this->prefixes as $prefix) {
+            if (str_starts_with($domain, $prefix)) {
+                return true;
+            }
         }
 
         // Regra da marca: `marca.<sufixo público>`, com no máximo dois rótulos de sufixo.
@@ -53,12 +64,16 @@ final class FreeMailList
         return true;
     }
 
-    /** @return array{domains:int,brands:int} */
+    /** @return array{domains:int,brands:int,prefixes:int} */
     public function counts(): array
     {
         $this->load();
 
-        return ['domains' => count($this->domains), 'brands' => count($this->brands)];
+        return [
+            'domains' => count($this->domains),
+            'brands' => count($this->brands),
+            'prefixes' => count($this->prefixes),
+        ];
     }
 
     /** Chamado pelo admin depois de cadastrar ou remover: a próxima carga já lê a lista nova. */
@@ -73,12 +88,13 @@ final class FreeMailList
             return;
         }
 
-        [$this->domains, $this->brands] = Cache::rememberForever(self::CACHE, function (): array {
+        [$this->domains, $this->brands, $this->prefixes] = Cache::rememberForever(self::CACHE, function (): array {
             $rows = FreeMailDomain::query()->get(['kind', 'value']);
 
             return [
                 array_fill_keys($rows->where('kind', 'domain')->pluck('value')->all(), true),
                 array_fill_keys($rows->where('kind', 'brand')->pluck('value')->all(), true),
+                array_values($rows->where('kind', 'prefix')->pluck('value')->all()),
             ];
         });
     }

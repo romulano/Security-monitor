@@ -136,10 +136,10 @@ class LeakImportTest extends TestCase
         $util = $this->queued('https://c.com/x:https://d.com/y:ana@acme.com.br');
 
         // Sem --aplicar não encosta em nada.
-        $this->artisan('leaks:limpar-fila')->assertSuccessful();
+        $this->artisan('leaks:limpar --so-fila')->assertSuccessful();
         $this->assertSame(3, LeakImportLine::count());
 
-        $this->artisan('leaks:limpar-fila --aplicar')->assertSuccessful();
+        $this->artisan('leaks:limpar --so-fila --aplicar')->assertSuccessful();
 
         $this->assertSame([$util->id], LeakImportLine::query()->pluck('id')->all());
         $this->assertDatabaseMissing('leak_import_lines', ['id' => $inutil->id]);

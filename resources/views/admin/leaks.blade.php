@@ -41,7 +41,7 @@
             'fila' => ['Fila', $counts['pending'], true],
             'resolvidas' => ['Resolvidas', $counts['resolved'], false],
             'credenciais' => ['Credenciais', null, false],
-            'genericos' => ['E-mails genéricos', $freeCounts['domains'] + $freeCounts['brands'], false],
+            'genericos' => ['E-mails genéricos', $freeCounts['domains'] + $freeCounts['brands'] + $freeCounts['prefixes'], false],
             'dumps' => ['Pasta e dumps', null, false],
         ] as $key => [$name, $total, $warn])
             <a href="{{ route('admin.leaks', $key === 'fila' ? [] : ['ver' => $key]) }}"
@@ -208,11 +208,18 @@
             <h2 class="text-sm font-semibold text-white">Cadastrar</h2>
             <p class="mt-1 max-w-3xl text-xs leading-relaxed text-ink-700">
                 <strong class="text-ink-400">Domínio</strong> é exato: <span class="font-mono">gmail.com</span>.
-                <strong class="text-ink-400">Marca</strong> casa a marca com qualquer sufixo público — uma linha
+                <strong class="text-ink-400">Marca</strong> casa a marca com qualquer sufixo <em>público</em> — uma linha
                 <span class="font-mono">hotmail</span> pega <span class="font-mono">hotmail.com</span>,
-                <span class="font-mono">hotmail.co.uk</span> e <span class="font-mono">hotmail.fr</span> de uma vez,
-                sem cadastrar os 127 domínios da Microsoft. Marca não pega subdomínio de empresa:
-                <span class="font-mono">live.suaempresa.com</span> continua sendo empresa.
+                <span class="font-mono">hotmail.co.uk</span> e <span class="font-mono">hotmail.fr</span>, sem cadastrar os
+                127 domínios da Microsoft. Marca não pega subdomínio de empresa.
+            </p>
+            <p class="mt-1 max-w-3xl text-xs leading-relaxed text-ink-700">
+                <strong class="text-ink-400">Prefixo</strong> casa pelo começo e ignora o resto: termina em ponto e pega
+                tudo depois dele. <span class="font-mono">gmail.</span> pega
+                <span class="font-mono">gmail.comm</span>, <span class="font-mono">gmail.con</span> e
+                <span class="font-mono">gmail.b</span> — o lixo que o dump produz e que a marca recusa, porque o sufixo
+                não é um TLD. É a regra mais larga das três: <span class="font-mono">live.</span> também pegaria
+                <span class="font-mono">live.suaempresa.com</span>.
             </p>
 
             <form method="POST" action="{{ route('admin.leaks.free-mail.store') }}" class="mt-3 grid gap-2 sm:grid-cols-[8rem_1fr_1fr_auto] sm:items-end">
@@ -222,6 +229,7 @@
                     <select name="kind" class="mt-1 w-full rounded-lg border border-ink-800 bg-ink-850 px-2.5 py-1.5 text-xs text-ink-200 focus:border-accent focus:outline-none">
                         <option value="domain" @selected(old('kind') === 'domain')>domínio</option>
                         <option value="brand" @selected(old('kind') === 'brand')>marca</option>
+                        <option value="prefix" @selected(old('kind') === 'prefix')>prefixo</option>
                     </select>
                 </label>
                 <label class="block text-xs text-ink-700">
@@ -238,7 +246,7 @@
             </form>
         </div>
 
-        @foreach ([['Marcas', $brands, 'marca'], ['Domínios', $domains, 'domínio']] as [$title, $rows, $noun])
+        @foreach ([['Prefixos', $prefixes, 'prefixo'], ['Marcas', $brands, 'marca'], ['Domínios', $domains, 'domínio']] as [$title, $rows, $noun])
             <div class="mb-4">
                 <h2 class="mb-2 text-sm font-semibold text-white">{{ $title }} <span class="font-mono text-xs text-ink-700">· {{ $rows->count() }}</span></h2>
                 @if ($rows->isEmpty())
